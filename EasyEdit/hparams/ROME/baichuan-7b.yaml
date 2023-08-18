@@ -1,5 +1,5 @@
 alg_name: "ROME"
-model_name: "/mnt/peng/EasyEdit/hugging_cache/llama-2-7b"
+model_name: "/mnt/xzk/Baichuan-7B"
 stats_dir: "/mnt/peng/EasyEdit/data/stats"
 device: 0
 layers: [5]
