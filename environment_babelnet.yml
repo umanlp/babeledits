@@ -1,0 +1,19 @@
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8.19 # Babelnet requires python 3.8
+  - pip
+  # python libs
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - conda-lock
+  - jupyter
+  - wikipedia-api
+  - pip:
+    - babelnet[rpc]
+    - sienna
+    - wikidata
+    - wikirepo
+    - google-cloud-translate
