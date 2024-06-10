@@ -66,10 +66,11 @@ if __name__ == "__main__":
     ## Params
     from datetime import timedelta, date
     import pickle
+    import time
     year = 2022
     # XTREME-R langs
     langs = ["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"]
-    langs = ["en"]
+    # langs = ["fr", "de"]
     print(f"Processing data for {len(langs)} langauges")
     start_date = date(year, 1, 1)
     end_date = date(year, 12, 31)
@@ -77,7 +78,8 @@ if __name__ == "__main__":
 
     lang_to_df = {}
     for lang in langs:
-
+        
+        t_start = time.time()
         save_path = f'wikipedia_stats/processed_data2/{lang}_{year}_df.csv'
 
         if os.path.exists(save_path):
@@ -99,11 +101,13 @@ if __name__ == "__main__":
         results = []
 
         print(f"> Getting synsets for {lang}")
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            synsets = [executor.submit(get_synset_from_wiki, wiki_id) for wiki_id in wiki_ids]
-            for future in as_completed(synsets):
-                results.append(future.result())
-        save_dir = f"synsets/{lang}"
+        # with ThreadPoolExecutor(max_workers=10) as executor:
+        #     synsets = [executor.submit(get_synset_from_wiki, wiki_id) for wiki_id in wiki_ids]
+        #     for future in as_completed(synsets):
+        #         results.append(future.result())
+        synsets = bn.get_synsets(*wiki_ids)
+        results = [(title, synset) for title, synset in zip(filtered_df['English Title'], synsets)]
+        save_dir = f"synsets2/{lang}"
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
@@ -125,3 +129,5 @@ if __name__ == "__main__":
         with open(f'{save_dir}/{lang}_relations.txt', 'w') as file:
             for relation, count in sorted_relations:
                 file.write(f"{relation}:{count}\n")
+        
+        print(f"Time taken for {lang}: {(time.time()-t_start)/60} minutes for {len(synsets)} synsets")
