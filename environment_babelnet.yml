@@ -16,4 +16,5 @@ dependencies:
     - sienna
     - wikidata
     - wikirepo
+    - google-cloud-storage
     - google-cloud-translate
