@@ -2,7 +2,7 @@
 
 ## Params
 from datetime import timedelta, date
-
+import babelnet as bn
 from babelnet import BabelSynsetID, Language
 year = 2022
 # XTREME-R langs
@@ -76,42 +76,92 @@ def convert_to_babel_relations(relations):
     return babel_relations
 # %%
 import pandas as pd
-import babelnet as bn
 from babelnet import Language, BabelSynsetID
-import copy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import itertools
 
-rel_df = pd.read_csv("synsets/relations_with_examples_expressions.tsv", sep="\t")
+rel_df = pd.read_csv("datasets/v1/relations_with_examples_expressions.tsv", sep="\t")
 relations = rel_df["relation_name"].tolist()
 relations = convert_to_babel_relations(relations)
 languages = [Language.from_iso(l) for l in [lang, "en"]]	
 edits = []
 
 t_start = time.time()
-# with ThreadPoolExecutor(max_workers=10) as executor:
-#     extracted = [executor.submit(get_data_from_synset, synset, lang, relations) for title, synset in data[:100] if synset is not None]
-#     for future in as_completed(extracted):
-#         edits.append(future.result())
+synset_to_senses = {synset:{"src_sense": synset.main_sense(Language.from_iso(lang)), "en_sense": synset.main_sense(Language.EN)} for title, synset in data[:10] if synset is not None}
+synset_to_senses = {synset:{"src_sense":senses["src_sense"].full_lemma, "en_sense":senses["en_sense"].full_lemma} for synset, senses in synset_to_senses.items() if all(senses.values())}
 
-edits = [get_data_from_synset(synset, languages, relations) for title, synset in data[:100] if synset is not None]
+synset_to_relations = {str(synset.id):[(e.pointer.name, e, e.target) for e in synset.outgoing_edges() if e.pointer in set(relations)] for synset in synset_to_senses}
+
+target_synset_ids =  list(set([BabelSynsetID(edge["target_id"]) for relations in synset_to_relations.values() for edges in relations.values() for edge in edges]))
+print(f"Fetching {len(target_synset_ids)} target synsets")
+target_synsets = bn.get_synsets(*(target_synset_ids))
+target_senses = {str(synset.id):{"en_sense":synset.main_sense(Language.EN), "src_sense":synset.main_sense(Language.from_iso(lang))} for synset in target_synsets}
+target_senses = {syn_id:{"en_sense":senses["en_sense"].full_lemma, "src_sense":senses["src_sense"].full_lemma} for syn_id, senses in target_senses.items() if all(senses.values())}
+
+for synset in synset_to_relations:
+    relation_to_edges = synset_to_relations[synset]
+    for relation in relation_to_edges:
+        edges = relation_to_edges[relation]
+        for edge in edges:
+            if edge["target_id"] in target_senses:
+                edge["target_sense_src"] = target_senses[edge["target_id"]]["src_sense"]
+                edge["target_sense_en"] = target_senses[edge["target_id"]]["en_sense"]
+            else:
+                edges.remove(edge)
+
+# for synset in synset_to_relations:
+#     relations = synset_to_relations[synset] 
+#     for relation in relations:
+#         relations[relation] = [e for e in relations[relation] if e["target_sense_en"] != ""]
+
 print(f"Time taken: {(time.time()-t_start)/60} minutes")
 
-
+output = {str(synset.id): {"subject_senses": senses, "relations": synset_to_relations[str(synset.id)]} for synset, senses in synset_to_senses.items()}
 import json
-with open("datasets/v1/mini-dataset.json", "w") as f:
-    json.dump(edits, f, indent=4)
+with open("datasets/v1/mini-dataset2.json", "w") as f:
+    json.dump(output, f, indent=4)
 f.close()
 # %%
+from collections import defaultdict
+rel_to_synsets = defaultdict(list)
+
+for d in list(synset_to_relations.values()):
+    for k, v in d.items():
+        [x.pop("edge_id") for x in v if "edge_id" in x]
+        rel_to_synsets[k] += v
+
+for rel in rel_to_synsets:
+    unique_synsets = {x["target_id"]:x for x in rel_to_synsets[rel]}
+    rel_to_synsets[rel] = list(unique_synsets.values())
 
 
-from itertools import chain
-all_relations = [chain(*element["relations"].values()) for element in edits]
-all_relations = list(chain(*all_relations))
-print(len(all_relations) , len(set(all_relations)))
+# %%
+import random
+for synset in synset_to_relations:
+    relation_to_edges = synset_to_relations[synset]
+    for relation in relation_to_edges:
+        edges = relation_to_edges[relation]
+        for edge in edges:
+            sampled_syn = random.sample(rel_to_synsets[relation], 1)[0]
+        edges["edit"] = sampled_syn
+
+
+# %%
 synsets = [BabelSynsetID(x) for x in all_relations]
-import babelnet as bn
+print(len(synsets))
 t_start = time.time()
-bn.get_synsets(*(synsets))
+r = bn.get_synsets(*(synsets))
 print(f"Time taken: {(time.time()-t_start)/60} minutes")
+# %%
+for relations in synset_to_relations.values():
+    for rel in relations.values():
+        for edge in edges:
+            if edge["target_id"] in target_senses:
+                edge["target_sense_en"] = target_senses[edge["target_id"]]["en_sense"]
+                edge["target_sense_src"] = target_senses[edge["target_id"]]["src_sense"]
+            else:
+                edge["target_sense_en"] = ""
+                edge["target_sense_src"] = ""
+print(synset_to_relations)
 # %%
