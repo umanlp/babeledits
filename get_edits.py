@@ -2,11 +2,24 @@
 
 ## Params
 import pickle
+from re import T
 import babelnet as bn
 from babelnet import BabelSynsetID, Language
+import argparse
 
-lang = "it"
-file_path = f'synsets/{lang}/{lang}_syns.pkl'
+parser = argparse.ArgumentParser(description='Process some data.')
+parser.add_argument('--lang', default='it', help='Language')
+parser.add_argument('--output_folder', default='datasets/v2', help='Output folder')
+parser.add_argument('--rel_path', default='datasets/v2/agg_relations_with_prompts.tsv', help='Path to relation file')
+parser.add_argument('--top_k', type=int, default=100, help='Top-k relations to consider')
+
+args = parser.parse_args()
+
+lang = args.lang
+output_folder = args.output_folder
+rel_path = args.rel_path
+top_k = args.top_k
+file_path = f'synsets2/{lang}/{lang}_syns.pkl'
 
 # %%
 # Load the pickle file
@@ -38,7 +51,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import itertools
 
-rel_df = pd.read_csv("datasets/v1/relations_with_examples_expressions.tsv", sep="\t")
+
+rel_df = pd.read_csv(rel_path, sep="\t").iloc[:top_k]
 relations = rel_df["relation_name"].tolist()
 relations = convert_to_babel_relations(relations)
 languages = [Language.from_iso(l) for l in [lang, "en"]]	# converting languages to BabelLanguage
@@ -97,11 +111,8 @@ for rel in rel_to_synsets:
 
 # %%
 import random
-import json
 import copy
-import pandas as pd
-
-rel_df = pd.read_csv("datasets/v1/relations_with_examples_expressions.tsv", sep="\t").set_index("relation_name")
+import json
 
 # Iterating over the main structure of synset -> relations -> edges
 for synset in synset_to_relations:
@@ -115,9 +126,9 @@ for synset in synset_to_relations:
                 sampled_syn = copy.deepcopy(random.sample(syn_pool, 1)[0]) # needed to avoid nested structures
                 if "edit" in sampled_syn:
                     sampled_syn.pop("edit")
-                prompt = rel_df.loc[relation,"expression"]
+                prompt = rel_df.loc[relation,"question"]
                 prompt = prompt.replace("<subject>", synset_to_senses[synset]["sense_en"])
-                prompt = prompt.replace("<object>", sampled_syn["target_sense_en"])
+                # prompt = prompt.replace("<object>", sampled_syn["target_sense_en"])
                 edge["edit"] = sampled_syn
                 edge["edit"]["prompt"] = prompt
         relation_to_edges[relation] = [edge for edge in relation_to_edges[relation] if "edit" in edge]
@@ -125,7 +136,7 @@ for synset in synset_to_relations:
 
 output = {synset_id: {"subject_senses": senses, "relations": synset_to_relations[synset_id]} for synset_id, senses in synset_to_senses.items()}
 
-with open(f"datasets/v1/{lang}.json", "w") as f:
+with open(f"{output_folder}/{lang}.json", "w") as f:
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
 
