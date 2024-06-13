@@ -11,9 +11,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta, datetime
 import argparse
 
-def get_top_pageviews(day, lang):
+def get_top_pageviews(day, lang, user_agent):
     url = f"https://wikimedia.org/api/rest_v1/metrics/pageviews/top/{lang}.wikipedia/all-access/{day.year}/{day.month:02}/{day.day:02}"
-    headers = {'User-Agent': 'BabelEdits (tommaso.green@uni-mannheim.de)'}
+    headers = {'User-Agent': user_agent}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -58,9 +58,9 @@ def get_top_pages(start_date, end_date, lang, top_k, save_path):
             print(f"Skipping {lang}, {save_path} already exists")
 
 
-def process_page(record, src_lang):
+def process_page(record, src_lang, user_agent):
     # Initialize the Wikipedia API for the source language
-    wiki_src = wikipediaapi.Wikipedia('BabelEdits (tommaso.green@uni-mannheim.de)', src_lang)
+    wiki_src = wikipediaapi.Wikipedia(user_agent, src_lang)
     title, views = record
     try:
         # Get the source language page
@@ -114,13 +114,16 @@ if __name__ == "__main__":
     parser.add_argument('--end_date', type=str, default='2022-12-31', help='The end date in YYYY-MM-DD format')
     parser.add_argument('--top_k', type=int, default=10000, help='The number of top pages to retrieve')
     parser.add_argument('--save_path', type=str, default='wikipedia_data/v1', help='The main path to save the data')
+    parser.add_argument('--user_agent', type=str, default=os.environ["WIKI_AGENT"], help='The user agent to use for Wikipedia API requests')
     args = parser.parse_args()
 
+    print(args.user_agent)
     year = args.year
     start_date = datetime.strptime(args.start_date, '%Y-%m-%d').date()
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d').date()
     top_k = args.top_k
     langs = args.langs
+    user_agent = args.user_agent
     
     lang_to_df = {}
     for lang in langs:
@@ -136,7 +139,7 @@ if __name__ == "__main__":
             if not os.path.exists(save_path_wiki):
                 # If the data has not been downloaded yet, download it
                 print(f"Getting top {top_k} pages for {lang}")
-                get_top_pages(start_date, end_date, lang, top_k, save_path_wiki)
+                get_top_pages(start_date, end_date, lang, top_k, save_path_wiki, user_agent)
             records = sienna.load_json(save_path_wiki)
             df = process_multiple_pages(records, lang)
             df = df.drop_duplicates(subset=['English Title']).dropna(subset=['English Title'])
