@@ -113,7 +113,7 @@ if __name__ == "__main__":
     parser.add_argument('--start_date', type=str, default='2022-01-01', help='The start date in YYYY-MM-DD format')
     parser.add_argument('--end_date', type=str, default='2022-12-31', help='The end date in YYYY-MM-DD format')
     parser.add_argument('--top_k', type=int, default=10000, help='The number of top pages to retrieve')
-
+    parser.add_argument('--save_path', type=str, default='wikipedia_data/v1', help='The main path to save the data')
     args = parser.parse_args()
 
     year = args.year
@@ -124,8 +124,8 @@ if __name__ == "__main__":
     
     lang_to_df = {}
     for lang in langs:
-        save_path_wiki = f'./wikipedia_stats/top_{top_k}_wikipedia_pages_{lang}_{year}.json'
-        save_path_csv = f'wikipedia_stats/processed_data2/{lang}_{year}_df.csv'
+        save_path_wiki = f'{args.save_path}/raw/top_{top_k}_wikipedia_pages_{lang}_{year}.json'
+        save_path_csv = f'{args.save_path}/processed/{lang}_{year}_df.csv'
         
         if os.path.exists(save_path_csv):
             # Load the data from the existing file
