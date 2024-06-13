@@ -1,116 +1,50 @@
-import babelnet as bn
-from babelnet.resources import WikipediaID
-from babelnet.language import Language
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import wikipediaapi
-import pandas as pd
-import json
-import sienna
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import pickle
+import time
 
-def process_page(record, src_lang):
-    # Initialize the Wikipedia API for the source language
-    wiki_src = wikipediaapi.Wikipedia('BabelEdits (tommaso.green@uni-mannheim.de)', src_lang)
-    title, views = record
-    try:
-        # Get the source language page
-        page_src = wiki_src.page(title)
-        
-        # Check if the page exists
-        try:
-            page_existance = page_src.exists()
-            if not page_existance:
-                return title, views, None, None
-        except:
-            return title, views, None, None
-        
-        if src_lang == "en":
-            return title, views, title, [src_lang]
-        else:
-            # Check for an English version of the page
-            try:
-                langlinks = page_src.langlinks
-                english_title = langlinks["en"].title if "en" in langlinks else None
-                lang_list = sorted([src_lang] + list(langlinks.keys()))
-            except:
-                english_title = None
-                lang_list = [src_lang]
-        return title, views, english_title, lang_list
-    except json.JSONDecodeError:
-        print(f"JSON Decode Error for {record}")
-        return record, "JSONDecodeError"
-
-
-def process_multiple_pages(records, lang):
-    results = []
-
-    # Use ThreadPoolExecutor to handle multithreading
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        # Submit tasks to the executor
-        future_to_title = [executor.submit(process_page, record, lang)   for record in records]
-
-        # Collect the results as they complete
-        for future in as_completed(future_to_title):
-            results.append(future.result())
-
-    results = pd.DataFrame(results, columns=["Title", "Views", "English Title", "Languages"])
-    results = results.dropna(subset=['Languages']).sort_values(by='Languages', key=lambda x: x.str.len(), ascending=False)
-    return results
-
-def get_synset_from_wiki(wiki_id):
-    synset = bn.get_synset(wiki_id)
-    return wiki_id, synset
+import argparse
+import babelnet as bn
+import pandas as pd
+from datetime import datetime
+from babelnet.language import Language
+from babelnet.resources import WikipediaID
+from collections import Counter
+from itertools import chain
 
 if __name__ == "__main__":
     ## Params
-    from datetime import timedelta, date
-    import pickle
-    import time
-    year = 2022
-    # XTREME-R langs
-    langs = ["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"]
-    # langs = ["fr", "de"]
-    print(f"Processing data for {len(langs)} langauges")
-    start_date = date(year, 1, 1)
-    end_date = date(year, 12, 31)
-    top_k = 10000
+    parser = argparse.ArgumentParser(description='Process Wikipedia pageviews.')
+    parser.add_argument('--langs', nargs='+', default=["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"], help='List of languages')
+    parser.add_argument('--year', type=int, default=2022, help='The year to process')
+    parser.add_argument('--start_date', type=str, default='2022-01-01', help='The start date in YYYY-MM-DD format')
+    parser.add_argument('--end_date', type=str, default='2022-12-31', help='The end date in YYYY-MM-DD format')
+    parser.add_argument('--top_k', type=int, default=10000, help='The number of top pages to retrieve')
+    parser.add_argument('--save_dir', type=str, default='synsets/v2', help='Save dir of the synsets')
+    parser.add_argument('--data_path', type=str, default='wikipedia_stats/processed_data2', help='Path to the Wikipedia processed data')
+    args = parser.parse_args()
+
+    year = args.year
+    start_date = datetime.strptime(args.start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(args.end_date, '%Y-%m-%d').date()
+    top_k = args.top_k
+    langs = args.langs
 
     lang_to_df = {}
     for lang in langs:
         
         t_start = time.time()
-        save_path = f'wikipedia_stats/processed_data2/{lang}_{year}_df.csv'
+        save_dir = f"{args.save_dir}/{lang}"
+        save_path = f'{args.data_path}/{lang}_{year}_df.csv'
+        df = pd.read_csv(save_path)
 
-        if os.path.exists(save_path):
-            # Load the data from the existing file
-            print(f"Loading data for {lang} from {save_path}")
-            lang_to_df[lang] = pd.read_csv(save_path)
-        else:
-            # Process the pages and save the data to a new file
-            print(f"Getting data for {lang}")
-            records = sienna.load(f"wikipedia_stats/top_{top_k}_wikipedia_pages_{lang}_{year}.json")
-            df = process_multiple_pages(records, lang)
-            lang_to_df[lang] = df
-            lang_to_df[lang].to_csv(save_path, index=False)
-
-        # print(len(lang_to_df[lang]))
-        filtered_df = lang_to_df[lang].drop_duplicates(subset=['English Title']).dropna(subset=['English Title'])
-        # print(len(filtered_df))
-        wiki_ids = [WikipediaID(title, Language.EN) for title in filtered_df['English Title']]
+        wiki_ids = [WikipediaID(title, Language.EN) for title in df['English Title']]
         results = []
 
         print(f"> Getting synsets for {lang}")
-        # with ThreadPoolExecutor(max_workers=10) as executor:
-        #     synsets = [executor.submit(get_synset_from_wiki, wiki_id) for wiki_id in wiki_ids]
-        #     for future in as_completed(synsets):
-        #         results.append(future.result())
         synsets = bn.get_synsets(*wiki_ids)
-        results = [(title, synset) for title, synset in zip(filtered_df['English Title'], synsets)]
-        save_dir = f"synsets2/{lang}"
+        results = [(title, synset) for title, synset in zip(df['English Title'], synsets)]
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
 
         # Write results to pickle file
         print(f"> Writing synsets for {lang} to {save_dir}/{lang}_syns.pkl")
@@ -119,8 +53,7 @@ if __name__ == "__main__":
 
         filtered_synsets = [(title,synset) for title,synset in results if synset is not None]
         edges = [[e.pointer.name for e in synset.outgoing_edges()] for _, synset in filtered_synsets]
-        from itertools import chain
-        from collections import Counter
+        
 
         flattened_edges = list(chain.from_iterable(edges))
         counter = Counter(flattened_edges)

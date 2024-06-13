@@ -139,4 +139,5 @@ if __name__ == "__main__":
                 get_top_pages(start_date, end_date, lang, top_k, save_path_wiki)
             records = sienna.load_json(save_path_wiki)
             df = process_multiple_pages(records, lang)
+            df = df.drop_duplicates(subset=['English Title']).dropna(subset=['English Title'])
             df.to_csv(save_path_csv, index=False)
