@@ -25,17 +25,18 @@ parser.add_argument(
 parser.add_argument(
     "--top_k", type=int, default=100, help="Top-k relations to consider"
 )
-
+parser.add_argument("--synset_path", default="synsets/v2", help="synset path")
 args = parser.parse_args()
 
 lang = args.lang
 output_folder = args.output_folder
 rel_path = args.rel_path
 top_k = args.top_k
-file_path = f"synsets2/{lang}/{lang}_syns.pkl"
+synset_path = args.synset_path
 
 # %%
 # Load the pickle file
+file_path = f"{synset_path}/{lang}/{lang}_syns.pkl"
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 
