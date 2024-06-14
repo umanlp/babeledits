@@ -203,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--top_k", type=int, default=10000, help="The number of top pages to retrieve"
     )
+    parser.add_argument("--year", type=int, default=2022, help="The year to process")
     parser.add_argument(
         "--save_path",
         type=str,
