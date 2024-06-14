@@ -206,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save_path",
         type=str,
-        default="wikipedia_data/v1",
+        default="wikipedia/v2",
         help="The main path to save the data",
     )
     parser.add_argument(
