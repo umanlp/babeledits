@@ -3,6 +3,7 @@ import argparse
 import pickle
 import random
 from collections import Counter, defaultdict
+from io import StringIO
 
 import babelnet as bn
 import pandas as pd
@@ -78,7 +79,8 @@ parser.add_argument(
 parser.add_argument("--dataset_path", default="datasets/v2", help="dataset path")
 parser.add_argument("--synset_path", default="synsets/v2", help="synset path")
 
-args = parser.parse_args()
+
+args = parser.parse_args(args=[])
 
 langs = args.langs
 lang = args.lang
@@ -109,11 +111,12 @@ rel_df = rel_df[
     ~rel_df.relation_name.str.endswith("ym") & ~rel_df.relation_name.str.endswith("YM")
 ]
 print(rel_df)
-
+# Save all relations with their counts
+rel_df.to_csv(f"{dataset_path}/agg_relations_all.csv", index=False)
 # %%
 relations = rel_df["relation_name"].tolist()[:max_rel]
 
-en_path = f"{synset_path}/en/en_synsets.pkl"
+en_path = f"{synset_path}/en/en_syns.pkl"
 print(f"> Loading data for en from {en_path}")
 with open(en_path, "rb") as f:
     data = pickle.load(f)
@@ -192,7 +195,7 @@ prompt = ChatPromptTemplate.from_messages(
             The output should be a tab separated file (tsv) with 5 columns, relation, count, subject, object and question. 
             When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
             do NOT include them in the question.
-            When producing the tsv, always keep the relation_name, count, subject, object columns untouched. Please operate on the entire input.""",
+            When producing the tsv, always keep the relation_name, count, subject, object columns untouched. Please operate on all the rows of the input.""",
         ),
         (
             "human",
@@ -207,4 +210,18 @@ chain = prompt | llm
 with get_openai_callback() as cb:
     result = chain.invoke(md)  # chain.invoke(",".join(rel_df.index.to_list()))
     print(cb)
-    print(result)
+    print(result.content)
+
+tsv_string = "\n".join(result.content.split('\n')[1:])
+
+# Use StringIO to read the string as a file
+tsv_data = StringIO(tsv_string)
+
+# Create a pandas DataFrame
+df = pd.read_csv(tsv_data, sep='\t')
+
+# Display the DataFrame
+print(df)
+
+# Save df containint relation_name, subject, object, question
+df.to_csv(f"{dataset_path}/agg_relations_with_prompts.tsv", sep="\t", index=False)
