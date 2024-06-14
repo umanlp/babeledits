@@ -24,17 +24,13 @@ def get_top_pageviews(day, lang, user_agent):
         return []
 
 
-def aggregate_pageviews(start_date, end_date, lang, top_k):
+def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
     delta = end_date - start_date
     pageview_counts = defaultdict(int)
 
-    def fetch_day_pageviews(day):
-        top_pages = get_top_pageviews(day, lang)
-        return top_pages
-
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = [
-            executor.submit(fetch_day_pageviews, start_date + timedelta(days=i))
+            executor.submit(get_top_pageviews, start_date + timedelta(days=i), lang, user_agent)
             for i in range(delta.days + 1)
         ]
         for future in as_completed(futures):
@@ -44,25 +40,22 @@ def aggregate_pageviews(start_date, end_date, lang, top_k):
                 views = page["views"]
                 pageview_counts[title] += views
 
-    # Sort pages by views and get the top 10,000
+    # Sort pages by views and get the top-k
     sorted_pageviews = sorted(
         pageview_counts.items(), key=lambda item: item[1], reverse=True
     )
-    return sorted_pageviews[:top_k]
+
+    # we return double the top-k, since we will have to filter later
+    return sorted_pageviews[:top_k*2]
 
 
-def get_top_pages(start_date, end_date, lang, top_k, save_path):
-    lang_to_stats = {}
-    for lang in langs:
-        if not os.path.exists(save_path):
-            print(f"Processing {lang}")
-            top_pages = aggregate_pageviews(start_date, end_date, lang, top_k)
-            lang_to_stats[lang] = top_pages
-            # Save to JSON file
-            with open(save_path, "w") as f:
-                json.dump(top_pages, f, indent=2)
-        else:
-            print(f"Skipping {lang}, {save_path} already exists")
+def get_top_pages(start_date, end_date, lang, top_k, save_path, user_agent):
+    print(f"Downloading wikipedia data for {lang}")
+    top_pages = aggregate_pageviews(
+        start_date, end_date, lang, top_k, user_agent
+    )
+    with open(save_path, "w") as f:
+        json.dump(top_pages, f, indent=2)
 
 
 def process_page(record, src_lang, user_agent):
@@ -95,14 +88,14 @@ def process_page(record, src_lang, user_agent):
         return record, "JSONDecodeError"
 
 
-def process_multiple_pages(records, lang):
+def process_multiple_pages(records, lang, user_agent):
     results = []
 
     # Use ThreadPoolExecutor to handle multithreading
     with ThreadPoolExecutor(max_workers=10) as executor:
         # Submit tasks to the executor
         future_to_title = [
-            executor.submit(process_page, record, lang) for record in records
+            executor.submit(process_page, record, lang, user_agent) for record in records
         ]
 
         # Collect the results as they complete
@@ -114,7 +107,7 @@ def process_multiple_pages(records, lang):
         .dropna()
         .drop_duplicates(subset=["English Title"])
     )
-    results["Languages"] = results["Languages"].apply(ast.literal_eval)
+    # results["Languages"] = results["Languages"].apply(ast.literal_eval)
     results["Languages filtered"] = results["Languages"].apply(
         lambda x: list(set(x) & set(langs))
     )
@@ -227,6 +220,12 @@ if __name__ == "__main__":
     user_agent = args.user_agent
 
     lang_to_df = {}
+
+    if not os.path.exists(f"{args.save_path}/raw"):
+        os.makedirs(f"{args.save_path}/raw")
+    if not os.path.exists(f"{args.save_path}/processed"):
+        os.makedirs(f"{args.save_path}/processed")
+
     for lang in langs:
         save_path_wiki = (
             f"{args.save_path}/raw/top_{top_k}_wikipedia_pages_{lang}_{year}.json"
@@ -245,6 +244,7 @@ if __name__ == "__main__":
                 get_top_pages(
                     start_date, end_date, lang, top_k, save_path_wiki, user_agent
                 )
-            records = sienna.load_json(save_path_wiki)
-            df = process_multiple_pages(records, lang)
+            records = sienna.load(save_path_wiki)
+            print(f"Processing {len(records)} pages for {lang}")
+            df = process_multiple_pages(records, lang, user_agent).iloc[:top_k]
             df.to_csv(save_path_csv, index=False)
