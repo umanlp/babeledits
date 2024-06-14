@@ -11,6 +11,9 @@ dependencies:
   - conda-lock
   - jupyter
   - wikipedia-api
+  - langchain
+  - langchain-community
+  - langchain-openai
   - pip:
     - babelnet[rpc]
     - sienna
