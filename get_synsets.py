@@ -16,18 +16,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Wikipedia pageviews.')
     parser.add_argument('--langs', nargs='+', default=["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"], help='List of languages')
     parser.add_argument('--year', type=int, default=2022, help='The year to process')
-    parser.add_argument('--start_date', type=str, default='2022-01-01', help='The start date in YYYY-MM-DD format')
-    parser.add_argument('--end_date', type=str, default='2022-12-31', help='The end date in YYYY-MM-DD format')
-    parser.add_argument('--top_k', type=int, default=10000, help='The number of top pages to retrieve')
     parser.add_argument('--save_dir', type=str, default='synsets/v2', help='Save dir of the synsets')
     parser.add_argument('--data_path', type=str, default='wikipedia_stats/processed_data2', help='Path to the Wikipedia processed data')
     args = parser.parse_args()
 
-    year = args.year
-    start_date = datetime.strptime(args.start_date, '%Y-%m-%d').date()
-    end_date = datetime.strptime(args.end_date, '%Y-%m-%d').date()
-    top_k = args.top_k
     langs = args.langs
+    year = args.year
 
     lang_to_df = {}
     for lang in langs:
@@ -35,7 +29,7 @@ if __name__ == "__main__":
         t_start = time.time()
         save_dir = f"{args.save_dir}/{lang}"
         save_path = f'{args.data_path}/{lang}_{year}_df.csv'
-        df = pd.read_csv(save_path)
+        df = pd.read_csv(save_path).dropna()
 
         wiki_ids = [WikipediaID(title, Language.EN) for title in df['English Title']]
         results = []
