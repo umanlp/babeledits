@@ -3,6 +3,7 @@ import argparse
 import copy
 import itertools
 import json
+from pathlib import Path
 import pickle
 import random
 import time
@@ -17,7 +18,7 @@ import re
 ## Params
 parser = argparse.ArgumentParser(description="Process some data.")
 parser.add_argument("--lang", default="it", help="Language")
-parser.add_argument("--output_folder", default="datasets/v2", help="Output folder")
+parser.add_argument("--output_folder", default="datasets/v2/en_only", help="Output folder")
 parser.add_argument(
     "--rel_path",
     default="datasets/v2/agg_relations_with_prompts.tsv",
@@ -226,6 +227,7 @@ output = {
     for synset_id, senses in synset_to_senses.items()
 }
 
+Path(output_folder).mkdir(parents=True, exist_ok=True)
 with open(f"{output_folder}/{lang}.json", "w") as f:
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
