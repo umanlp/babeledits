@@ -5,6 +5,7 @@
 - We select the 50 languages from XTREME-R. It's an easy choice since they are many and they have a good degree of typological diversity
 - langs = ["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"]
 
+- Babelnet params /work/tgreen/miniconda3/envs/babelnet/lib/python3.8/site-packages/babelnet/apis/rpc_api.py
 ## Entity Extraction
 
 - There can be multiple strategies to extract entities from BabelNet:
@@ -15,14 +16,14 @@
         - Haven't explored this yet since it can be computationally expensive.
     2. **Wikipedia Querying per language** [**CURRENTLY USED**]
         - Wikipedia Page Selection (``get_pages.py``):
-            - We selected a suitable time frame to extract the per-page view count. Currently using year 2022.
-            - TODO: check BLOOM cutoff
+            - We selected a suitable time frame to extract the per-page view count. Currently using year 2021 (Bloom was released in mid-2022).
             - We can use the Wikipedia API to get the page view count for a certain language-specific wiki.
             - We save for each page all its inter-language links together with the page view count.
             - We keep only pages that have an English title and remove duplicates.
             - We sort the results by number of inter-language links **filtered by selected languages** (to ensure higher degree of multi-parallelism) and keep the top-10000.
                 - TODO compute Spearman correlation between view count and number of **filtered** inter-language links
                 - One can create other versions of the datasets by sampling uniformly or taking tail entities
+            - Time required: this takes 9 hours (532 mins), should be optimized (TODO)
         - Synset extraction (``get_synsets.py``):
             - for each language:
                 - We extract the synsets from Babelnet using the English Wikipedia title and save them to disk.

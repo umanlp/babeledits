@@ -26,6 +26,10 @@ parser.add_argument(
 parser.add_argument(
     "--top_k", type=int, default=100, help="Top-k relations to consider"
 )
+parser.add_argument(
+    "--max_edge", type=int, default=3, help="For each relation, how many edges to consider"
+)
+
 parser.add_argument("--synset_path", default="synsets/v2", help="synset path")
 args = parser.parse_args()
 
@@ -34,6 +38,7 @@ output_folder = args.output_folder
 rel_path = args.rel_path
 top_k = args.top_k
 synset_path = args.synset_path
+max_edge = args.max_edge
 
 # %%
 # Load the pickle file
@@ -117,7 +122,7 @@ synset_to_relations = {
 }
 synset_to_relations = {
     synset: {
-        str(r): [{"edge_id": str(v[1]), "target_id": str(v[2])} for v in edge_data]
+        str(r): random.sample([{"edge_id": str(v[1]), "target_id": str(v[2])} for v in edge_data], max_edge)
         for r, edge_data in itertools.groupby(edge_list, key=lambda e: e[0])
     }
     for synset, edge_list in synset_to_relations.items()
