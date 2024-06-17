@@ -104,8 +104,8 @@ def process_multiple_pages(records, lang, user_agent):
 
     results = (
         pd.DataFrame(results, columns=["Title", "Views", "English Title", "Languages"])
-        .dropna()
         .drop_duplicates(subset=["English Title"])
+        .dropna()
     )
     # results["Languages"] = results["Languages"].apply(ast.literal_eval)
     results["Languages filtered"] = results["Languages"].apply(
@@ -114,6 +114,7 @@ def process_multiple_pages(records, lang, user_agent):
     results["Selected Language Count"] = results["Languages filtered"].apply(
         lambda x: len(x)
     )
+    results = results.dropna()
     results = results.sort_values(
         by="Languages filtered", key=lambda x: x.str.len(), ascending=False
     )
@@ -247,4 +248,4 @@ if __name__ == "__main__":
             records = sienna.load(save_path_wiki)
             print(f"Processing {len(records)} pages for {lang}")
             df = process_multiple_pages(records, lang, user_agent).iloc[:top_k]
-            df.to_csv(save_path_csv, index=False)
+            df.to_csv(save_path_csv, index=False, encoding="utf-8")

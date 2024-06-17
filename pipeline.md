@@ -5,7 +5,7 @@
 - We select the 50 languages from XTREME-R. It's an easy choice since they are many and they have a good degree of typological diversity
 - langs = ["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","wo","yo","zh"]
 
-- Babelnet params /work/tgreen/miniconda3/envs/babelnet/lib/python3.8/site-packages/babelnet/apis/rpc_api.py
+- Babelnet TIMEOUT params /work/tgreen/miniconda3/envs/babelnet/lib/python3.8/site-packages/babelnet/apis/rpc_api.py
 ## Entity Extraction
 
 - There can be multiple strategies to extract entities from BabelNet:
@@ -64,10 +64,7 @@
 
 ## Translation
 
-- Is translation necessary? 
-- TODO: remove paranthesis from disambiguation pages, remove ""
 - We extract all the subject synsets
- from all the datasets and create a glossary (``get_glossary.py``)
+ from all the datasets and create a glossary (``get_glossary.py``) 
 - This is uploaded to Google cloud storage (``upload_glossary.py``)
-    - TODO fixes are needed!
-- We use the glossary to translate the edits to all the languages (``translate_edits.py``)
+- We use the glossary to translate the edits to all the languages (``translate.py``)
