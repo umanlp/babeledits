@@ -12,6 +12,7 @@ import babelnet as bn
 import pandas as pd
 from babelnet import BabelSynsetID, Language
 from babelnet.data.relation import BabelPointer
+import re 
 
 ## Params
 parser = argparse.ArgumentParser(description="Process some data.")
@@ -59,6 +60,18 @@ def convert_to_babel_relations(relations):
                 raise ValueError("Could not convert relation!")
     return babel_relations
 
+def clean(sense):
+    # Replace underscores with spaces
+    sense = sense.replace('_', ' ')
+    
+    # Remove round brackets and everything in between
+    sense = re.sub(r'\(.*?\)', '', sense)
+    
+    # Remove double quotes if they wrap the entire string
+    if sense.startswith('"') and sense.endswith('"'):
+        sense = sense[1:-1]
+    
+    return sense
 
 # %%
 
@@ -85,8 +98,8 @@ synset_to_senses = {
 }
 synset_to_senses = {
     synset: {
-        "sense_src": senses["sense_src"].full_lemma,
-        "sense_en": senses["sense_en"].full_lemma,
+        "sense_src": clean(senses["sense_src"].full_lemma),
+        "sense_en": clean(senses["sense_en"].full_lemma),
     }
     for synset, senses in synset_to_senses.items()
     if all(senses.values())
@@ -134,8 +147,8 @@ target_senses = {
 }
 target_senses = {
     syn_id: {
-        "sense_en": senses["sense_en"].full_lemma,
-        "sense_src": senses["sense_src"].full_lemma,
+        "sense_en": clean(senses["sense_en"].full_lemma),
+        "sense_src": clean(senses["sense_src"].full_lemma),
     }
     for syn_id, senses in target_senses.items()
     if all(senses.values())
@@ -149,8 +162,8 @@ for synset in synset_to_relations:
             if (
                 edge["target_id"] in target_senses
             ):  # add data only if we have senses for the target synset
-                edge["target_sense_src"] = target_senses[edge["target_id"]]["sense_src"]
-                edge["target_sense_en"] = target_senses[edge["target_id"]]["sense_en"]
+                edge["target_sense_src"] = clean(target_senses[edge["target_id"]]["sense_src"])
+                edge["target_sense_en"] = clean(target_senses[edge["target_id"]]["sense_en"])
         relation_to_edges[relation] = [
             edge for edge in relation_to_edges[relation] if "target_sense_en" in edge
         ]
@@ -198,7 +211,7 @@ for synset in synset_to_relations:
                     "<subject>", synset_to_senses[synset]["sense_en"]
                 )
                 edge["edit"] = sampled_syn
-                edge["edit"]["prompt"] = prompt
+                edge["edit"]["prompt_en"] = prompt
         relation_to_edges[relation] = [
             edge for edge in relation_to_edges[relation] if "edit" in edge
         ]
@@ -211,3 +224,5 @@ output = {
 with open(f"{output_folder}/{lang}.json", "w") as f:
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
+
+print(f"Done! Output saved to {output_folder}/{lang}.json")
