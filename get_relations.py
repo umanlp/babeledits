@@ -13,6 +13,7 @@ from babelnet.resources import BabelSynsetID
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+import re
 
 # Params
 parser = argparse.ArgumentParser(description="Process relations data.")
@@ -116,6 +117,24 @@ rel_df = rel_df.head(max_rel).reset_index(drop=True)
 print(rel_df)
 # Save all relations with their counts
 rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
+
+# %%
+
+
+def clean(sense):
+    # Replace underscores with spaces
+    sense = sense.replace("_", " ")
+
+    # Remove round brackets and everything in between
+    sense = re.sub(r"\(.*?\)", "", sense)
+
+    # Remove double quotes if they wrap the entire string
+    if sense.startswith('"') and sense.endswith('"'):
+        sense = sense[1:-1]
+
+    return sense
+
+
 # %%
 relations = rel_df["relation_name"].tolist()
 
@@ -125,6 +144,8 @@ with open(en_path, "rb") as f:
     data = pickle.load(f)
 
 subj_and_obj = defaultdict(dict)
+
+print(f"Loaded {len(data)} en synsets")
 random.shuffle(data)
 print("Relations:")
 for relation in relations:
@@ -134,7 +155,7 @@ for relation in relations:
     random.shuffle(data)
     syn_iter = iter(data)
     while not found:
-        count +=1
+        count += 1
         try:
             _, synset = next(syn_iter)
         except StopIteration:
@@ -144,14 +165,14 @@ for relation in relations:
             for edge in synset.outgoing_edges():
                 if edge.pointer.name == relation:
                     subject_sense = synset.main_sense(Language.EN)
-                    target_sense = bn.get_synset(
-                        BabelSynsetID(edge.target)
-                    ).main_sense(Language.EN)
+                    target_sense = bn.get_synset(BabelSynsetID(edge.target)).main_sense(
+                        Language.EN
+                    )
                     if all(
                         [subject_sense, target_sense]
                     ):  # if both senses are not None
-                        subject = subject_sense.full_lemma.replace("_", " ")
-                        object = target_sense.full_lemma.replace("_", " ")
+                        subject = clean(subject_sense.full_lemma)
+                        object = clean(target_sense.full_lemma)
                         subj_and_obj[relation]["subject"] = subject
                         subj_and_obj[relation]["object"] = object
                         found = True
@@ -167,7 +188,7 @@ rel_df["subject"] = rel_df["relation_name"].apply(
 rel_df["object"] = rel_df["relation_name"].apply(
     lambda x: subj_and_obj[x]["object"] if x in subj_and_obj else None
 )
-
+rel_df.to_csv(f"{dataset_path}/agg_relations_with_subj_obj.tsv", sep="\t", index=False)
 # %%
 # Let's give the data to GPT4 to generate questions to be post-edited
 
@@ -177,13 +198,9 @@ print(md)
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
-    max_tokens=None,
+    max_tokens=5000,
     timeout=None,
     max_retries=5,
-    # api_key="...",  # if you prefer to pass api key in directly instead of using env vars
-    # base_url="...",
-    # organization="...",
-    # other params...
 )
 
 prompt = ChatPromptTemplate.from_messages(
@@ -197,7 +214,8 @@ prompt = ChatPromptTemplate.from_messages(
             The output should be a tab separated file (tsv) with 5 columns, relation, count, subject, object and question. 
             When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
             do NOT include them in the question.
-            When producing the tsv, always keep the relation_name, count, subject, object columns untouched. Please operate on all the rows of the input.""",
+            When producing the tsv, always keep the relation_name, count, subject, object columns untouched. You simply need to create the question column. 
+            Please operate on ALL the rows of the input and simply return a tsv with the same number of rows as the input WITHOUT any extra text.""",
         ),
         (
             "human",
@@ -214,16 +232,18 @@ with get_openai_callback() as cb:
     print(cb)
     print(result.content)
 
-tsv_string = "\n".join(result.content.split('\n')[1:])
+
+# %%
 
 # Use StringIO to read the string as a file
+tsv_string = "\n".join(result.content.split("\n"))
 tsv_data = StringIO(tsv_string)
 
 # Create a pandas DataFrame
-df = pd.read_csv(tsv_data, sep='\t')
+df = pd.read_csv(tsv_data, sep="\t")
 
 # Display the DataFrame
 print(df)
 
-# Save df containint relation_name, subject, object, question
+# Save df containing relation_name, subject, object, question
 df.to_csv(f"{dataset_path}/agg_relations_with_prompts.tsv", sep="\t", index=False)
