@@ -112,14 +112,14 @@ rel_df = rel_df[~rel_df.relation_name.str.contains("%|#|~|@|%|\+")]
 rel_df = rel_df[
     ~rel_df.relation_name.str.endswith("ym") & ~rel_df.relation_name.str.endswith("YM")
 ]
-rel_df = rel_df.head(max_rel)
+rel_df = rel_df.head(max_rel).reset_index(drop=True)
 print(rel_df)
 # Save all relations with their counts
 rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
 # %%
 relations = rel_df["relation_name"].tolist()
 
-en_path = f"{synset_path}/it/it_syns.pkl"
+en_path = f"{synset_path}/en/en_syns.pkl"
 print(f"> Loading data for en from {en_path}")
 with open(en_path, "rb") as f:
     data = pickle.load(f)
@@ -167,7 +167,6 @@ rel_df["subject"] = rel_df["relation_name"].apply(
 rel_df["object"] = rel_df["relation_name"].apply(
     lambda x: subj_and_obj[x]["object"] if x in subj_and_obj else None
 )
-rel_df = rel_df.reset_index(drop=True)
 
 # %%
 # Let's give the data to GPT4 to generate questions to be post-edited
