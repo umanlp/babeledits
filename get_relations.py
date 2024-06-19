@@ -4,6 +4,7 @@ import pickle
 import random
 from collections import Counter, defaultdict
 from io import StringIO
+from pathlib import Path
 
 import babelnet as bn
 import pandas as pd
@@ -72,7 +73,6 @@ parser.add_argument(
     ],
     help="list of languages",
 )
-parser.add_argument("--lang", default="en", help="language")
 parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
@@ -80,14 +80,15 @@ parser.add_argument("--dataset_path", default="datasets/v2", help="dataset path"
 parser.add_argument("--synset_path", default="synsets/v2", help="synset path")
 
 
-args = parser.parse_args(args=[])
+args = parser.parse_args()
 
 langs = args.langs
-lang = args.lang
 max_rel = args.max_rel
 dataset_path = args.dataset_path
 synset_path = args.synset_path
 
+print(f"Dataset path: {dataset_path}")
+Path(dataset_path).mkdir(parents=True, exist_ok=True)
 # %%
 
 rel_counter = Counter()
@@ -112,7 +113,7 @@ rel_df = rel_df[
 ]
 print(rel_df)
 # Save all relations with their counts
-rel_df.to_csv(f"{dataset_path}/agg_relations_all.csv", index=False)
+rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
 # %%
 relations = rel_df["relation_name"].tolist()[:max_rel]
 

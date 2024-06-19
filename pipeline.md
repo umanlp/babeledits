@@ -28,6 +28,7 @@
             - for each language:
                 - We extract the synsets from Babelnet using the English Wikipedia title and save them to disk.
                 - We additionally save a frequency-sorted list of relations across all synsets.
+                - This takes circa 16 hours
     3. **Wikipedia Querying per language + aggregation** (LATER) 
         - Wikipedia Page Selection (``get_pages.py``):
             - Performed as above
