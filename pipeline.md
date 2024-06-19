@@ -17,10 +17,10 @@
     2. **Wikipedia Querying per language** [**CURRENTLY USED**]
         - Wikipedia Page Selection (``get_pages.py``):
             - We selected a suitable time frame to extract the per-page view count. Currently using year 2021 (Bloom was released in mid-2022).
-            - We can use the Wikipedia API to get the page view count for a certain language-specific wiki.
+            - We can use the Wikipedia API to get the page view count for a certain language-specific wiki, we save the top-20k by view count.
             - We save for each page all its inter-language links together with the page view count.
             - We keep only pages that have an English title and remove duplicates.
-            - We sort the results by number of inter-language links **filtered by selected languages** (to ensure higher degree of multi-parallelism) and keep the top-10000.
+            - We sort the results by number of inter-language links **filtered by selected languages** (to ensure higher degree of multi-parallelism) and keep the top-10k.
                 - TODO compute Spearman correlation between view count and number of **filtered** inter-language links
                 - One can create other versions of the datasets by sampling uniformly or taking tail entities
             - Time required: this takes 9 hours (532 mins), should be optimized (TODO)
@@ -45,7 +45,7 @@
 1. **Relation Aggregation** (`get_relations.py`): 
     - We aggregate the relations from all languages and sort them by frequency.
 2. **Prompt Generation** (`get_relations.py`): 
-    - For each relation, we gather an example subject-predicate-object triple from the synsets.
+    - For each relation in the top-200, we gather an example subject-predicate-object triple from the synsets.
     - We ask GPT-4 to generate a question for each relation.
     - EXAMPLE: EDUCATED_AT, Sushmita Sen, Mithibai College -->	Where was \<subject> educated?
 3. **Relation Selection**:

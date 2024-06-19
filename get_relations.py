@@ -76,8 +76,8 @@ parser.add_argument(
 parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
-parser.add_argument("--dataset_path", default="datasets/v2", help="dataset path")
-parser.add_argument("--synset_path", default="synsets/v2", help="synset path")
+parser.add_argument("--dataset_path", default="datasets/v3", help="dataset path")
+parser.add_argument("--synset_path", default="synsets/v3", help="synset path")
 
 
 args = parser.parse_args()
@@ -106,56 +106,56 @@ for lang in langs:
 rel_df = pd.DataFrame(rel_counter.items(), columns=["relation_name", "count"])
 rel_df.sort_values(by="count", ascending=False, inplace=True)
 
+
 # remove all relations whose name ends with ym or YM, or that have some symbol derived from wordnet
 rel_df = rel_df[~rel_df.relation_name.str.contains("%|#|~|@|%|\+")]
 rel_df = rel_df[
     ~rel_df.relation_name.str.endswith("ym") & ~rel_df.relation_name.str.endswith("YM")
 ]
+rel_df = rel_df.head(max_rel)
 print(rel_df)
 # Save all relations with their counts
 rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
 # %%
-relations = rel_df["relation_name"].tolist()[:max_rel]
+relations = rel_df["relation_name"].tolist()
 
-en_path = f"{synset_path}/en/en_syns.pkl"
+en_path = f"{synset_path}/it/it_syns.pkl"
 print(f"> Loading data for en from {en_path}")
 with open(en_path, "rb") as f:
     data = pickle.load(f)
 
-bad_relations = []
 subj_and_obj = defaultdict(dict)
+random.shuffle(data)
+print("Relations:")
 for relation in relations:
     print(relation, end=",")
+    count = 0
     found = False
+    random.shuffle(data)
+    syn_iter = iter(data)
     while not found:
-        count = 0
-        max_count = 2000
-        random.shuffle(data)
-        for _, synset in data:
-            count += 1
-            if count > max_count:
-                # print("Max count reached")
-                bad_relations.append(relation)
-                found = True
-                break
-            if synset is not None:
-                for edge in synset.outgoing_edges():
-                    if edge.pointer.name == relation:
-                        subject_sense = synset.main_sense(Language.EN)
-                        target_sense = bn.get_synset(
-                            BabelSynsetID(edge.target)
-                        ).main_sense(Language.EN)
-                        if all(
-                            [subject_sense, target_sense]
-                        ):  # if both senses are not None
-                            subject = subject_sense.full_lemma.replace("_", " ")
-                            object = target_sense.full_lemma.replace("_", " ")
-                            subj_and_obj[relation]["subject"] = subject
-                            subj_and_obj[relation]["object"] = object
-                            found = True
-                            break
-                if found:
-                    break
+        count +=1
+        try:
+            _, synset = next(syn_iter)
+        except StopIteration:
+            print("StopIteration")
+            break
+        if synset is not None:
+            for edge in synset.outgoing_edges():
+                if edge.pointer.name == relation:
+                    subject_sense = synset.main_sense(Language.EN)
+                    target_sense = bn.get_synset(
+                        BabelSynsetID(edge.target)
+                    ).main_sense(Language.EN)
+                    if all(
+                        [subject_sense, target_sense]
+                    ):  # if both senses are not None
+                        subject = subject_sense.full_lemma.replace("_", " ")
+                        object = target_sense.full_lemma.replace("_", " ")
+                        subj_and_obj[relation]["subject"] = subject
+                        subj_and_obj[relation]["object"] = object
+                        found = True
+                        break
 
 print(subj_and_obj)
 
@@ -167,18 +167,20 @@ rel_df["subject"] = rel_df["relation_name"].apply(
 rel_df["object"] = rel_df["relation_name"].apply(
     lambda x: subj_and_obj[x]["object"] if x in subj_and_obj else None
 )
+rel_df = rel_df.reset_index(drop=True)
 
 # %%
 # Let's give the data to GPT4 to generate questions to be post-edited
 
-md = rel_df.to_markdown()
+md = rel_df.to_markdown(index=False)
+print(md)
 
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
     max_tokens=None,
     timeout=None,
-    max_retries=2,
+    max_retries=5,
     # api_key="...",  # if you prefer to pass api key in directly instead of using env vars
     # base_url="...",
     # organization="...",

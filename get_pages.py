@@ -30,7 +30,9 @@ def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = [
-            executor.submit(get_top_pageviews, start_date + timedelta(days=i), lang, user_agent)
+            executor.submit(
+                get_top_pageviews, start_date + timedelta(days=i), lang, user_agent
+            )
             for i in range(delta.days + 1)
         ]
         for future in as_completed(futures):
@@ -46,14 +48,12 @@ def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
     )
 
     # we return double the top-k, since we will have to filter later
-    return sorted_pageviews[:top_k*2]
+    return sorted_pageviews[: top_k * 2]
 
 
 def get_top_pages(start_date, end_date, lang, top_k, save_path, user_agent):
     print(f"Downloading wikipedia data for {lang}")
-    top_pages = aggregate_pageviews(
-        start_date, end_date, lang, top_k, user_agent
-    )
+    top_pages = aggregate_pageviews(start_date, end_date, lang, top_k, user_agent)
     with open(save_path, "w") as f:
         json.dump(top_pages, f, indent=2)
 
@@ -75,6 +75,11 @@ def process_page(record, src_lang, user_agent):
             return title, views, None, None
 
         # Check for an English version of the page
+
+        if src_lang == "en":
+            langlinks = page_src.langlinks
+            return title, views, title, sorted([src_lang] + list(langlinks.keys()))
+
         try:
             langlinks = page_src.langlinks
             english_title = langlinks["en"].title if "en" in langlinks else None
@@ -95,7 +100,8 @@ def process_multiple_pages(records, lang, user_agent):
     with ThreadPoolExecutor(max_workers=10) as executor:
         # Submit tasks to the executor
         future_to_title = [
-            executor.submit(process_page, record, lang, user_agent) for record in records
+            executor.submit(process_page, record, lang, user_agent)
+            for record in records
         ]
 
         # Collect the results as they complete
@@ -107,7 +113,6 @@ def process_multiple_pages(records, lang, user_agent):
         .drop_duplicates(subset=["English Title"])
         .dropna()
     )
-    # results["Languages"] = results["Languages"].apply(ast.literal_eval)
     results["Languages filtered"] = results["Languages"].apply(
         lambda x: list(set(x) & set(langs))
     )
@@ -185,23 +190,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--start_date",
         type=str,
-        default="2022-01-01",
+        default="2021-01-01",
         help="The start date in YYYY-MM-DD format",
     )
     parser.add_argument(
         "--end_date",
         type=str,
-        default="2022-12-31",
+        default="2021-12-31",
         help="The end date in YYYY-MM-DD format",
     )
     parser.add_argument(
         "--top_k", type=int, default=10000, help="The number of top pages to retrieve"
     )
-    parser.add_argument("--year", type=int, default=2022, help="The year to process")
+    parser.add_argument("--year", type=int, default=2021, help="The year to process")
     parser.add_argument(
         "--save_path",
         type=str,
-        default="wikipedia/v2",
+        default="wikipedia_data/v3",
         help="The main path to save the data",
     )
     parser.add_argument(
@@ -246,6 +251,6 @@ if __name__ == "__main__":
                     start_date, end_date, lang, top_k, save_path_wiki, user_agent
                 )
             records = sienna.load(save_path_wiki)
-            print(f"Processing {len(records)} pages for {lang}")
+            print(f"Post-processing {len(records)} pages for {lang}")
             df = process_multiple_pages(records, lang, user_agent).iloc[:top_k]
             df.to_csv(save_path_csv, index=False, encoding="utf-8")
