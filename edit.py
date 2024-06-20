@@ -23,7 +23,7 @@ def read_data(json_path, lang):
         subj_count = 0
         for relation_type, relations in value['relations'].items():
             for relation in relations:
-                prompt_key = 'prompt' #f'prompt_{lang}'
+                prompt_key = f'prompt_{lang}'
                 
                 if 'edit' in relation:
                     if prompt_key in relation['edit']:
