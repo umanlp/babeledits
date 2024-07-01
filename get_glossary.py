@@ -22,6 +22,7 @@ for lang in langs:
     f = sienna.load(f"{dataset_dir}/{lang}.json")
     subj_transl[lang] = [(syn_id, data["subject_senses"]["sense_src"], data["subject_senses"]["sense_en"]) for syn_id, data in f.items()]
     subj_transl[lang] = pd.DataFrame(subj_transl[lang], columns=["synset_id", f"{lang}", "en"])
+    subj_transl[lang].drop_duplicates().drop(columns="synset_id").to_csv(f"{output_dir}/glossary_en-{lang}.csv", index=False, na_rep="", encoding='utf-8')
 
 # %%
 glossary = None

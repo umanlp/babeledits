@@ -1,3 +1,4 @@
+# %%
 from google.cloud import translate
 
 project_id = "babeledits-trial"
@@ -65,3 +66,6 @@ def delete_all(glossaries):
         delete_glossary(project_id, glossary)
 
 print(list_glossaries(project_id))
+# delete_all(list_glossaries(project_id))
+# print(list_glossaries(project_id))
+# %%
