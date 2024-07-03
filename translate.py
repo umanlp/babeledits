@@ -7,6 +7,7 @@ import pandas as pd
 from pathlib import Path
 import json
 import argparse
+from utils import add_translation
 from google.cloud import storage
 
 # from google.cloud import blob
@@ -25,24 +26,6 @@ def extract(data, search_key):
         for item in data:
             output.extend(extract(item, search_key))
     return output
-
-
-def add_translation(data, transl_it, search_key, translation_key):
-    if isinstance(data, dict):
-        keys = list(data.keys())
-        for key in keys:
-            value = data[key]
-            if key == search_key:
-                try:
-                    next_transl = next(transl_it)
-                    data[translation_key] = next_transl
-                except StopIteration:
-                    return
-            else:
-                add_translation(value, transl_it, search_key, translation_key)
-    elif isinstance(data, list):
-        for item in data:
-            add_translation(item, transl_it, search_key, translation_key)
 
 
 def translate_text_with_glossary(
@@ -205,7 +188,6 @@ tgt_blob_path = args.tgt_blob_path + f"/{tgt_lang}/"
 data = sienna.load(dataset_path)
 print(f"Reading dataset from {dataset_path}...")
 prompts = extract(data, search_key)
-prompts = prompts[:5000]
 
 # Convert prompts to tsv, upload to GCS
 df = pd.DataFrame(prompts, columns=["prompt"])
@@ -289,6 +271,8 @@ output_df = output_df.sort_values("req_id", ascending=True)
 
 # Get glossary translation if present, otherwise use the translation without glossary
 translations = output_df.iloc[:, -1].fillna(output_df.iloc[:, -2]).tolist()
+print("Number of prompts:", len(prompts))
+print("Number of prompts translated:", len(translations))
 # %%
 
 print(f"Adding translations to the dataset in {output_dir}...")
