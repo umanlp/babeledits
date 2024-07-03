@@ -4,11 +4,11 @@ import json
 import re
 import sys
 sys.path.append('EasyEdit')
-import easyeditor
-from easyeditor import BaseEditor
-from easyeditor import ROMEHyperParams
+import EasyEdit.easyeditor
+from EasyEdit.easyeditor import BaseEditor
+from EasyEdit.easyeditor import ROMEHyperParams
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "7" # SELECT YOUR GPU HERE
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" # SELECT YOUR GPU HERE
 
 def read_data(json_path, lang):
     with open(json_path, 'r', encoding='utf-8') as file:
@@ -23,7 +23,7 @@ def read_data(json_path, lang):
         subj_count = 0
         for relation_type, relations in value['relations'].items():
             for relation in relations:
-                prompt_key = f'prompt_{lang}'
+                prompt_key = f'prompt_{lang}' if lang != "en" else "prompt"
                 
                 if 'edit' in relation:
                     if prompt_key in relation['edit']:
@@ -53,22 +53,25 @@ def clean(sense):
     
     return sense
 
+if __name__ == "__main__":
+    subjects, prompts, ground_truth, targets = read_data('datasets/v2/it.json', 'en')
+    subjects = [clean(x) for x in subjects]
+    ground_truth = [clean(x) for x in ground_truth]
+    targets = [clean(x) for x in targets]
+    # %%
+    hparams=ROMEHyperParams.from_hparams('hparams/ROME/bloom.yaml')
+    hparams.device = 0
+    editor=BaseEditor.from_hparams(hparams)
+    max_edits = 10
 
-subjects, prompts, ground_truth, targets = read_data('datasets/v2/it.json', 'en')
-subjects = [clean(x) for x in subjects]
-ground_truth = [clean(x) for x in ground_truth]
-targets = [clean(x) for x in targets]
-# %%
-hparams=ROMEHyperParams.from_hparams('EasyEdit/hparams/ROME/llama-7b.yaml')
-hparams.device = 0
-editor=BaseEditor.from_hparams(hparams)
-max_edits = 10
-metrics, edited_model, _ = editor.edit(
-    prompts=prompts[:max_edits],
-    ground_truth=ground_truth[:max_edits],
-    target_new=targets[:max_edits],
-    subject=subjects[:max_edits],
-    keep_original_weight=False
-)
-print(metrics)
-# %%
+    print(len(prompts), len(targets))
+
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts[:max_edits],
+        ground_truth=ground_truth[:max_edits],
+        target_new=targets[:max_edits],
+        subject=subjects[:max_edits],
+        keep_original_weight=False
+    )
+    print(metrics)
+    # %%
