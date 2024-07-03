@@ -1,3 +1,6 @@
 synsets
 wikidata
 synsets2
+.vscode/launch.json
+test.py
+__pycache__/
