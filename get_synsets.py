@@ -71,14 +71,14 @@ if __name__ == "__main__":
         ],
         help="List of languages",
     )
-    parser.add_argument("--year", type=int, default=2022, help="The year to process")
+    parser.add_argument("--year", type=int, default=2021, help="The year to process")
     parser.add_argument(
-        "--save_dir", type=str, default="synsets/v2", help="Save dir of the synsets"
+        "--save_dir", type=str, default="synsets/v3", help="Save dir of the synsets"
     )
     parser.add_argument(
         "--data_path",
         type=str,
-        default="wikipedia_stats/processed_data2",
+        default="wikipedia_data/v3/processed",
         help="Path to the Wikipedia processed data",
     )
     args = parser.parse_args()
