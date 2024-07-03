@@ -4,9 +4,9 @@ import json
 import re
 import sys
 sys.path.append('EasyEdit')
-import easyeditor
-from easyeditor import BaseEditor
-from easyeditor import ROMEHyperParams
+import EasyEdit.easyeditor
+from EasyEdit.easyeditor import BaseEditor
+from EasyEdit.easyeditor import ROMEHyperParams
 import os
 from utils import read_data
 os.environ["CUDA_VISIBLE_DEVICES"] = "7" # SELECT YOUR GPU HERE

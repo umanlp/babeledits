@@ -4,3 +4,5 @@ synsets2
 .vscode/launch.json
 test.py
 __pycache__/
+logs/
+.vscode/
