@@ -124,7 +124,7 @@ if __name__ == "__main__":
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
     # Write results to pickle file
-    print(f"> Writing synsets to {save_dir / "all_langs_syns.pkl"}")
+    print(f"> Writing synsets to {save_dir / 'all_langs_syns.pkl'}")
     with open(save_dir / "all_langs_syns.pkl", "wb") as f:
         pickle.dump(results, f)
 
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     counter = Counter(flattened_edges)
     sorted_relations = counter.most_common()
     
-    print(f"> Writing synsets to {save_dir / "all_langs_relations.txt"}")
+    print(f"> Writing synsets to {save_dir / 'all_langs_relations.txt'}")
     with open(save_dir / "all_langs_relations.txt", "w") as file:
         for relation, count in sorted_relations:
             file.write(f"{relation}:{count}\n")
