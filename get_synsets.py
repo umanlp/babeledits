@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pickle
 import time
 
@@ -10,6 +11,16 @@ from babelnet.language import Language
 from babelnet.resources import WikipediaID
 from collections import Counter
 from itertools import chain
+
+
+def check_langs(synset, babel_langs):
+    return babel_langs.issubset(set(synset.languages))
+
+
+def all_true(synset):
+    if isinstance(synset, bn.BabelSynset):
+        return True
+
 
 if __name__ == "__main__":
     ## Params
@@ -36,6 +47,7 @@ if __name__ == "__main__":
             "he",
             "hi",
             "ht",
+            "hr",
             "hu",
             "id",
             "it",
@@ -65,7 +77,6 @@ if __name__ == "__main__":
             "uk",
             "ur",
             "vi",
-            "wo",
             "yo",
             "zh",
         ],
@@ -87,47 +98,58 @@ if __name__ == "__main__":
     year = args.year
 
     lang_to_df = {}
+    babel_langs = set([Language.from_iso(lang) for lang in langs])
+
+    wiki_ids = []
     for lang in langs:
-        t_start = time.time()
-        save_dir = f"{args.save_dir}/{lang}"
-        save_path = f"{args.data_path}/{lang}_{year}_df.csv"
-        df = pd.read_csv(save_path).dropna()
+        data_path = f"{args.data_path}/{lang}_{year}_df.csv"
+        df = pd.read_csv(data_path).dropna()
+        wiki_ids.extend([WikipediaID(title, Language.EN) for title in df["English Title"]])
+    
+    t_synsets_start = time.time()
+    synsets = [bn.get_synset(w) for w in wiki_ids]
+    t_synsets_end = time.time()
+    print(
+        f"> Time taken to get synsets: {(t_synsets_end - t_synsets_start)/60} minutes"
+    )
+    results = [
+        (title, synset) for title, synset in zip(df["English Title"], synsets)
+    ]
+    results = [
+        (title, synset)
+        for title, synset in results
+        if synset is not None and check_langs(synset, babel_langs)
+    ]
+    print(f"> {len(results)} (filtered) synsets found.")
+    save_dir = Path(args.save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    # Write results to pickle file
+    print(f"> Writing synsets to {save_dir / "all_langs_syns.pkl"}")
+    with open(save_dir / "all_langs_syns.pkl", "wb") as f:
+        pickle.dump(results, f)
 
-        wiki_ids = [WikipediaID(title, Language.EN) for title in df["English Title"]]
-        results = []
+    wiki_save_dir = Path(args.data_path).parent / "filtered"
+    wiki_save_dir.mkdir(parents=True, exist_ok=True)
+    titles = [x[0] for x in results]
 
-        print(f"> Getting synsets for {lang}")
-        synsets = bn.get_synsets(*wiki_ids)
-        results = [
-            (title, synset) for title, synset in zip(df["English Title"], synsets)
-        ]
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        # Write results to pickle file
-        print(f"> Writing synsets for {lang} to {save_dir}/{lang}_syns.pkl")
-        with open(f"{save_dir}/{lang}_syns.pkl", "wb") as f:
-            pickle.dump(results, f)
-
-        filtered_synsets = [
-            (title, synset) for title, synset in results if synset is not None
-        ]
-        edges = [
-            [e.pointer.name for e in synset.outgoing_edges()]
-            for _, synset in filtered_synsets
-        ]
-
-        flattened_edges = list(chain.from_iterable(edges))
-        counter = Counter(flattened_edges)
-        sorted_relations = counter.most_common()
+    for lang in langs:
         print(
-            f"> Writing relations for {lang} to {save_dir}/{lang}_relations.txt",
-            end="\n\n",
+            f"> Writing filtered wikipedia pages to {wiki_save_dir}/{lang}_{year}_df.csv"
         )
-        with open(f"{save_dir}/{lang}_relations.txt", "w") as file:
-            for relation, count in sorted_relations:
-                file.write(f"{relation}:{count}\n")
+        filtered_df = df[
+            df["English Title"].isin(titles)
+        ].reset_index(drop=True)
+        filtered_df.to_csv(f"{wiki_save_dir}/{lang}_{year}_df.csv", index=False)
 
-        print(
-            f"Time taken for {lang}: {(time.time()-t_start)/60} minutes for {len(synsets)} synsets"
-        )
+    edges = [
+        [e.pointer.name for e in synset.outgoing_edges()] for _, synset in results
+    ]
+
+    flattened_edges = list(chain.from_iterable(edges))
+    counter = Counter(flattened_edges)
+    sorted_relations = counter.most_common()
+    
+    print(f"> Writing synsets to {save_dir / "all_langs_relations.txt"}")
+    with open(save_dir / "all_langs_relations.txt", "w") as file:
+        for relation, count in sorted_relations:
+            file.write(f"{relation}:{count}\n")
