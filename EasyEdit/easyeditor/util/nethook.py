@@ -369,6 +369,11 @@ def get_parameter(model, name):
     for n, p in model.named_parameters():
         if n == name:
             return p
+    # if lm_head is not registered, we assume it is the transpose of word
+    # embeddings and is stored but not registered (e.g. Bloom)
+    # https://huggingface.co/bigscience/bloom-7b1/discussions/7
+    if name == "lm_head.weight":
+        return model.lm_head.weight
     raise LookupError(name)
 
 
