@@ -34,7 +34,7 @@ def load_translations(translation_path):
     return langs,output_df
 
 data = sienna.load(dataset_path)
-langs, output_df = load_translations(translation_path, dataset_path)
+langs, output_df = load_translations(translation_path)
 # %%
 
 print(f"Adding translations to the dataset in {output_dir}...")
