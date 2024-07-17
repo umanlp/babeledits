@@ -4,7 +4,6 @@ import json
 import sienna
 import os
 import datetime
-import ast
 import requests
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -48,7 +47,7 @@ def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
     )
 
     # we return double the top-k, since we will have to filter later
-    return sorted_pageviews[: top_k * 2]
+    return sorted_pageviews[: top_k]
 
 
 def get_top_pages(start_date, end_date, lang, top_k, save_path, user_agent):
@@ -113,16 +112,34 @@ def process_multiple_pages(records, lang, user_agent):
         .drop_duplicates(subset=["English Title"])
         .dropna()
     )
-    results["Languages filtered"] = results["Languages"].apply(
-        lambda x: list(set(x) & set(langs))
-    )
-    results["Selected Language Count"] = results["Languages filtered"].apply(
-        lambda x: len(x)
-    )
-    results = results.dropna()
-    results = results.sort_values(
-        by="Languages filtered", key=lambda x: x.str.len(), ascending=False
-    )
+    # results["Languages filtered"] = results["Languages"].apply(
+        # lambda x: list(set(x) & set(langs))
+    # )
+    # results["Selected Language Count"] = results["Languages filtered"].apply(
+        # lambda x: len(x)
+    # )
+    # results = results.dropna()
+    # results = results.sort_values(
+        # by="Languages filtered", key=lambda x: x.str.len(), ascending=False
+    # )
+    titles = [str(x) for x in results["English Title"]]
+    from get_synsets import check_langs
+    import babelnet as bn
+    from babelnet import Language
+    from babelnet.resources import WikipediaID
+
+    babel_langs = set([Language.from_iso(lang) for lang in langs])
+    wiki_ids = [WikipediaID(title, Language.EN) for title in titles]
+    print(f"Checking Babelnet presence for {len(titles)} pages")
+    synsets = [bn.get_synset(w) for w in wiki_ids]
+    selected_pages = [
+        title
+        for title, synset in zip(titles, synsets)
+        if synset is not None and check_langs(synset, babel_langs)
+    ]
+    mask = results["English Title"].isin(selected_pages)
+    print(f"Num Wikipedia pages {len(titles)}, Num selected pages {mask.sum()}")
+    results = results[results["English Title"].isin(selected_pages)]
     return results
 
 
@@ -217,6 +234,23 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    import logging
+    import sys
+
+    file_handler = logging.FileHandler(filename='logs/get_pages.log')
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+    handlers = [file_handler, stdout_handler]
+
+    logging.basicConfig(
+    level=logging.INFO, 
+    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
+    handlers=handlers
+    )
+
+    logger = logging.getLogger("my logger")
+    logging.getLogger('wikipediaapi').setLevel(logging.WARN)
+    print = logger.info
+    
     print(args.user_agent)
     year = args.year
     start_date = datetime.strptime(args.start_date, "%Y-%m-%d").date()
