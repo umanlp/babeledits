@@ -81,6 +81,7 @@ if __name__ == "__main__":
     # Extract languages from the samples
     sample_langs = [sample[1] for sample in samples]
 
+    # TODO if not enough samples are sampled, continue sampling until we have enough samples
     # Plotting the histogram
     plt.figure(figsize=(20, 8))  # Set the figure size to 20x8 inches
     bars = plt.hist(sample_langs, bins=len(sorted_langs), edgecolor="black")

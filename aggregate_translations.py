@@ -19,7 +19,7 @@ translation_path = args.translation_path
 dataset_path = args.dataset_path
 output_dir = args.output_dir
 
-def load_translations(translation_path, dataset_path):
+def load_translations(translation_path):
     translation_files = [x for x in os.listdir(translation_path) if x.endswith(".tsv")]
     langs = [x.split(".")[0][-2:] for x in translation_files]
 
