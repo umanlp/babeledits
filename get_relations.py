@@ -13,8 +13,9 @@ from babelnet.resources import BabelSynsetID
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-import re
+from utils import clean
 
+# %%
 # Params
 parser = argparse.ArgumentParser(description="Process relations data.")
 parser.add_argument(
@@ -39,6 +40,7 @@ parser.add_argument(
         "he",
         "hi",
         "ht",
+        "hr",
         "hu",
         "id",
         "it",
@@ -68,7 +70,6 @@ parser.add_argument(
         "uk",
         "ur",
         "vi",
-        "wo",
         "yo",
         "zh",
     ],
@@ -77,13 +78,14 @@ parser.add_argument(
 parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
-parser.add_argument("--dataset_path", default="datasets/v3", help="dataset path")
-parser.add_argument("--synset_path", default="synsets/v3", help="synset path")
+parser.add_argument("--dataset_path", default="datasets/v4", help="dataset path")
+parser.add_argument("--synset_path", default="synsets/v4", help="synset path")
 
 
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 
 langs = args.langs
+print(f"Languages: {len(langs)}")
 max_rel = args.max_rel
 dataset_path = args.dataset_path
 synset_path = args.synset_path
@@ -93,14 +95,12 @@ Path(dataset_path).mkdir(parents=True, exist_ok=True)
 # %%
 
 rel_counter = Counter()
-for lang in langs:
-    rel_path = f"{synset_path}/{lang}/{lang}_relations.txt"
-    print(f"> Loading data for {lang} from {rel_path}")
-    with open(rel_path, "r") as f:
-        for line in f:
-            relation, count = line.strip().split(":")
-            rel_counter[relation] += int(count)
-    print(f"> Data for {lang} was loaded")
+
+rel_path = f"{synset_path}/all_langs_relations.txt"
+with open(rel_path, "r") as f:
+    for line in f:
+        relation, count = line.strip().split(":")
+        rel_counter[relation] += int(count)
 
 # %%
 
@@ -118,29 +118,11 @@ print(rel_df)
 # Save all relations with their counts
 rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
 
-# %%
-
-
-def clean(sense):
-    # Replace underscores with spaces
-    sense = sense.replace("_", " ")
-
-    # Remove round brackets and everything in between
-    sense = re.sub(r"\(.*?\)", "", sense)
-
-    # Remove double quotes if they wrap the entire string
-    if sense.startswith('"') and sense.endswith('"'):
-        sense = sense[1:-1]
-
-    return sense
-
 
 # %%
 relations = rel_df["relation_name"].tolist()
 
-en_path = f"{synset_path}/en/en_syns.pkl"
-print(f"> Loading data for en from {en_path}")
-with open(en_path, "rb") as f:
+with open(f"{synset_path}/all_langs_syns.pkl", "rb") as f:
     data = pickle.load(f)
 
 subj_and_obj = defaultdict(dict)
@@ -198,9 +180,9 @@ print(md)
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
-    max_tokens=5000,
     timeout=None,
     max_retries=5,
+    max_tokens=None
 )
 
 prompt = ChatPromptTemplate.from_messages(
@@ -210,12 +192,12 @@ prompt = ChatPromptTemplate.from_messages(
             """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
             (for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
             In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
-            The input is a markdown table with 4 columns, relation, count, subject, object. 
-            The output should be a tab separated file (tsv) with 5 columns, relation, count, subject, object and question. 
+            Additionally, create an additional version of the question by rephrasing.
+            The input is a markdown table with 4 columns, relation_name, count, subject, object. 
             When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
             do NOT include them in the question.
-            When producing the tsv, always keep the relation_name, count, subject, object columns untouched. You simply need to create the question column. 
-            Please operate on ALL the rows of the input and simply return a tsv with the same number of rows as the input WITHOUT any extra text.""",
+            You simply need to output the result in tsv format with 6 columns: relation_name, count, subject, object, question and rephrase. 
+            For all the columns except question and rephrase, simply copy the values from the input tsv."""
         ),
         (
             "human",
@@ -236,11 +218,11 @@ with get_openai_callback() as cb:
 # %%
 
 # Use StringIO to read the string as a file
-tsv_string = "\n".join(result.content.split("\n"))
+tsv_string = "\n".join(result.content.split("\n")[1:])
 tsv_data = StringIO(tsv_string)
 
 # Create a pandas DataFrame
-df = pd.read_csv(tsv_data, sep="\t")
+df = pd.read_csv(tsv_data, sep="\t").dropna()
 
 # Display the DataFrame
 print(df)
