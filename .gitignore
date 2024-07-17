@@ -6,3 +6,9 @@ test.py
 __pycache__/
 logs/
 .vscode/
+hey.py
+translate_senses.py
+speed_test.py
+rome.py
+request.sh
+request.json
