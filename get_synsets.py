@@ -89,10 +89,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_path",
         type=str,
-        default="wikipedia_data/v3/processed",
-        help="Path to the Wikipedia processed data",
+        default="wikipedia_data/v4/all_langs.csv",
+        help="Path to the Wikipedia processed csv with all languages",
     )
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     langs = args.langs
     year = args.year
@@ -100,12 +100,10 @@ if __name__ == "__main__":
     lang_to_df = {}
     babel_langs = set([Language.from_iso(lang) for lang in langs])
 
-    wiki_ids = []
-    for lang in langs:
-        data_path = f"{args.data_path}/{lang}_{year}_df.csv"
-        df = pd.read_csv(data_path).dropna()
-        wiki_ids.extend([WikipediaID(title, Language.EN) for title in df["English Title"]])
-    
+    df = pd.read_csv(args.data_path).dropna()
+    wiki_ids = [WikipediaID(title, Language.EN) for title in df["English Title"]]
+
+    print("Starting synset extraction")
     t_synsets_start = time.time()
     synsets = [bn.get_synset(w) for w in wiki_ids]
     t_synsets_end = time.time()
@@ -113,12 +111,13 @@ if __name__ == "__main__":
         f"> Time taken to get synsets: {(t_synsets_end - t_synsets_start)/60} minutes"
     )
     results = [
-        (title, synset) for title, synset in zip(df["English Title"], synsets)
-    ]
-    results = [
         (title, synset)
-        for title, synset in results
-        if synset is not None and check_langs(synset, babel_langs)
+        for title, synset in zip(df["English Title"], synsets)
+        if synset is not None
+    ]
+    print(f"> {len(results)} not-null synsets found.")
+    results = [
+        (title, synset) for title, synset in results if check_langs(synset, babel_langs)
     ]
     print(f"> {len(results)} (filtered) synsets found.")
     save_dir = Path(args.save_dir)
@@ -136,20 +135,16 @@ if __name__ == "__main__":
         print(
             f"> Writing filtered wikipedia pages to {wiki_save_dir}/{lang}_{year}_df.csv"
         )
-        filtered_df = df[
-            df["English Title"].isin(titles)
-        ].reset_index(drop=True)
+        filtered_df = df[df["English Title"].isin(titles)].reset_index(drop=True)
         filtered_df.to_csv(f"{wiki_save_dir}/{lang}_{year}_df.csv", index=False)
 
-    edges = [
-        [e.pointer.name for e in synset.outgoing_edges()] for _, synset in results
-    ]
+    edges = [[e.pointer.name for e in synset.outgoing_edges()] for _, synset in results]
 
     flattened_edges = list(chain.from_iterable(edges))
     counter = Counter(flattened_edges)
     sorted_relations = counter.most_common()
-    
-    print(f"> Writing synsets to {save_dir / 'all_langs_relations.txt'}")
+
+    print(f"> Writing relations to {save_dir / 'all_langs_relations.txt'}")
     with open(save_dir / "all_langs_relations.txt", "w") as file:
         for relation, count in sorted_relations:
             file.write(f"{relation}:{count}\n")
