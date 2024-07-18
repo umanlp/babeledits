@@ -76,7 +76,7 @@ if __name__ == "__main__":
         ground_truth=ground_truth[:max_edits],
         target_new=targets[:max_edits],
         subject=subjects[:max_edits],
-        train_ds=train_ds
+        train_ds=train_ds,
         sequential_edit=False,
         keep_original_weight=True,
     )
