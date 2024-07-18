@@ -8,3 +8,15 @@ logs/
 .vscode/
 stats/
 results/
+hey.py
+translate_senses.py
+speed_test.py
+rome.py
+request.sh
+request.json
+mistakes/ja_mistakes.csv
+compare_py_files.sh
+cmd.txt
+check_op.sh
+babelnet_conf2.yml
+analyze_translations.py

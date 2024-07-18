@@ -3,26 +3,9 @@ import argparse
 from google.cloud import storage
 from google.cloud import translate_v3 as translate
 import pandas as pd
-from pathlib import Path
+from utils import upload_to_gcs
 
 # Uploading the CSV file to a Google Cloud Storage bucket
-def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
-    """Uploads a file to the bucket."""
-    # Initialize a storage client
-    storage_client = storage.Client()
-
-    # Get the bucket
-    bucket = storage_client.bucket(bucket_name)
-
-    # Create a blob object from the file path
-    blob = bucket.blob(destination_blob_name)
-
-    # Upload the file to GCS
-    blob.upload_from_filename(source_file_name)
-
-    print(
-        f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}."
-    )
 
 
 def create_glossary(
@@ -37,12 +20,15 @@ def create_glossary(
     short phrases (usually fewer than five words).
     https://cloud.google.com/translate/docs/advanced/glossary#format-glossary
     """
-    print(f"Creating glossary {glossary_id} for project {project_id}. Input URI: {input_uri}")
+    print(
+        f"Creating glossary {glossary_id} for project {project_id}. Input URI: {input_uri}"
+    )
     client = translate.TranslationServiceClient()
 
     # Supported language codes: https://cloud.google.com/translate/docs/languages
     location = "us-central1"  # The location of the glossary
 
+    print(f"Using location {location}")
     name = client.glossary_path(project_id, location, glossary_id)
     language_codes_set = translate.types.Glossary.LanguageCodesSet(
         language_codes=languages
@@ -60,7 +46,7 @@ def create_glossary(
     parent = f"projects/{project_id}/locations/{location}"
     # glossary is a custom dictionary Translation API uses
     # to translate the domain-specific terminology.
-    operation = client.create_glossary(parent=parent, glossary=glossary, timeout=6000)
+    operation = client.create_glossary(parent=parent, glossary=glossary)
 
     result = operation.result(timeout)
     print(f"Created: {result.name}")
@@ -71,46 +57,55 @@ def create_glossary(
 
 if __name__ == "__main__":
     # Create the argument parser
-    parser = argparse.ArgumentParser(description="Upload a file to Google Cloud Storage")
-    
+    parser = argparse.ArgumentParser(
+        description="Upload a file to Google Cloud Storage"
+    )
+
     # Add the command line arguments with default values
     parser.add_argument(
         "--bucket_name", default="glossary-babeledits", help="Name of the bucket"
     )
     parser.add_argument(
         "--source_file_name",
-        default="./translation/glossaries/glossary_no_id.csv",
+        default="./translation/glossaries/v4/glossary_no_id.csv",
         help="Path to the source file",
     )
     parser.add_argument(
         "--destination_blob_name",
-        default="glossary_no_id.csv",
+        default="glossaries/v4/glossary_no_id_v4.csv",
         help="Name of the destination blob",
     )
     parser.add_argument("--project_id", default="babeledits-trial", help="Project ID")
-    parser.add_argument("--glossary_id", default="it_fr_v3", help="Glossary ID")
-    
+    parser.add_argument("--glossary_id", default="multi_v4", help="Glossary ID")
+
     args, _ = parser.parse_known_args()
-    
+
     # Assign the values to variables
     bucket_name = args.bucket_name
     source_file_name = args.source_file_name
     destination_blob_name = args.destination_blob_name
     project_id = args.project_id
     glossary_id = args.glossary_id
-    
-    languages = pd.read_csv(source_file_name).columns
-    print(languages)
-    
+
+    print(args)
+    print(f"Loading the glossary from {source_file_name}")
+    glossary_df = pd.read_csv(source_file_name)
+    languages = glossary_df.columns
+    print(f"Languages: {languages}")
+    print(f"Glossary contains {len(glossary_df)} synsets")
+    print(glossary_df.head())
+
     # Upload the file
     upload_to_gcs(bucket_name, source_file_name, destination_blob_name)
-    
+
     # Create the glossary
     input_uri = f"gs://{bucket_name}/{destination_blob_name}"
     create_glossary(
         project_id,
         input_uri,
         glossary_id,
-        timeout=5000,
+        timeout=100000,
         languages=languages,
     )
+
+# %%

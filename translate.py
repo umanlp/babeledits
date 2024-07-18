@@ -7,25 +7,11 @@ import pandas as pd
 from pathlib import Path
 import json
 import argparse
-from utils import add_translation
+from utils import add_translation, download_blob, extract, folder_exists, delete_folder
 from google.cloud import storage
 
 # from google.cloud import blob
 import urllib.parse
-
-
-def extract(data, search_key):
-    output = []
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key == search_key:
-                output.append(value)
-            else:
-                output.extend(extract(value, search_key))
-    elif isinstance(data, list):
-        for item in data:
-            output.extend(extract(item, search_key))
-    return output
 
 
 def translate_text_with_glossary(
@@ -65,12 +51,12 @@ def translate_text_with_glossary(
     )
 
     glossary_config = translate.TranslateTextGlossaryConfig(glossary=glossary)
-    glossaries = {tgt_lang: glossary_config}  # target lang as key
+    glossaries = {tgt: glossary_config for tgt in tgt_langs}  # target lang as key
 
     # Supported language codes: https://cloud.google.com/translate/docs/languages
     operation = client.batch_translate_text(
         request={
-            "target_language_codes": [target_language_code],
+            "target_language_codes": target_language_code,
             "source_language_code": source_language_code,
             "parent": parent,
             "input_configs": [input_configs_element],
@@ -101,35 +87,9 @@ def translate_text_with_glossary(
     return response, file_names
 
 
-def folder_exists(uri):
-    parsed_url = urllib.parse.urlparse(uri)
-    bucket_name = parsed_url.netloc
-    folder_name = parsed_url.path.lstrip("/")
-
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-
-    blobs = list(client.list_blobs(bucket_name, prefix=folder_name))
-    return len(blobs) > 0
-
-
-def delete_folder(uri):
-    parsed_url = urllib.parse.urlparse(uri)
-    bucket_name = parsed_url.netloc
-    folder_name = parsed_url.path.lstrip("/")
-
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-
-    blobs = client.list_blobs(bucket_name, prefix=folder_name)
-    for blob in blobs:
-        blob.delete()
-        print(f"Blob {blob.name} in bucket {bucket_name} deleted.")
-
-
 parser = argparse.ArgumentParser(description="Translate text using a glossary")
 parser.add_argument(
-    "--dataset_path", default="datasets/v3/it.json", help="Path to the dataset"
+    "--dataset_path", default="datasets/v4/all_langs.json", help="Path to the dataset"
 )
 parser.add_argument(
     "--project_id", default="babeledits-trial", help="ID of the GCP project"
@@ -146,22 +106,24 @@ parser.add_argument(
 )
 parser.add_argument(
     "--src_blob_path",
-    default="translations/v3",
+    default="translations/v4",
     help="Name of the path where the source files are stored",
 )
 parser.add_argument(
     "--tgt_blob_path",
-    default="translations/v3",
+    default="translations/v4/",
     help="Name of the path where the translations will stored",
 )
-parser.add_argument("--glossary_id", default="it_en_v1", help="ID of the glossary")
+parser.add_argument("--glossary_id", default="multi_v4", help="ID of the glossary")
 parser.add_argument(
     "--search_key", default="prompt_en", help="Key to search in the dataset"
 )
 parser.add_argument("--src_lang", default="en", help="Source language code")
-parser.add_argument("--tgt_lang", default="it", help="Target language code")
 parser.add_argument(
-    "--output_dir", default="datasets/v3/translated", help="Output directory"
+    "--tgt_langs", default=["it", "de", "fr"], nargs="+", help="Target language code(s)"
+)
+parser.add_argument(
+    "--output_dir", default="datasets/v4/translated", help="Output directory"
 )
 parser.add_argument(
     "-d",
@@ -177,13 +139,15 @@ project_id = args.project_id
 glossary_id = args.glossary_id
 search_key = args.search_key
 src_lang = args.src_lang
-tgt_lang = args.tgt_lang
+tgt_langs = args.tgt_langs
 output_dir = args.output_dir
 src_bucket_name = args.src_bucket_name
-src_blob_name = Path(args.src_blob_path) / f"prompts_{tgt_lang}.tsv"
+src_blob_name = Path(args.src_blob_path) / "prompts_en.tsv"
 
 tgt_bucket_name = args.tgt_bucket_name
-tgt_blob_path = args.tgt_blob_path + f"/{tgt_lang}/"
+tgt_blob_path = args.tgt_blob_path
+if not args.tgt_blob_path.endswith("/"):
+    tgt_blob_path += "/"
 
 data = sienna.load(dataset_path)
 print(f"Reading dataset from {dataset_path}...")
@@ -193,7 +157,7 @@ prompts = extract(data, search_key)
 df = pd.DataFrame(prompts, columns=["prompt"])
 tsv_src_path = Path(dataset_path).parent / "tsv" / "src"
 tsv_src_path.mkdir(parents=True, exist_ok=True)
-prompt_src_path = tsv_src_path / f"prompts_{tgt_lang}.tsv"
+prompt_src_path = tsv_src_path / "prompts_en.tsv"
 df.to_csv(prompt_src_path, sep="\t")
 
 print(
@@ -204,7 +168,7 @@ upload_to_gcs(str(src_bucket_name), str(prompt_src_path), str(src_blob_name))
 input_uri = f"gs://{src_bucket_name}/{src_blob_name}"
 output_uri = f"gs://{tgt_bucket_name}/{tgt_blob_path}"
 print(
-    f"Translating {len(prompts)} prompts from {src_lang} to {tgt_lang} using glossary {glossary_id}"
+    f"Translating {len(prompts)} prompts from {src_lang} to {tgt_langs} using glossary {glossary_id}"
 )
 if folder_exists(output_uri):
     if args.delete:
@@ -220,68 +184,27 @@ if folder_exists(output_uri):
             exit()
 print(f"Input URI: {input_uri}", f"Output URI: {output_uri}", sep="\n")
 response, file_names = translate_text_with_glossary(
-    project_id, glossary_id, input_uri, output_uri, src_lang, tgt_lang
+    project_id, glossary_id, input_uri, output_uri, src_lang, tgt_langs
 )
 print(response)
 print(f"Files produced {file_names}")
 
 # %%
-
-
-def download_blob(bucket_name, blob_name, destination_file_name):
-    """Downloads a file from a Google Cloud Storage bucket."""
-
-    # Initialize the storage client
-    storage_client = storage.Client()
-
-    # Get the bucket
-    bucket = storage_client.bucket(bucket_name)
-
-    # Get the blob (file) from the bucket
-    blob = bucket.blob(blob_name)
-
-    # Download the file to the specified destination
-    blob.download_to_filename(destination_file_name)
-
-    print(f"File {blob_name} downloaded to {destination_file_name}.")
-
-
-# Example usage
-tgt_blob_name = [x for x in file_names if x.endswith(".tsv")][0]
-tsv_tgt_path = Path(dataset_path).parent / "tsv" / "tgt" / tgt_lang
+tsv_tgt_path = Path(dataset_path).parent / "tsv" / "tgt"
 tsv_tgt_path.mkdir(parents=True, exist_ok=True)
-prompt_tgt_path = tsv_tgt_path / f"prompts_{tgt_lang}.tsv"
-
-print(
-    f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
-)
-download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
-
 index_blob_name = [x for x in file_names if x.endswith("index.csv")][0]
 index_path = tsv_tgt_path / "index.csv"
 print(
     f"Downloading index as well from {tgt_bucket_name} at location {index_blob_name} to {index_path}..."
 )
 download_blob(tgt_bucket_name, index_blob_name, index_path)
+index_df = pd.read_csv(index_path, names=["orig_file", "lang", "output_file"], usecols=[0,1,2])
 
-output_df = pd.read_csv(
-    prompt_tgt_path, sep="\t", names=["req_id", "src", "tgt", "tgt_gloss"], header=0
-)
-output_df = output_df.sort_values("req_id", ascending=True)
-
-# Get glossary translation if present, otherwise use the translation without glossary
-translations = output_df.iloc[:, -1].fillna(output_df.iloc[:, -2]).tolist()
-print("Number of prompts:", len(prompts))
-print("Number of prompts translated:", len(translations))
-# %%
-
-print(f"Adding translations to the dataset in {output_dir}...")
-translation_key = "prompt_src"
-add_translation(data, iter(translations), search_key, translation_key)
-
-output_dir = Path(output_dir)
-output_dir.mkdir(exist_ok=True)
-with open(output_dir / Path(dataset_path).name, "w") as f:
-    json.dump(data, f, indent=4, ensure_ascii=False)
-f.close()
-print("DONE!")
+for index, row in index_df.iterrows():
+    lang = row["lang"]
+    prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
+    tgt_blob_name = row["output_file"].replace("gs://", "").replace(tgt_bucket_name+"/", "")
+    print(
+        f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
+    )
+    download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
