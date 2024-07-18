@@ -6,6 +6,8 @@ test.py
 __pycache__/
 logs/
 .vscode/
+stats/
+results/
 hey.py
 translate_senses.py
 speed_test.py
