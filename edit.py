@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_file", type=str, default="datasets/v3/post_proc/it.json"
+        "--data_file", type=str, default="datasets/v4/translated/all_langs.json"
     )
     parser.add_argument("--hparam", type=str, default="hparams/ROME/llama-7b.yaml")
     parser.add_argument("--lang", type=str, default=None)
