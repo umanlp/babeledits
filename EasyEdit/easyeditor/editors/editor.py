@@ -61,7 +61,14 @@ class BaseEditor:
 
         if type(self.model_name) is str:
             device_map = 'auto' if hparams.model_parallel else None
-            torch_dtype = torch.float16 if hasattr(hparams, 'fp16') and hparams.fp16 else torch.float32
+            # torch_dtype = torch.float16 if hasattr(hparams, 'fp16') and hparams.fp16 else torch.float32
+            if hasattr(hparams,'fp16') and hparams.fp16:
+                torch_dtype = torch.float16
+            elif hasattr(hparams,'bf16') and hparams.bf16:
+                torch_dtype = torch.bfloat16
+            else:
+                torch_dtype = torch.float32
+            print(f">> Using torch_dtype: {torch_dtype} ++")
             if 't5' in self.model_name.lower():
                 self.model = T5ForConditionalGeneration.from_pretrained(self.model_name, torch_dtype=torch_dtype, device_map=device_map)
                 self.tok = T5Tokenizer.from_pretrained(self.model_name)
