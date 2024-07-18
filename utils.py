@@ -25,12 +25,12 @@ def add_translation(data, transl, search_key, langs):
             if key == search_key:
                 try:
                     _, next_transl = next(transl)
-                    data.pop(search_key)
+                    en_prompt = data.pop(search_key)
                     data["prompts"] = {
-                        f"{lang}": next_transl[f"tgt_{lang}"] for lang in langs
+                        f"{lang}": (next_transl[f"tgt_{lang}"] if lang != "en" else en_prompt) for lang in langs 
                     }
                     data["prompts_gloss"] = {
-                        f"{lang}": next_transl[f"tgt_gloss_{lang}"] for lang in langs
+                        f"{lang}": (next_transl[f"tgt_gloss_{lang}"] if lang != "en" else en_prompt) for lang in langs 
                     }
                 except StopIteration:
                     return
