@@ -38,6 +38,8 @@ langs, output_df = load_translations(translation_path)
 # %%
 
 print(f"Adding translations to the dataset in {output_dir}...")
+langs = langs + ["en"]
+langs.sort()
 add_translation(data, iter(output_df.iterrows()), "prompt_en", langs)
 
 output_dir = Path(output_dir)
