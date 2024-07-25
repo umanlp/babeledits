@@ -15,11 +15,14 @@ def get_files(url):
 	"""
 	resp = requests.get(url)
 	soup = BeautifulSoup(resp.content,"html.parser")
-	list_elements = soup.find_all("li")
-	size = [li.text.split(" ")[-1].replace("M","") for li in list_elements]
-#     print(size)
-	list_elements = [li.a.get("href") for li in list_elements]
-	return list_elements, size
+	links = soup.find_all('a')
+
+	# Extract the titles and number of bytes
+	titles_and_bytes = [(link.text, link.next_sibling.strip().split()[-1]) for link in links if link.text != '../' and 'projectviews' not in link.text]
+
+	list_elements = [x[0] for x in titles_and_bytes]
+	sizes = [x[1] for x in titles_and_bytes]
+	return list_elements, sizes
 
 def get_url(host_path, file_name):
     """ Goes to lambda function
@@ -32,7 +35,7 @@ def get_url(host_path, file_name):
 
 def main():
 
-	host_path = "https://dumps.wikimedia.org/other/pagecounts-raw/"
+	host_path = "https://dumps.wikimedia.org/other/pageviews/"
 
 	year_start = int(sys.argv[1])
 	year_end = int(sys.argv[2])
@@ -41,18 +44,22 @@ def main():
 	if year_start < 2007:
 		print("There are no dumps prior to 2007")
 		return
-	if year_start > 2015:
-		print("For years after 2015 use the API") 
-		return
+	# if year_start > 2015:
+	# 	print("For years after 2015 use the API") 
+	# 	return
 
 	#list of years to loop over: 2008-2014
-	years = range(year_start,2015)
+	if year_end == year_start:
+		years = [year_start]
+	else:
+		years = range(year_start,year_end)
+	print("Years to be fetched:", years)
 	#list of months to loop over: 01 - 12
 	months = ["%.2d" % i for i in range(1, 13)]
 
 	# urls and files (with information on size) for each year are fetched
-	final_size = 0
 	for year in years:
+		print("Year:", year)
 		year_lst = []
 		memory_lst = []
 		for month in months:
@@ -69,23 +76,16 @@ def main():
 			"size": memory_lst,
 		})
 
-		df["filter"] = df.file.apply(lambda x: "yes" if x.startswith("pagecounts") else "no")
-		df = df[df["filter"] == "yes"]
-		df = df.drop("filter", axis=1)
 		df["size"] = pd.to_numeric(df["size"], errors='coerce')
 		df["url"] = df["file"].apply(lambda x: get_url(host_path, x))
 
 		path = join(output_dir, str(year)+".csv")
 		df.to_csv(path,index=False)
 		print("File saved:"+path)
-		total = df["size"].sum()/1024
+		total = df["size"].sum()/ 1e9
+		print(df["size"].sum())
 		print("Cumulative file size: {} in GB".format(total))
 		print("Number of files:", df.shape[0])
-		final_size = final_size + total
-		if final_size > 1024:
-			print("Total size to be downloaded {} in {}".format(final_size/1024, "TB"))
-		else:
-			print("Total size to be downloaded {} in {}".format(final_size, "GB"))
 
 if __name__ == '__main__':
 	main()
