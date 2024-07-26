@@ -10,6 +10,8 @@ from os import listdir
 from os import listdir
 from os.path import isfile, join
 import gc
+from collections import defaultdict
+import gzip
 
 def get_files(path):
     """ Returns a list of files in a directory
@@ -29,52 +31,55 @@ def load_names_df(path):
     return df 
 
 
-def parse(path_old, path_new, project="en"):
-    """ Reads file, eliminates unneeded data, filters for project "en" and sspecified names
+def parse(path_old):
+    """ Reads file, eliminates unneeded data, filters
     """
-    global bad_files
-
-    f_name = path_old.split("/")[-1]
+    global data
 
     try:
-        df = pd.read_csv(path_old, sep=" ")
-        df.columns = ["project", "name", "views", "size"]
-        df = df[df["project"] == project]
-        df = df.drop(["size","project"], axis=1)
-        path_new = path_new + f_name
-        df.to_csv(path_new, sep=" ",compression="gzip", index=False, header=False)
-        print("{} > {}, DONE! ".format(path_old, path_new))
+        print(f"reading {path_old}")
+        with gzip.open(path_old, "rb") as f:
+            line = f.readline().decode().strip()
+            while line:
+                parts = line.split()
+                if len(parts) != 4:
+                    print(f"Could not parse following line: {line}")
+                domain, title, views, _ = parts
+                data[domain][title] += int(views)
+                line = f.readline().decode().strip()
     except:
         try:
-            df = pd.read_csv(path_old, sep=" ", encoding="latin_1")
-            df.columns = ["project", "name", "views", "size"]
-            df = df[df["project"] == project]
-            df = df.drop(["size","project"], axis=1)
-            path_new = path_new + f_name
-            df.to_csv(path_new, sep=" ",compression="gzip", index=False, header=False)
-            print("{} > {}, DONE! ".format(path_old, path_new))
+            with gzip.open(path_old, "rb") as f:
+                line = f.readline().decode().strip()
+                while line:
+                    parts = line.split()
+                    if len(parts) != 4:
+                        print(f"Could not parse following line: {line}")
+                    domain, title, views, _ = parts
+                    data[domain][title] += int(views)
+                    line = f.readline().decode().strip()
         except:
-            print("SKIP")
+            print(f"SKIP {path_old}")
 
 
-def threader(save_dir, project):
+def threader():
     global q
     while q.empty() != True:
         # gets a worker from the queue
         worker = q.get()
 
         # Run the example job with the avail worker in queue (thread)
-        parse(worker, save_dir, project) 
+        parse(worker) 
 
         # completed with the job
         q.task_done()
 
 
-def start_threads(num_threads, save_dir, project):
+def start_threads(num_threads):
 
     for x in range(num_threads):
         time.sleep(0.05)
-        t = threading.Thread(target=threader, args=(save_dir, project,))
+        t = threading.Thread(target=threader)
 
          # classifying as a daemon, so they will die when the main dies
         t.daemon = True
@@ -84,13 +89,14 @@ def start_threads(num_threads, save_dir, project):
 
 
 def main():
-    global q
+    global q, data
     # bad_files = []
     start = time.time()
     files_dir = sys.argv[1]
     save_dir = sys.argv[2]
-    project = sys.argv[3]
-    num_threads = int(sys.argv[4])
+    num_threads = int(sys.argv[3])
+
+    data = defaultdict(lambda: defaultdict(int))
 
     print("Loading Files dir: ", files_dir)
     files = get_files(files_dir)
@@ -100,9 +106,17 @@ def main():
     for worker in files:
         q.put(worker)
 
-    start_threads(num_threads, save_dir, project)
+    start_threads(num_threads)
 
     q.join()
+
+    print(f"Writing data in {save_dir}")
+    for domain in data:
+        with open(os.path.join(save_dir, f"{domain}.csv"), "w") as f:
+            title_with_count = [(title, count) for title, count in data[domain].items()]
+            title_with_count.sort(key=lambda x: x[1], reverse=True)
+            for title, count in title_with_count:
+                f.write(f"{title} {count}\n")
 
     end = time.time()
     duration = end-start
