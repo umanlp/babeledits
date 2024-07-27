@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 import cProfile
 import time
+import os
 def download(url, save_path, lib="requests"):
     global q
     """ Downloads file to specified path, if server returns status codes other than 200 url is saved
@@ -15,6 +16,10 @@ def download(url, save_path, lib="requests"):
 
     f_name = url.split("/")[-1]
     save = save_path+"/"+f_name
+
+        
+    if os.path.isfile(save):
+        return
 
     if lib == "requests":
         
