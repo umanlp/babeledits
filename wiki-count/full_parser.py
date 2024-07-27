@@ -66,22 +66,32 @@ def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue):
 
         parse(worker, data)
 
+        # This is to get a bit of advance over the uploading of the data
+        if data_queue.empty():
+            data_queue.put(data)
+            data = Counter()
+
         tqdm_queue.put("file")
     tqdm_queue.put(None)
     logging.debug("Putting data on the queue")
     data_queue.put(data)
     logging.debug("Data sent")
+    data_queue.put(None)
 
 
 def depile_thread(num_threads, save_dir, data_queue: Queue, tqdm_queue: Queue):
     data = Counter()
-    for i in range(num_threads):
+    none_count = 0
+    while none_count < num_threads:
         logging.debug("Getting data from the queue")
         res = data_queue.get()
+        if res is None:
+            tqdm_queue.put("process")
+            logging.debug(f"Processes finished")
+            none_count += 1
+            continue
         logging.debug("Updating data")
         data.update(res)
-        tqdm_queue.put("process")
-        logging.debug(f"Processes finished: {i+1}/{num_threads}")
     
     logging.info(f"Writing data in {save_dir}")
     new_data = defaultdict(lambda: defaultdict(int))
