@@ -46,8 +46,12 @@ def parse(path_old, data):
             while line:
                 parts = line.split(" ")
                 if len(parts) < 4:
+                    line = f.readline().decode().strip()
                     continue
                 domain, *title, views, _ = parts
+                if "." not in domain:
+                    line = f.readline().decode().strip()
+                    continue
                 title = " ".join(title)
                 data[(domain, title)] += int(views)
                 line = f.readline().decode().strip()
