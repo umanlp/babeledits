@@ -1,6 +1,6 @@
 
 import threading
-from queue import Queue
+from multiprocessing import Queue
 import sys, time
 import pandas as pd
 import requests
@@ -12,6 +12,10 @@ from os.path import isfile, join
 import gc
 from collections import defaultdict
 import gzip
+import logging
+import multiprocessing
+
+logging.basicConfig(level=logging.INFO)
 
 def get_files(path):
     """ Returns a list of files in a directory
@@ -31,85 +35,53 @@ def load_names_df(path):
     return df 
 
 
-def parse(path_old):
+def parse(path_old, data_queue: Queue):
     """ Reads file, eliminates unneeded data, filters
     """
-    global data
 
     try:
         print(f"reading {path_old}")
         with gzip.open(path_old, "rb") as f:
             line = f.readline().decode().strip()
             while line:
-                parts = line.split()
-                if len(parts) != 4:
+                parts = line.split(" ")
+                if len(parts) < 4:
                     print(f"Could not parse following line: {line}")
-                domain, title, views, _ = parts
-                data[domain][title] += int(views)
+                    continue
+                domain, *title, views, _ = parts
+                title = " ".join(title)
+                data_queue.put((domain, title, int(views)))
                 line = f.readline().decode().strip()
-    except:
-        try:
-            with gzip.open(path_old, "rb") as f:
-                line = f.readline().decode().strip()
-                while line:
-                    parts = line.split()
-                    if len(parts) != 4:
-                        print(f"Could not parse following line: {line}")
-                    domain, title, views, _ = parts
-                    data[domain][title] += int(views)
-                    line = f.readline().decode().strip()
-        except:
-            print(f"SKIP {path_old}")
+    except Exception as e:
+        logging.info(f"SKIP {path_old}", exc_info=e)
 
 
-def threader():
-    global q
-    while q.empty() != True:
+def threader(q: Queue, data_queue: Queue):
+    while True:
         # gets a worker from the queue
         worker = q.get()
+        if worker is None:
+            break
 
         # Run the example job with the avail worker in queue (thread)
-        parse(worker) 
+        start = time.time()
 
-        # completed with the job
-        q.task_done()
+        parse(worker, data_queue) 
 
+        delay = time.time() - start
+        print(f"Took {delay:.2f} for {worker}")
+    data_queue.put(None)
 
-def start_threads(num_threads):
-
-    for x in range(num_threads):
-        time.sleep(0.05)
-        t = threading.Thread(target=threader)
-
-         # classifying as a daemon, so they will die when the main dies
-        t.daemon = True
-        # print("Thread started")
-        # begins, must come after daemon definition
-        t.start()
-
-
-def main():
-    global q, data
-    # bad_files = []
-    start = time.time()
-    files_dir = sys.argv[1]
-    save_dir = sys.argv[2]
-    num_threads = int(sys.argv[3])
-
+def depile_thread(num_threads, save_dir, data_queue: Queue):
+    none_count = 0
     data = defaultdict(lambda: defaultdict(int))
-
-    print("Loading Files dir: ", files_dir)
-    files = get_files(files_dir)
-
-    q = Queue()
-
-    for worker in files:
-        q.put(worker)
-
-    start_threads(num_threads)
-
-    q.join()
-
+    while none_count < num_threads:
+        res = data_queue.get()
+        if res is None:
+            none_count += 1
+        else:
+            data[res[0]][res[1]] += res[2]
+    
     print(f"Writing data in {save_dir}")
     for domain in data:
         with open(os.path.join(save_dir, f"{domain}.csv"), "w") as f:
@@ -117,6 +89,55 @@ def main():
             title_with_count.sort(key=lambda x: x[1], reverse=True)
             for title, count in title_with_count:
                 f.write(f"{title} {count}\n")
+
+    data_queue.task_done()
+
+
+
+def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue):
+    threads = []
+    for x in range(num_threads):
+        time.sleep(0.05)
+        t = multiprocessing.Process(target=threader, args=(q, data_queue))
+
+         # classifying as a daemon, so they will die when the main dies
+        t.daemon = True
+        # print("Thread started")
+        # begins, must come after daemon definition
+        t.start()
+        threads.append(t)
+
+    gather_t = multiprocessing.Process(target=depile_thread, args=(num_threads,save_dir, data_queue))
+    gather_t.daemon =True
+    gather_t.start()
+    threads.append(gather_t)
+    return threads
+
+
+def main():
+
+    # bad_files = []
+    start = time.time()
+    files_dir = sys.argv[1]
+    save_dir = sys.argv[2]
+    num_threads = int(sys.argv[3])
+
+    
+
+    print("Loading Files dir: ", files_dir)
+    files = get_files(files_dir)
+
+    q = Queue()
+    data_queue = Queue()
+
+    for worker in files:
+        q.put(worker)
+    q.put(None)
+
+    threads = start_threads(num_threads, save_dir, q, data_queue)
+
+    for t in threads:
+        t.join()
 
     end = time.time()
     duration = end-start
