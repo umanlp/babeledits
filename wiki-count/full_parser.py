@@ -54,9 +54,8 @@ def parse(path_old, data):
     except Exception as e:
         logging.error(f"SKIP {path_old}", exc_info=e)
 
-def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue, soft_limit: int):
+def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue):
     data = Counter()
-    accumulations = 0
     while True:
         # gets a worker from the queue
         worker = q.get()
@@ -64,52 +63,31 @@ def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue, soft_limit: int):
             break
 
         # Run the example job with the avail worker in queue (thread)
-        start = time.time()
 
         parse(worker, data)
-        delay = time.time() - start
 
-        tqdm_queue.put(1)
-
-        if data_queue.qsize() < soft_limit:
-            #print(f"Last file: {delay:.2f}s. Queue is free (size={data_queue.qsize()}), sending data for {accumulations + 1} files")
-            start = time.time()
-            data_queue.put(data)
-            delay = time.time() - start
-            #print(f"Delay sending data: {delay:.2f}s")
-            data = Counter()
-            accumulations = 0
-        else:
-            accumulations += 1
-            #print(f"Last file: {delay:.2f}s. Queue has reached soft limit ((size={data_queue.qsize()})), will send data later for {accumulations} accumulated files")
-
+        tqdm_queue.put("file")
     tqdm_queue.put(None)
-
-    print(f"Process finished, sending remaining data")
-
-    while accumulations > 0 and data_queue.qsize() < soft_limit:
-        time.sleep(0.5)
+    logging.debug("Putting data on the queue")
     data_queue.put(data)
-    
-    data_queue.put(None)
+    logging.debug("Data sent")
 
 
-def depile_thread(num_threads, save_dir, data_queue: Queue):
-    none_count = 0
+def depile_thread(num_threads, save_dir, data_queue: Queue, tqdm_queue: Queue):
     data = Counter()
-    while none_count < num_threads:
+    for i in range(num_threads):
+        logging.debug("Getting data from the queue")
         res = data_queue.get()
-        if res is None:
-            none_count += 1
-            print(f"Processes finished: {none_count}/{num_threads}")
-            continue
+        logging.debug("Updating data")
         data.update(res)
+        tqdm_queue.put("process")
+        logging.debug(f"Processes finished: {i+1}/{num_threads}")
     
-    print(f"Writing data in {save_dir}")
+    logging.info(f"Writing data in {save_dir}")
     new_data = defaultdict(lambda: defaultdict(int))
     for (domain, title), views in data.items():
         new_data[domain][title] = views
-    for domain in data:
+    for domain in new_data:
         with open(os.path.join(save_dir, f"{domain}.csv"), "w") as f:
             title_with_count = [(title, count) for title, count in new_data[domain].items()]
             title_with_count.sort(key=lambda x: x[1], reverse=True)
@@ -118,21 +96,32 @@ def depile_thread(num_threads, save_dir, data_queue: Queue):
 
 def tqdm_process(tqdm_queue: Queue, num_threads: int, n_files: int):
     none_count = 0
+    process_early_finish = 0
     with tqdm(total=n_files, dynamic_ncols=True) as pbar:
         while none_count < num_threads:
             res = tqdm_queue.get()
-            if res is None:
+            if res == "file":
+                pbar.update()
+            elif res == "process":
+                process_early_finish += 1
+            else:
                 none_count += 1
-                continue
-            pbar.update()
+
+    with tqdm(total=num_threads, dynamic_ncols=True) as pbar:
+        pbar.update(process_early_finish)
+        while process_early_finish < num_threads:
+            res = tqdm_queue.get()
+            if res == "process":
+                pbar.update()
+                process_early_finish += 1
 
 
 
-def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue, soft_limit: int, tqdm_queue: Queue, n_files: int):
+def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue, tqdm_queue: Queue, n_files: int):
     threads = []
     for x in range(num_threads):
         time.sleep(0.05)
-        t = multiprocessing.Process(target=threader, args=(q, data_queue, tqdm_queue, soft_limit))
+        t = multiprocessing.Process(target=threader, args=(q, data_queue, tqdm_queue))
 
          # classifying as a daemon, so they will die when the main dies
         t.daemon = True
@@ -141,7 +130,7 @@ def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue, soft_limit
         t.start()
         threads.append(t)
 
-    gather_t = multiprocessing.Process(target=depile_thread, args=(num_threads,save_dir, data_queue))
+    gather_t = multiprocessing.Process(target=depile_thread, args=(num_threads,save_dir, data_queue, tqdm_queue))
     gather_t.daemon =True
     gather_t.start()
     threads.append(gather_t)
@@ -159,22 +148,21 @@ def main():
     files_dir = sys.argv[1]
     save_dir = sys.argv[2]
     num_threads = int(sys.argv[3])
-    soft_limit = 2 * num_threads if len(sys.argv) < 5 else int(sys.argv[4])
-
-    
+    soft_limit = 0 if len(sys.argv) < 5 else int(sys.argv[4])
 
     print("Loading Files dir: ", files_dir)
     files = get_files(files_dir)
 
     q = Queue()
-    data_queue = Queue()
+    data_queue = Queue(maxsize=soft_limit)
     tqdm_queue = Queue()
 
     for worker in files:
         q.put(worker)
-    q.put(None)
+    for _ in range(num_threads):
+        q.put(None)
 
-    threads = start_threads(num_threads, save_dir, q, data_queue, soft_limit, tqdm_queue, len(files))
+    threads = start_threads(num_threads, save_dir, q, data_queue, tqdm_queue, len(files))
 
     for t in threads:
         t.join()
