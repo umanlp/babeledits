@@ -15,6 +15,8 @@ import gzip
 import logging
 import multiprocessing
 from tqdm import tqdm
+from typing import List
+import re
 
 logging.basicConfig(level=logging.INFO)
 
@@ -49,17 +51,19 @@ def parse(path_old, data):
                     line = f.readline().decode().strip()
                     continue
                 domain, *title, views, _ = parts
-                if "." not in domain:
+                if domain.endswith(".m"):
+                    domain = ".".join(domain.split(".")[:-1])
+                if "." in domain:
                     line = f.readline().decode().strip()
                     continue
                 title = " ".join(title)
-                data[(domain, title)] += int(views)
+                data[hash(domain) % len(data)][(domain, title)] += int(views)
                 line = f.readline().decode().strip()
     except Exception as e:
         logging.error(f"SKIP {path_old}", exc_info=e)
 
-def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue):
-    data = Counter()
+def threader(q: Queue, tqdm_queue: Queue, *data_queues):
+    data = [Counter() for _ in range(len(data_queues))]
     while True:
         # gets a worker from the queue
         worker = q.get()
@@ -71,22 +75,23 @@ def threader(q: Queue, data_queue: Queue, tqdm_queue: Queue):
         parse(worker, data)
 
         # This is to get a bit of advance over the uploading of the data
-        if data_queue.empty():
-            data_queue.put(data)
-            data = Counter()
+        for i_q, data_queue in enumerate(data_queues):
+            if data_queue.empty():
+                data_queue.put(data[i_q])
+                data[i_q] = Counter()
 
         tqdm_queue.put("file")
     tqdm_queue.put(None)
-    logging.debug("Putting data on the queue")
-    data_queue.put(data)
-    logging.debug("Data sent")
-    data_queue.put(None)
+    for i_q, data_queue in enumerate(data_queues):
+        if len(data[i_q]) > 0:
+            data_queue.put(data[i_q])
+        data_queue.put(None)
 
 
-def depile_thread(num_threads, save_dir, data_queue: Queue, tqdm_queue: Queue):
+def depile_thread(num_reading_threads, save_dir, data_queue: Queue, tqdm_queue: Queue):
     data = Counter()
     none_count = 0
-    while none_count < num_threads:
+    while none_count < num_reading_threads:
         logging.debug("Getting data from the queue")
         res = data_queue.get()
         if res is None:
@@ -108,11 +113,11 @@ def depile_thread(num_threads, save_dir, data_queue: Queue, tqdm_queue: Queue):
             for title, count in title_with_count:
                 f.write(f"{title} {count}\n")
 
-def tqdm_process(tqdm_queue: Queue, num_threads: int, n_files: int):
+def tqdm_process(tqdm_queue: Queue, num_reading_threads: int, num_processing_threads: int, n_files: int):
     none_count = 0
     process_early_finish = 0
     with tqdm(total=n_files, dynamic_ncols=True) as pbar:
-        while none_count < num_threads:
+        while none_count < num_reading_threads:
             res = tqdm_queue.get()
             if res == "file":
                 pbar.update()
@@ -121,9 +126,9 @@ def tqdm_process(tqdm_queue: Queue, num_threads: int, n_files: int):
             else:
                 none_count += 1
 
-    with tqdm(total=num_threads, dynamic_ncols=True) as pbar:
+    with tqdm(total=num_reading_threads * num_processing_threads, dynamic_ncols=True) as pbar:
         pbar.update(process_early_finish)
-        while process_early_finish < num_threads:
+        while process_early_finish < num_reading_threads * num_processing_threads:
             res = tqdm_queue.get()
             if res == "process":
                 pbar.update()
@@ -131,11 +136,11 @@ def tqdm_process(tqdm_queue: Queue, num_threads: int, n_files: int):
 
 
 
-def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue, tqdm_queue: Queue, n_files: int):
+def start_threads(num_reading_threads, num_processing_threads, n_files: int, save_dir, q: Queue, tqdm_queue: Queue, data_queues: List[Queue]):
     threads = []
-    for x in range(num_threads):
+    for x in range(num_reading_threads):
         time.sleep(0.05)
-        t = multiprocessing.Process(target=threader, args=(q, data_queue, tqdm_queue))
+        t = multiprocessing.Process(target=threader, args=(q, tqdm_queue, *data_queues))
 
          # classifying as a daemon, so they will die when the main dies
         t.daemon = True
@@ -144,11 +149,12 @@ def start_threads(num_threads, save_dir, q: Queue, data_queue: Queue, tqdm_queue
         t.start()
         threads.append(t)
 
-    gather_t = multiprocessing.Process(target=depile_thread, args=(num_threads,save_dir, data_queue, tqdm_queue))
-    gather_t.daemon =True
-    gather_t.start()
-    threads.append(gather_t)
-    tqdm_t = multiprocessing.Process(target=tqdm_process, args=(tqdm_queue, num_threads, n_files))
+    for i_q in range(num_processing_threads):
+        gather_t = multiprocessing.Process(target=depile_thread, args=(num_reading_threads ,save_dir, data_queues[i_q], tqdm_queue))
+        gather_t.daemon =True
+        gather_t.start()
+        threads.append(gather_t)
+    tqdm_t = multiprocessing.Process(target=tqdm_process, args=(tqdm_queue, num_reading_threads, num_processing_threads, n_files))
     tqdm_t.daemon =True
     tqdm_t.start()
     threads.append(tqdm_t)
@@ -161,22 +167,22 @@ def main():
     start = time.time()
     files_dir = sys.argv[1]
     save_dir = sys.argv[2]
-    num_threads = int(sys.argv[3])
-    soft_limit = 0 if len(sys.argv) < 5 else int(sys.argv[4])
+    num_reading_threads = int(sys.argv[3])
+    num_processing_threads = num_reading_threads if len(sys.argv) < 5 else int(sys.argv[4])
 
     print("Loading Files dir: ", files_dir)
     files = get_files(files_dir)
 
     q = Queue()
-    data_queue = Queue(maxsize=soft_limit)
+    data_queues = [Queue(maxsize=num_reading_threads) for _ in range(num_processing_threads)]
     tqdm_queue = Queue()
 
     for worker in files:
         q.put(worker)
-    for _ in range(num_threads):
+    for _ in range(num_reading_threads):
         q.put(None)
 
-    threads = start_threads(num_threads, save_dir, q, data_queue, tqdm_queue, len(files))
+    threads = start_threads(num_reading_threads, num_processing_threads, len(files), save_dir, q, tqdm_queue, data_queues)
 
     for t in threads:
         t.join()
