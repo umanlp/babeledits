@@ -1,63 +1,10 @@
-import wikipediaapi
-import pandas as pd
-import json
-import sienna
-import os
-import datetime
-import requests
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import timedelta, datetime
 import argparse
+import json
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
-def get_top_pageviews(day, lang, user_agent):
-    url = f"https://wikimedia.org/api/rest_v1/metrics/pageviews/top/{lang}.wikipedia/all-access/{day.year}/{day.month:02}/{day.day:02}"
-    headers = {"User-Agent": user_agent}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        return data["items"][0]["articles"]
-    else:
-        print(f"Failed to get pageviews for {day} (Status code {response.status_code})")
-        return []
-
-
-def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
-    delta = end_date - start_date
-    pageview_counts = defaultdict(int)
-
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        futures = [
-            executor.submit(
-                get_top_pageviews, start_date + timedelta(days=i), lang, user_agent
-            )
-            for i in range(delta.days + 1)
-        ]
-        for future in as_completed(futures):
-            top_pages = future.result()
-            for page in top_pages:
-                title = page["article"]
-                views = page["views"]
-                pageview_counts[title] += views
-
-    # Sort pages by views and get the top-k
-    sorted_pageviews = sorted(
-        pageview_counts.items(), key=lambda item: item[1], reverse=True
-    )
-
-    # we return double the top-k, since we will have to filter later
-    if top_k is None:
-        return sorted_pageviews
-    else:
-        return sorted_pageviews[: top_k]
-
-
-def get_top_pages(start_date, end_date, lang, top_k, save_path, user_agent):
-    print(f"Downloading wikipedia data for {lang}")
-    top_pages = aggregate_pageviews(start_date, end_date, lang, top_k, user_agent)
-    with open(save_path, "w") as f:
-        json.dump(top_pages, f, indent=2)
+import pandas as pd
+import wikipediaapi
 
 
 def process_page(record, src_lang, user_agent):
@@ -116,20 +63,21 @@ def process_multiple_pages(records, src_lang, user_agent, langs):
         .dropna()
     )
     # results["Languages filtered"] = results["Languages"].apply(
-        # lambda x: list(set(x) & set(langs))
+    # lambda x: list(set(x) & set(langs))
     # )
     # results["Selected Language Count"] = results["Languages filtered"].apply(
-        # lambda x: len(x)
+    # lambda x: len(x)
     # )
     # results = results.dropna()
     # results = results.sort_values(
-        # by="Languages filtered", key=lambda x: x.str.len(), ascending=False
+    # by="Languages filtered", key=lambda x: x.str.len(), ascending=False
     # )
     titles = [str(x) for x in results["English Title"]]
-    from get_synsets import check_langs
     import babelnet as bn
     from babelnet import Language
     from babelnet.resources import WikipediaID
+
+    from get_synsets import check_langs
 
     babel_langs = set([Language.from_iso(lang) for lang in langs])
     wiki_ids = [WikipediaID(title, Language.EN) for title in titles]
@@ -208,25 +156,12 @@ if __name__ == "__main__":
         help="List of languages",
     )
     parser.add_argument(
-        "--start_date",
-        type=str,
-        default="2021-01-01",
-        help="The start date in YYYY-MM-DD format",
-    )
-    parser.add_argument(
-        "--end_date",
-        type=str,
-        default="2021-12-31",
-        help="The end date in YYYY-MM-DD format",
-    )
-    parser.add_argument(
         "--top_k", type=int, default=None, help="The number of top pages to retrieve"
     )
-    parser.add_argument("--year", type=int, default=2021, help="The year to process")
     parser.add_argument(
         "--save_path",
         type=str,
-        default="wikipedia_data/v3",
+        default="wikipedia_data/v5",
         help="The main path to save the data",
     )
     parser.add_argument(
@@ -237,57 +172,42 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    import logging
-    import sys
-
-    file_handler = logging.FileHandler(filename='logs/get_pages.log')
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    handlers = [file_handler, stdout_handler]
-
-    logging.basicConfig(
-    level=logging.INFO, 
-    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
-    handlers=handlers
-    )
-
-    logger = logging.getLogger("my logger")
-    logging.getLogger('wikipediaapi').setLevel(logging.WARN)
-    print = logger.info
-    
     print(args.user_agent)
-    year = args.year
-    start_date = datetime.strptime(args.start_date, "%Y-%m-%d").date()
-    end_date = datetime.strptime(args.end_date, "%Y-%m-%d").date()
     top_k = args.top_k
     langs = args.langs
     user_agent = args.user_agent
 
-    lang_to_df = {}
-
-    if not os.path.exists(f"{args.save_path}/raw"):
-        os.makedirs(f"{args.save_path}/raw")
     if not os.path.exists(f"{args.save_path}/processed"):
         os.makedirs(f"{args.save_path}/processed")
 
     for lang in langs:
-        save_path_wiki = (
-            f"{args.save_path}/raw/top_{top_k}_wikipedia_pages_{lang}_{year}.json"
-        )
-        save_path_csv = f"{args.save_path}/processed/{lang}_{year}_df.csv"
+        save_path_wiki = f"{args.save_path}/raw/{lang}.csv"
+        if not os.path.exists(save_path_wiki):
+            raise ValueError(f"File {save_path_wiki} does not exist")
+
+    for lang in langs:
+        save_path_wiki = f"{args.save_path}/raw/{lang}.csv"
+        save_path_csv = f"{args.save_path}/processed/{lang}.csv"
 
         if os.path.exists(save_path_csv):
             # Load the data from the existing file
             print(f"Data for {lang} from {save_path_csv} already exists.")
         else:
             # Process the pages and save the data to a new file
-            print(f"Getting data for {lang}")
-            if not os.path.exists(save_path_wiki):
-                # If the data has not been downloaded yet, download it
-                print(f"Getting top {top_k} pages for {lang}")
-                get_top_pages(
-                    start_date, end_date, lang, top_k, save_path_wiki, user_agent
-                )
-            records = sienna.load(save_path_wiki)
+            print(f"Processing data for {lang}")
+
+            wiki_df = (
+                pd.read_csv(save_path_wiki, sep=" ", header=0, names=["Title", "Views"])
+                .dropna()
+                .reset_index(drop=True)
+            )
+            wiki_df = wiki_df[
+                pd.to_numeric(wiki_df["Views"], errors="coerce").notnull()
+            ]
+            wiki_df["Views"] = wiki_df["Views"].astype(int)
+            wiki_df = wiki_df.sort_values("Views", ascending=False).iloc[: 2 * top_k]
+
+            records = list(zip(wiki_df["Title"], wiki_df["Views"]))
             print(f"Post-processing {len(records)} pages for {lang}")
             df = process_multiple_pages(records, lang, user_agent, langs).iloc[:top_k]
             df.to_csv(save_path_csv, index=False, encoding="utf-8")
