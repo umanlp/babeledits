@@ -2,9 +2,15 @@ import argparse
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
+import babelnet as bn
 import pandas as pd
 import wikipediaapi
+from babelnet import Language
+from babelnet.resources import WikipediaID
+
+from get_synsets import check_langs
 
 
 def process_page(record, src_lang, user_agent):
@@ -62,22 +68,8 @@ def process_multiple_pages(records, src_lang, user_agent, langs):
         .drop_duplicates(subset=["English Title"])
         .dropna()
     )
-    # results["Languages filtered"] = results["Languages"].apply(
-    # lambda x: list(set(x) & set(langs))
-    # )
-    # results["Selected Language Count"] = results["Languages filtered"].apply(
-    # lambda x: len(x)
-    # )
-    # results = results.dropna()
-    # results = results.sort_values(
-    # by="Languages filtered", key=lambda x: x.str.len(), ascending=False
-    # )
-    titles = [str(x) for x in results["English Title"]]
-    import babelnet as bn
-    from babelnet import Language
-    from babelnet.resources import WikipediaID
 
-    from get_synsets import check_langs
+    titles = [str(x) for x in results["English Title"]]
 
     babel_langs = set([Language.from_iso(lang) for lang in langs])
     wiki_ids = [WikipediaID(title, Language.EN) for title in titles]
@@ -90,7 +82,7 @@ def process_multiple_pages(records, src_lang, user_agent, langs):
     ]
     mask = results["English Title"].isin(selected_pages)
     print(f"Num Wikipedia pages {len(titles)}, Num selected pages {mask.sum()}")
-    results = results[results["English Title"].isin(selected_pages)]
+    results = results[mask]
     return results
 
 
@@ -177,19 +169,19 @@ if __name__ == "__main__":
     langs = args.langs
     user_agent = args.user_agent
 
-    if not os.path.exists(f"{args.save_path}/processed"):
-        os.makedirs(f"{args.save_path}/processed")
+    processed_dir = Path(f"{args.save_path}/processed")
+    processed_dir.mkdir(parents=True, exist_ok=True)
 
     for lang in langs:
-        save_path_wiki = f"{args.save_path}/raw/{lang}.csv"
-        if not os.path.exists(save_path_wiki):
+        save_path_wiki = Path(f"{args.save_path}/raw/{lang}.csv")
+        if not save_path_wiki.exists():
             raise ValueError(f"File {save_path_wiki} does not exist")
 
     for lang in langs:
-        save_path_wiki = f"{args.save_path}/raw/{lang}.csv"
-        save_path_csv = f"{args.save_path}/processed/{lang}.csv"
+        save_path_wiki = Path(f"{args.save_path}/raw/{lang}.csv")
+        save_path_csv = Path(f"{args.save_path}/processed/{lang}.csv")
 
-        if os.path.exists(save_path_csv):
+        if save_path_csv.exists():
             # Load the data from the existing file
             print(f"Data for {lang} from {save_path_csv} already exists.")
         else:
@@ -207,7 +199,11 @@ if __name__ == "__main__":
             wiki_df["Views"] = wiki_df["Views"].astype(int)
             wiki_df = wiki_df.sort_values("Views", ascending=False).iloc[: 2 * top_k]
 
+            # Extracting and saving wikipedia pages 
             records = list(zip(wiki_df["Title"], wiki_df["Views"]))
             print(f"Post-processing {len(records)} pages for {lang}")
-            df = process_multiple_pages(records, lang, user_agent, langs).iloc[:top_k]
+            df = process_multiple_pages(records, lang, user_agent, langs).iloc[
+                :top_k
+            ]
+            print(f"Saving {len(df)} pages for {lang}")
             df.to_csv(save_path_csv, index=False, encoding="utf-8")
