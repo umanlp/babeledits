@@ -47,7 +47,10 @@ def aggregate_pageviews(start_date, end_date, lang, top_k, user_agent):
     )
 
     # we return double the top-k, since we will have to filter later
-    return sorted_pageviews[: top_k]
+    if top_k is None:
+        return sorted_pageviews
+    else:
+        return sorted_pageviews[: top_k]
 
 
 def get_top_pages(start_date, end_date, lang, top_k, save_path, user_agent):
@@ -86,20 +89,20 @@ def process_page(record, src_lang, user_agent):
         except:
             english_title = None
             lang_list = [src_lang]
-        return title, views, english_title, lang_list
+        return page_src.title, views, english_title, lang_list
     except json.JSONDecodeError:
         print(f"JSON Decode Error for {record}")
         return record, "JSONDecodeError"
 
 
-def process_multiple_pages(records, lang, user_agent):
+def process_multiple_pages(records, src_lang, user_agent, langs):
     results = []
 
     # Use ThreadPoolExecutor to handle multithreading
     with ThreadPoolExecutor(max_workers=10) as executor:
         # Submit tasks to the executor
         future_to_title = [
-            executor.submit(process_page, record, lang, user_agent)
+            executor.submit(process_page, record, src_lang, user_agent)
             for record in records
         ]
 
@@ -217,7 +220,7 @@ if __name__ == "__main__":
         help="The end date in YYYY-MM-DD format",
     )
     parser.add_argument(
-        "--top_k", type=int, default=10000, help="The number of top pages to retrieve"
+        "--top_k", type=int, default=None, help="The number of top pages to retrieve"
     )
     parser.add_argument("--year", type=int, default=2021, help="The year to process")
     parser.add_argument(
@@ -286,5 +289,5 @@ if __name__ == "__main__":
                 )
             records = sienna.load(save_path_wiki)
             print(f"Post-processing {len(records)} pages for {lang}")
-            df = process_multiple_pages(records, lang, user_agent).iloc[:top_k]
+            df = process_multiple_pages(records, lang, user_agent, langs).iloc[:top_k]
             df.to_csv(save_path_csv, index=False, encoding="utf-8")
