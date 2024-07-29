@@ -82,7 +82,6 @@ if __name__ == "__main__":
         ],
         help="List of languages",
     )
-    parser.add_argument("--year", type=int, default=2021, help="The year to process")
     parser.add_argument(
         "--save_dir", type=str, default="synsets/v3", help="Save dir of the synsets"
     )
@@ -95,9 +94,7 @@ if __name__ == "__main__":
     args, _ = parser.parse_known_args()
 
     langs = args.langs
-    year = args.year
 
-    lang_to_df = {}
     babel_langs = set([Language.from_iso(lang) for lang in langs])
 
     df = pd.read_csv(args.data_path).dropna()
@@ -123,20 +120,9 @@ if __name__ == "__main__":
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
     # Write results to pickle file
-    print(f"> Writing synsets to {save_dir / 'all_langs_syns.pkl'}")
-    with open(save_dir / "all_langs_syns.pkl", "wb") as f:
+    print(f"> Writing synsets to {save_dir / 'syns.pkl'}")
+    with open(save_dir / "syns.pkl", "wb") as f:
         pickle.dump(results, f)
-
-    wiki_save_dir = Path(args.data_path).parent / "filtered"
-    wiki_save_dir.mkdir(parents=True, exist_ok=True)
-    titles = [x[0] for x in results]
-
-    for lang in langs:
-        print(
-            f"> Writing filtered wikipedia pages to {wiki_save_dir}/{lang}_{year}_df.csv"
-        )
-        filtered_df = df[df["English Title"].isin(titles)].reset_index(drop=True)
-        filtered_df.to_csv(f"{wiki_save_dir}/{lang}_{year}_df.csv", index=False)
 
     edges = [[e.pointer.name for e in synset.outgoing_edges()] for _, synset in results]
 
@@ -144,7 +130,7 @@ if __name__ == "__main__":
     counter = Counter(flattened_edges)
     sorted_relations = counter.most_common()
 
-    print(f"> Writing relations to {save_dir / 'all_langs_relations.txt'}")
-    with open(save_dir / "all_langs_relations.txt", "w") as file:
+    print(f"> Writing relations to {save_dir / 'relations.txt'}")
+    with open(save_dir / "relations.txt", "w") as file:
         for relation, count in sorted_relations:
             file.write(f"{relation}:{count}\n")

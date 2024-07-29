@@ -89,36 +89,52 @@ def lcs(str1, str2):
     return lcs
 
 
-def read_data(json_path, lang, prompt_type="prompts_gloss"):
+def read_data(json_path, lang, tgt_lang, prompt_type="prompts", tgt_prompt_type="prompts_gloss"):
     with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
     subjects = []
-    prompts = []
-    ground_truth = []
-    edits = []
+    tgt_subjects = []
+    
     en_subjects = []
+    
+    prompts = []
+    tgt_prompts = []
+    
+    ground_truth = []
+    
+    edits = []
+    tgt_edits = []
 
-    prompt_key = f"{lang}"
-    ground_truth_key = f"target_sense_{lang}"
-    edit_key = f"target_sense_{lang}"
 
-    for key, value in data.items():
+    for _, value in data.items():
         subj_count = 0
-        for relation_type, relation_data in value["relations"].items():
+        tgt_subj_count = 0
+        for _, relation_data in value["relations"].items():
             if "edit" in relation_data:
-                if prompt_key in relation_data["edit"][prompt_type]:
-                    prompts.append(relation_data["edit"][prompt_type][prompt_key])
+                if lang in relation_data["edit"][prompt_type]:
+                    prompts.append(relation_data["edit"][prompt_type][lang])
+                
+                if tgt_lang in relation_data["edit"][tgt_prompt_type]:
+                    tgt_prompts.append(relation_data["edit"][tgt_prompt_type][tgt_lang])
 
-                if ground_truth_key in relation_data:
-                    ground_truth.append(relation_data[ground_truth_key])
+                if f"target_sense_{lang}" in relation_data:
+                    ground_truth.append(relation_data[f"target_sense_{lang}"])
 
-                if edit_key in relation_data["edit"]:
-                    edits.append(relation_data["edit"][edit_key])
+                if f"target_sense_{lang}" in relation_data["edit"]:
+                    edits.append(relation_data["edit"][f"target_sense_{lang}"])
                     subj_count += 1
+
+                if f"target_sense_{tgt_lang}" in relation_data["edit"]:
+                    tgt_edits.append(relation_data["edit"][f"target_sense_{tgt_lang}"])
+                    tgt_subj_count += 1
+
         subjects.extend([value["subject_senses"][f"sense_{lang}"]] * subj_count)
+        tgt_subjects.extend([value["subject_senses"][f"sense_{tgt_lang}"]] * tgt_subj_count)
         en_subjects.extend([value["subject_senses"]["sense_en"]] * subj_count)
-    return subjects, en_subjects, prompts, ground_truth, edits
+
+    data = {"subjects": subjects, "en_subjects": en_subjects, "prompts": prompts, "ground_truth": ground_truth,  "edits": edits, "tgt_prompts": tgt_prompts, "tgt_edits": tgt_edits}
+    return data
 
 
 def clean(sense):

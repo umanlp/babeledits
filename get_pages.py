@@ -26,7 +26,7 @@ def process_page(record, src_lang, user_agent):
             page_existance = page_src.exists()
             if not page_existance:
                 return title, views, None, None
-        except:
+        except Exception:
             return title, views, None, None
 
         # Check for an English version of the page
@@ -39,7 +39,7 @@ def process_page(record, src_lang, user_agent):
             langlinks = page_src.langlinks
             english_title = langlinks["en"].title if "en" in langlinks else None
             lang_list = sorted([src_lang] + list(langlinks.keys()))
-        except:
+        except Exception:
             english_title = None
             lang_list = [src_lang]
         return page_src.title, views, english_title, lang_list
