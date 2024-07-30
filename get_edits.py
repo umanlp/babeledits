@@ -5,7 +5,6 @@ import itertools
 import json
 import pickle
 import random
-import re
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -17,6 +16,7 @@ from babelnet.data.relation import BabelPointer
 from tqdm import tqdm
 
 from get_synsets import check_langs
+from utils import clean
 
 ## Params
 parser = argparse.ArgumentParser(description="Process some data.")
@@ -77,9 +77,7 @@ parser.add_argument(
     ],
     help="List of languages",
 )
-parser.add_argument(
-    "--output_folder", default="datasets/v4", help="Output folder"
-)
+parser.add_argument("--output_folder", default="datasets/v4", help="Output folder")
 parser.add_argument(
     "--rel_path",
     default="datasets/v4/agg_relations_with_prompts.tsv",
@@ -126,18 +124,30 @@ def convert_to_babel_relations(relations):
     return babel_relations
 
 
-def clean(sense):
-    # Replace underscores with spaces
-    sense = sense.replace("_", " ")
+PERSON_SYN_ID = "bn:00044576n"
+IS_A_RELATION = BabelPointer.INSTANCE_OF
 
-    # Remove round brackets and everything in between
-    sense = re.sub(r"\(.*?\)", "", sense)
 
-    # Remove double quotes if they wrap the entire string
-    if sense.startswith('"') and sense.endswith('"'):
-        sense = sense[1:-1]
-
-    return sense.strip()
+def extract_main_sense(synset, lang):
+    if lang == "en" and any(
+        [
+            str(e.target) == PERSON_SYN_ID
+            for e in synset.outgoing_edges(*[IS_A_RELATION])
+        ]
+    ):
+        main_lemma = synset.main_sense(bn.Language.from_iso(lang)).full_lemma
+        all_senses = synset.senses(bn.Language.from_iso(lang))
+        sense_found = False
+        for s in all_senses:
+            if main_lemma != s.full_lemma and main_lemma in s.full_lemma:
+                sense_found = True
+                break
+        if sense_found:
+            return s.full_lemma
+        else:
+            return main_lemma
+    else:
+        return synset.main_sense(bn.Language.from_iso(lang)).full_lemma
 
 
 # %%
@@ -150,7 +160,7 @@ relations = convert_to_babel_relations(relations)
 
 t_start = time.time()
 
-file_path = f"{synset_path}/all_langs_syns.pkl"
+file_path = f"{synset_path}/syns.pkl"
 print(f"Loading synsets from {file_path}")
 with open(file_path, "rb") as f:
     data = pickle.load(f)
@@ -161,20 +171,9 @@ print(f"Loaded {len(data)} synsets from {file_path}")
 # Get synset -> senses map, for each not-null synset which is a subject (i.e., derived from a wikipedia title)
 # Second step serves to only get the synset->sense map only for synsets that have senses in both the source language and target language
 synset_to_senses = {
-    synset: {
-        f"sense_{lang}": synset.main_sense(Language.from_iso(lang)) for lang in langs
-    }
+    synset: {f"sense_{lang}": clean(extract_main_sense(synset, lang)) for lang in langs}
     for _, synset in tqdm(data, desc="Getting senses")
     if synset is not None
-}
-
-#TODO might not be necessary with the new setup of multiparallel filtered synsets
-synset_to_senses = {
-    synset: {
-        f"sense_{lang}": clean(senses[f"sense_{lang}"].full_lemma) for lang in langs
-    }
-    for synset, senses in tqdm(synset_to_senses.items())
-    if all(senses.values())
 }
 
 # Get synset -> outgoing relation maps, only for the relations we selected a priori
@@ -193,7 +192,9 @@ synset_to_relations = {
         str(r): [{"edge_id": str(v[1]), "target_id": str(v[2])} for v in edge_data]
         for r, edge_data in itertools.groupby(edge_list, key=lambda e: e[0])
     }
-    for synset, edge_list in tqdm(synset_to_relations.items(), desc="Grouping relations")
+    for synset, edge_list in tqdm(
+        synset_to_relations.items(), desc="Grouping relations"
+    )
 }
 
 synset_to_relations = {
@@ -252,23 +253,21 @@ for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
             tgt_syn = BabelSynsetID(edge["target_id"]).to_synset()
             if check_langs(tgt_syn, babel_langs):
                 target_senses = {
-                    f"target_sense_{lang}": clean(
-                        tgt_syn.main_sense(Language.from_iso(lang)).full_lemma
-                    )
+                    f"target_sense_{lang}": clean(extract_main_sense(tgt_syn, lang))
                     for lang in args.langs
                 }
                 edge.update(target_senses)
-                found = True #TODO
+                found = True  # TODO
                 break
-        relation_to_edges[relation] = [
-            edge for edge in relation_to_edges[relation] if "target_sense_en" in edge
-        ]
-        if found: #TODO
+        # relation_to_edges[relation] = [
+        #     edge for edge in relation_to_edges[relation] if "target_sense_en" in edge
+        # ]
+        if found:  # TODO
             break
     synset_to_relations[synset] = {
-        relation: edge_list
+        relation: [e for e in edge_list if "target_sense_en" in e]
         for relation, edge_list in relation_to_edges.items()
-        if len(edge_list) > 0
+        if len([e for e in edge_list if "target_sense_en" in e]) > 0
     }
 
 # Remove synsets with no suitable edges
@@ -320,20 +319,24 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
 # Cleaning up
 synset_to_relations = {
     synset: {
-        relation: edge_list for relation, edge_list in relations.items() if len(edge_list) > 0
+        relation: edge_list
+        for relation, edge_list in relations.items()
+        if len(edge_list) > 0
     }
     for synset, relations in synset_to_relations.items()
 }
 
 synset_to_relations = {
-    synset : relations
+    synset: relations
     for synset, relations in synset_to_relations.items()
     if len(relations) > 0
 }
 
+
 def sample_one_relation(relations_to_edges):
     relation = random.choice(list(relations_to_edges.keys()))
-    return {relation : random.choice(relations_to_edges[relation]) }
+    return {relation: random.choice(relations_to_edges[relation])}
+
 
 output = {
     synset_id: {
@@ -345,9 +348,9 @@ output = {
 }
 
 Path(output_folder).mkdir(parents=True, exist_ok=True)
-with open(f"{output_folder}/all_langs_break.json", "w") as f: #TODO
+with open(f"{output_folder}/dataset.json", "w") as f:  # TODO
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
 
 print(f"Time taken: {(time.time()-t_start)/60} minutes")
-print(f"Done! Output saved to {output_folder}/all_langs.json") 
+print(f"Done! Output saved to {output_folder}/dataset.json")
