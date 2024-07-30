@@ -78,6 +78,7 @@ parser.add_argument(
 parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
+parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
 parser.add_argument("--dataset_path", default="datasets/v4", help="dataset path")
 parser.add_argument("--synset_path", default="synsets/v4", help="synset path")
 
@@ -96,7 +97,7 @@ Path(dataset_path).mkdir(parents=True, exist_ok=True)
 
 rel_counter = Counter()
 
-rel_path = f"{synset_path}/all_langs_relations.txt"
+rel_path = f"{synset_path}/relations.txt"
 with open(rel_path, "r") as f:
     for line in f:
         relation, count = line.strip().split(":")
@@ -122,7 +123,7 @@ rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
 # %%
 relations = rel_df["relation_name"].tolist()
 
-with open(f"{synset_path}/all_langs_syns.pkl", "rb") as f:
+with open(f"{synset_path}/syns.pkl", "rb") as f:
     data = pickle.load(f)
 
 subj_and_obj = defaultdict(dict)
@@ -185,19 +186,31 @@ llm = ChatOpenAI(
     max_tokens=None
 )
 
+if args.rephrase:
+    msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
+(for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
+In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
+Additionally, create an additional version of the question by rephrasing.
+The input is a markdown table with 4 columns, relation_name, count, subject, object. 
+When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
+do NOT include them in the question.
+You simply need to output the result in tsv format with 6 columns: relation_name, count, subject, object, question and rephrase. 
+For all the columns except question and rephrase, simply copy the values from the input tsv."""
+else:
+    msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
+(for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
+In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
+The input is a markdown table with 4 columns, relation_name, count, subject, object. 
+When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
+do NOT include them in the question.
+You simply need to output the result in tsv format with 5 columns: relation_name, count, subject, object and question. 
+For all the columns except question and rephrase, simply copy the values from the input tsv."""
+
 prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
-            (for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
-            In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
-            Additionally, create an additional version of the question by rephrasing.
-            The input is a markdown table with 4 columns, relation_name, count, subject, object. 
-            When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
-            do NOT include them in the question.
-            You simply need to output the result in tsv format with 6 columns: relation_name, count, subject, object, question and rephrase. 
-            For all the columns except question and rephrase, simply copy the values from the input tsv."""
+            msg,
         ),
         (
             "human",
