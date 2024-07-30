@@ -67,16 +67,16 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--source_file_name",
-        default="./translation/glossaries/v4/glossary_no_id.csv",
+        default="glossaries/v5/glossary_no_id.csv",
         help="Path to the source file",
     )
     parser.add_argument(
         "--destination_blob_name",
-        default="glossaries/v4/glossary_no_id_v4.csv",
+        default="glossaries/v5/glossary_no_id.csv",
         help="Name of the destination blob",
     )
     parser.add_argument("--project_id", default="babeledits-trial", help="Project ID")
-    parser.add_argument("--glossary_id", default="multi_v4", help="Glossary ID")
+    parser.add_argument("--glossary_id", default="multi_v5", help="Glossary ID")
 
     args, _ = parser.parse_known_args()
 
