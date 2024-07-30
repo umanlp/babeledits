@@ -1,5 +1,6 @@
 synsets
 wikidata
+wikipedia_data
 synsets2
 .vscode/launch.json
 test.py
@@ -35,3 +36,6 @@ translation_checks/v4/tsv/tgt/en_sentences_translated_th.tsv
 translation_checks/v4/tsv/tgt/en_sentences_translated_zh.tsv
 translation_checks/v4/tsv/tgt/en_sentences_translated.tsv
 translation_checks/v4/tsv/tgt/index.csv
+en_titles.txt
+french_cos_sim.csv
+french_string_match.csv

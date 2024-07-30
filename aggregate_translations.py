@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import pandas as pd
 import sienna
-from utils import add_translation
+from utils import add_translation, extract
 import os
 import argparse
 
@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser(description='Aggregate Relations')
 parser.add_argument('--translation_path', type=str, default='datasets/v4/tsv/tgt', help='Path to the translation files')
 parser.add_argument('--dataset_path', type=str, default='datasets/v4/all_langs.json', help='Path to the dataset file')
 parser.add_argument('--output_dir', type=str, default='datasets/v4/translated', help='Path to the output directory')
+parser.add_argument('--delete_same_prompt', action='store_true', help='Flag to delete translations with the same prompt')
 
 args = parser.parse_args()
 
@@ -34,13 +35,30 @@ def load_translations(translation_path):
     return langs,output_df
 
 data = sienna.load(dataset_path)
-langs, output_df = load_translations(translation_path)
+src_langs, output_df = load_translations(translation_path)
 # %%
 
 print(f"Adding translations to the dataset in {output_dir}...")
-langs = langs + ["en"]
+langs = src_langs + ["en"]
 langs.sort()
 add_translation(data, iter(output_df.iterrows()), "prompt_en", langs)
+
+if args.delete_same_prompt: # only for bilingual datasets where it could be that prompt = prompt_gloss
+    print("Removing translations with the same prompt...")
+    idxs_to_remove = []
+
+    for lang in src_langs:
+        all_prompts = extract(data, lang)
+        prompts = [x for i, x in enumerate(all_prompts) if i % 2 ==0]
+        prompts_gloss = [x for i, x in enumerate(all_prompts) if i % 2 ==1]
+        for i, (prompt, prompt_gloss) in enumerate(zip(prompts, prompts_gloss)):
+            if prompt == prompt_gloss:
+                idxs_to_remove.append(i)
+    keys_to_remove = [list(data.keys())[i] for i in idxs_to_remove]
+    print(f"Removing {len(idxs_to_remove)} translations with the same prompt...")
+    for k in keys_to_remove:
+        data.pop(k)
+
 
 output_dir = Path(output_dir)
 output_dir.mkdir(exist_ok=True)
