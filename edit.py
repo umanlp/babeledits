@@ -113,7 +113,7 @@ if __name__ == "__main__":
         idxs_to_remove = []
         for idx, elem in enumerate(zip(prompts, subjects)):
             p, s = elem
-            if s not in p:
+            if p.count(s) != 1:
                 idxs_to_remove.append(idx)
 
         for idx in reversed(idxs_to_remove):
