@@ -45,16 +45,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--wiki_path",
-        default="wikipedia_data/v4/processed",
+        default="wikipedia_data/v5/processed",
         help="Path to the wiki file",
     )
     parser.add_argument(
         "--save_path",
-        default="wikipedia_data/v4",
+        default="wikipedia_data/v5",
         help="Path to save the merged dataset",
     )
     parser.add_argument(
-        "--num_samples", default=20000, type=int, help="Number of samples to draw"
+        "--num_samples", default=13000, type=int, help="Number of samples to draw"
     )
 
     args, _ = parser.parse_known_args()
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     lang_to_df = {}
     for file in os.listdir(args.wiki_path):
         if file.endswith(".csv"):
-            lang = file.split("_")[0]
+            lang = file.split(".")[0]
             df = pd.read_csv(os.path.join(args.wiki_path, file))
             if len(df) > 0:
                 lang_to_df[lang] = df
@@ -101,8 +101,12 @@ if __name__ == "__main__":
             va="bottom",
         )
 
-    plt.show()
 
+    # Save the plot as a PNG file
+    plot_save_path = Path(args.save_path) / "sample_distribution.png"
+    plt.savefig(plot_save_path)
+    
+    plt.show()
     # Save samples to a CSV file if save_path is provided
     save_path = Path(args.save_path) / "all_langs.csv"
     sample_df = pd.DataFrame(samples, columns=["English Title", "Wikipedia Language"])

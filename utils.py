@@ -3,42 +3,64 @@ import re
 import urllib
 
 
-def extract(data, search_key):
-    output = []
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key == search_key:
-                output.append(value)
-            else:
-                output.extend(extract(value, search_key))
-    elif isinstance(data, list):
-        for item in data:
-            output.extend(extract(item, search_key))
-    return output
+def extract(data, field, upper_level_field=None):
+    """
+    Extracts the specified field from every entry in the given JSON data.
+
+    :param data: The JSON data as a dictionary.
+    :param field: The field to extract.
+    :param upper_level_field: The upper-level field if the field is two letters long.
+    :return: A list of the extracted values.
+    """
+    extracted_values = []
+
+    def extract_from_dict(d, field, upper_level_field=None):
+        if len(field) == 2:
+            if upper_level_field and upper_level_field in d:
+                if field in d[upper_level_field]:
+                    return d[upper_level_field][field]
+        else:
+            if field in d:
+                return d[field]
+        for key, value in d.items():
+            if isinstance(value, dict):
+                result = extract_from_dict(value, field, upper_level_field)
+                if result is not None:
+                    return result
+        return None
+
+    for key, value in data.items():
+        extracted_value = extract_from_dict(value, field, upper_level_field)
+        extracted_values.append(extracted_value)
+
+    return extracted_values
 
 
-def add_translation(data, transl, search_key, langs):
-    if isinstance(data, dict):
-        keys = list(data.keys())
-        for key in keys:
-            value = data[key]
-            if key == search_key:
-                try:
-                    _, next_transl = next(transl)
-                    en_prompt = data.pop(search_key)
-                    data["prompts"] = {
-                        f"{lang}": (next_transl[f"tgt_{lang}"] if lang != "en" else en_prompt) for lang in langs 
-                    }
-                    data["prompts_gloss"] = {
-                        f"{lang}": (next_transl[f"tgt_gloss_{lang}"] if lang != "en" else en_prompt) for lang in langs 
-                    }
-                except StopIteration:
-                    return
-            else:
-                add_translation(value, transl, search_key, langs)
-    elif isinstance(data, list):
-        for item in data:
-            add_translation(item, transl, search_key, langs)
+def add_translations(json_data, dataframe, langs):
+    # Create an iterator over the dataframe rows
+    df_iter = dataframe.iterrows()
+
+    # Traverse through each item in the JSON data
+    for item in json_data.values():
+        for relation in item["relations"].values():
+            edit = relation.get("edit", {})
+            if "prompts" not in edit:
+                edit["prompts"] = {}
+            if "prompts_gloss" not in edit:
+                edit["prompts_gloss"] = {}
+
+            # Get the next row from the dataframe iterator
+            _, row = next(df_iter)
+
+            for lang in langs:
+                # Update the prompts with translations from dataframe
+                if lang != "en":
+                    edit["prompts"][lang] = row[f"tgt_{lang}"]
+                    edit["prompts_gloss"][lang] = row[f"tgt_gloss_{lang}"]
+                else:
+                    edit["prompts"][lang] = row["src"]
+                    edit["prompts_gloss"][lang] = row["src"]
+    return json_data
 
 
 def edit_distance(s1, s2):
@@ -89,23 +111,24 @@ def lcs(str1, str2):
     return lcs
 
 
-def read_data(json_path, lang, tgt_lang, prompt_type="prompts", tgt_prompt_type="prompts_gloss"):
+def read_data(
+    json_path, lang, tgt_lang, prompt_type="prompts", tgt_prompt_type="prompts_gloss"
+):
     with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
     subjects = []
     tgt_subjects = []
-    
+
     en_subjects = []
-    
+
     prompts = []
     tgt_prompts = []
-    
+
     ground_truth = []
-    
+
     edits = []
     tgt_edits = []
-
 
     for _, value in data.items():
         subj_count = 0
@@ -114,7 +137,7 @@ def read_data(json_path, lang, tgt_lang, prompt_type="prompts", tgt_prompt_type=
             if "edit" in relation_data:
                 if lang in relation_data["edit"][prompt_type]:
                     prompts.append(relation_data["edit"][prompt_type][lang])
-                
+
                 if tgt_lang in relation_data["edit"][tgt_prompt_type]:
                     tgt_prompts.append(relation_data["edit"][tgt_prompt_type][tgt_lang])
 
@@ -130,10 +153,20 @@ def read_data(json_path, lang, tgt_lang, prompt_type="prompts", tgt_prompt_type=
                     tgt_subj_count += 1
 
         subjects.extend([value["subject_senses"][f"sense_{lang}"]] * subj_count)
-        tgt_subjects.extend([value["subject_senses"][f"sense_{tgt_lang}"]] * tgt_subj_count)
+        tgt_subjects.extend(
+            [value["subject_senses"][f"sense_{tgt_lang}"]] * tgt_subj_count
+        )
         en_subjects.extend([value["subject_senses"]["sense_en"]] * subj_count)
 
-    data = {"subjects": subjects, "en_subjects": en_subjects, "prompts": prompts, "ground_truth": ground_truth,  "edits": edits, "tgt_prompts": tgt_prompts, "tgt_edits": tgt_edits}
+    data = {
+        "subjects": subjects,
+        "en_subjects": en_subjects,
+        "prompts": prompts,
+        "ground_truth": ground_truth,
+        "edits": edits,
+        "tgt_prompts": tgt_prompts,
+        "tgt_edits": tgt_edits,
+    }
     return data
 
 
@@ -154,6 +187,7 @@ def clean(sense):
 def download_blob(bucket_name, blob_name, destination_file_name):
     """Downloads a file from a Google Cloud Storage bucket."""
     from google.cloud import storage
+
     # Initialize the storage client
     storage_client = storage.Client()
 
@@ -171,6 +205,7 @@ def download_blob(bucket_name, blob_name, destination_file_name):
 
 def folder_exists(uri):
     from google.cloud import storage
+
     parsed_url = urllib.parse.urlparse(uri)
     bucket_name = parsed_url.netloc
     folder_name = parsed_url.path.lstrip("/")
@@ -184,6 +219,7 @@ def folder_exists(uri):
 
 def delete_folder(uri):
     from google.cloud import storage
+
     parsed_url = urllib.parse.urlparse(uri)
     bucket_name = parsed_url.netloc
     folder_name = parsed_url.path.lstrip("/")
@@ -198,6 +234,7 @@ def delete_folder(uri):
 
 def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     from google.cloud import storage
+
     """Uploads a file to the bucket."""
     # Initialize a storage client
     storage_client = storage.Client()

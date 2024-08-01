@@ -5,7 +5,7 @@ import json
 import yaml
 
 sys.path.append("EasyEdit")
-from utils import read_data
+from utils import extract
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
@@ -57,12 +57,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--hparam", type=str, default="hparams/ROME/llama-7b.yaml")
     parser.add_argument("--lang", type=str, default=None)
-    parser.add_argument("--tgt_lang", type=str, default=None)
+    parser.add_argument("--tgt_langs", type=str, default=None, nargs="+")
     parser.add_argument("--max_edits", type=int, default=None)
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--log_subdir", type=str, default=None)
     parser.add_argument("--prompt_type", type=str, default=None)
-    parser.add_argument("--tgt_prompt_type", type=str, default=None)
+    parser.add_argument("--tgt_prompt_type", type=str, default=None, nargs="+")
     args = parser.parse_args()
 
     method = os.path.basename(os.path.dirname(args.hparam))
@@ -71,15 +71,13 @@ if __name__ == "__main__":
         f"Running {method} on {args.data_file} on device {args.device}\nUsing hparams: {args.hparam}\nLogging to: {args.log_subdir}\nMax edits: {args.max_edits}"
     )
     print("Loading data")
-    data = read_data(
-        args.data_file, args.lang, args.tgt_lang, args.prompt_type, args.tgt_prompt_type
-    )
-    subjects = data["subjects"]
-    prompts = data["prompts"]
-    ground_truth = data["ground_truth"]
-    targets = data["edits"]
-    tgt_targets = data["tgt_edits"]
-    tgt_prompts = data["tgt_prompts"]
+    
+    with open(args.data_file, "r", encoding="utf-8") as file:
+        data = json.load(file)
+    subjects = extract(data, args.lang, "subjects", )
+    prompts = extract(data, args.lang, "prompts",)
+    targets = extract(data, args.lang, "targets")
+    # ground_truths = data["ground_truth"]
 
     print("Data loaded")
     hparams = get_hparm_class(method).from_hparams(args.hparam)
@@ -119,23 +117,31 @@ if __name__ == "__main__":
         for idx in reversed(idxs_to_remove):
             del prompts[idx]
             del subjects[idx]
-            del ground_truth[idx]
+            # del ground_truth[idx]
             del targets[idx]
 
         print(f"Size of the dataset after filtering: {len(prompts)}")
 
     max_edits = args.max_edits if args.max_edits is not None else len(prompts)
-    port_key =  f"{args.prompt_type}-{args.tgt_prompt_type}_{args.lang}-{args.tgt_lang}"
-    portability_inputs = {
-        port_key: {
-            "prompt": data["tgt_prompts"],
-            "ground_truth": data["tgt_edits"],
-        },
-    }
+
+    xlt_confs = [
+        (tgt_prompt_type, tgt_lang)
+        for tgt_prompt_type in args.tgt_prompt_type
+        for tgt_lang in args.tgt_langs
+    ]
+    portability_inputs = {}
+    for tgt_prompt_type, tgt_lang in xlt_confs:
+        port_key = f"{args.prompt_type}-{tgt_prompt_type}_{args.lang}-{tgt_lang}"
+        portability_inputs.update({
+            port_key: {
+                "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
+                "ground_truth": extract(data, tgt_lang, "targets")[:max_edits],
+            },
+        })
     if method == "FT":
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
-            ground_truth=ground_truth[:max_edits],
+            # ground_truth=ground_truth[:max_edits],
             target_new=targets[:max_edits],
             portability_inputs=portability_inputs,
             train_ds=train_ds,
@@ -145,7 +151,7 @@ if __name__ == "__main__":
     else:
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
-            ground_truth=ground_truth[:max_edits],
+            # ground_truth=ground_truth[:max_edits],
             subject=subjects[:max_edits],
             target_new=targets[:max_edits],
             portability_inputs=portability_inputs,
@@ -162,14 +168,22 @@ if __name__ == "__main__":
             f.write(str(summary))
 
         # Save the command used to launch the script
-        command = "python " + ' '.join(sys.argv)
+        command = "python " + " ".join(sys.argv)
         with open(os.path.join("logs", args.log_subdir, "command.txt"), "w") as f:
             f.write(command)
 
-        hparams_dict = {attr: getattr(hparams, attr) for attr in dir(hparams) if not attr.startswith('__') and not callable(getattr(hparams, attr))}
+        hparams_dict = {
+            attr: getattr(hparams, attr)
+            for attr in dir(hparams)
+            if not attr.startswith("__") and not callable(getattr(hparams, attr))
+        }
 
-        with open(os.path.join("logs", args.log_subdir, f"hparams_{method}.yaml"), "w") as yaml_file:
+        with open(
+            os.path.join("logs", args.log_subdir, f"hparams_{method}.yaml"), "w"
+        ) as yaml_file:
             yaml.dump(hparams_dict, yaml_file, default_flow_style=False)
 
         print(">>> FINISHED <<<")
-        print(f"Logs, metrics and hyperparameters saved to {os.path.join('logs', args.log_subdir)}")
+        print(
+            f"Logs, metrics and hyperparameters saved to {os.path.join('logs', args.log_subdir)}"
+        )

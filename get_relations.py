@@ -19,63 +19,6 @@ from utils import clean
 # Params
 parser = argparse.ArgumentParser(description="Process relations data.")
 parser.add_argument(
-    "--langs",
-    nargs="+",
-    default=[
-        "af",
-        "ar",
-        "az",
-        "bg",
-        "bn",
-        "de",
-        "el",
-        "en",
-        "es",
-        "et",
-        "eu",
-        "fa",
-        "fi",
-        "fr",
-        "gu",
-        "he",
-        "hi",
-        "ht",
-        "hr",
-        "hu",
-        "id",
-        "it",
-        "ja",
-        "jv",
-        "ka",
-        "kk",
-        "ko",
-        "lt",
-        "ml",
-        "mr",
-        "ms",
-        "my",
-        "nl",
-        "pa",
-        "pl",
-        "pt",
-        "qu",
-        "ro",
-        "ru",
-        "sw",
-        "ta",
-        "te",
-        "th",
-        "tl",
-        "tr",
-        "uk",
-        "ur",
-        "vi",
-        "yo",
-        "zh",
-    ],
-    help="list of languages",
-)
-parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
 parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
@@ -85,8 +28,6 @@ parser.add_argument("--synset_path", default="synsets/v4", help="synset path")
 
 args, _ = parser.parse_known_args()
 
-langs = args.langs
-print(f"Languages: {len(langs)}")
 max_rel = args.max_rel
 dataset_path = args.dataset_path
 synset_path = args.synset_path
@@ -190,10 +131,10 @@ if args.rephrase:
     msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
 (for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
 In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
-Additionally, create an additional version of the question by rephrasing.
+Moreover, create an additional version of the question by rephrasing.
 The input is a markdown table with 4 columns, relation_name, count, subject, object. 
-When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
-do NOT include them in the question.
+When creating the question, ALWAYS keep the <subject> placeholder, the examples provided as subject and object are there just to help you understand the relation,
+do NOT include them in the question which means that you should NOT replace the <subject> placeholder with the examples.
 You simply need to output the result in tsv format with 6 columns: relation_name, count, subject, object, question and rephrase. 
 For all the columns except question and rephrase, simply copy the values from the input tsv."""
 else:
@@ -201,10 +142,10 @@ else:
 (for example, WordNet or Babelnet) into natural language questions. Given the relations provided in the user input, create a question for each relation.
 In the case of the relation PLAYS_FOR, the question could be 'Which team does <subject> play for?'.
 The input is a markdown table with 4 columns, relation_name, count, subject, object. 
-When creating the question, always keep the <subject> or <object> placeholder, the examples provided as subject and object are there just to help you understand the relation,
-do NOT include them in the question.
+When creating the question, ALWAYS keep the <subject> placeholder, the examples provided as subject and object are there just to help you understand the relation,
+so do NOT include them in the question which means that you should NOT replace the <subject> placeholder with the examples.
 You simply need to output the result in tsv format with 5 columns: relation_name, count, subject, object and question. 
-For all the columns except question and rephrase, simply copy the values from the input tsv."""
+For all the columns except question simply copy the values from the input tsv."""
 
 prompt = ChatPromptTemplate.from_messages(
     [

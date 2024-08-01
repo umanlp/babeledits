@@ -26,6 +26,9 @@ def main():
     parser.add_argument(
         "--device", type=str, default="cpu", help="Device to run the model on (cpu or cuda:idx)"
     )
+    parser.add_argument(
+        "--top_k", type=int, default=500, help="Number of top pages to extract"
+    )
     args = parser.parse_args()
 
     res = pd.read_csv(
@@ -40,6 +43,8 @@ def main():
     embeddings2 = model.encode(ent_2)
     res["cos_sim"] = model.similarity_pairwise(embeddings1, embeddings2).numpy()
     filtered = res[res["cos_sim"] <= args.threshold]
+    filtered = filtered.sort_values(by="cos_sim", ascending=False)
+    filtered = filtered.head(args.top_k)
     print(f"Extracted {len(filtered)} pages for {args.lang}")
     Path(args.save_path).mkdir(parents=True, exist_ok=True)
     filtered.to_csv(f"{args.save_path}/{args.lang}.csv", index=False)

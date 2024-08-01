@@ -151,7 +151,7 @@ if not args.tgt_blob_path.endswith("/"):
 
 data = sienna.load(dataset_path)
 print(f"Reading dataset from {dataset_path}...")
-prompts = extract(data, search_key)
+prompts = extract(data, 'en', 'prompts')
 
 # Convert prompts to tsv, upload to GCS
 df = pd.DataFrame(prompts, columns=["prompt"])
