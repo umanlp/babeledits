@@ -197,7 +197,7 @@ if __name__ == "__main__":
                 pd.to_numeric(wiki_df["Views"], errors="coerce").notnull()
             ]
             wiki_df["Views"] = wiki_df["Views"].astype(int)
-            wiki_df = wiki_df.sort_values("Views", ascending=False).iloc[: 2 * top_k]
+            wiki_df = wiki_df.sort_values("Views", ascending=False).iloc[: int(1.5 * top_k)]
 
             # Extracting and saving wikipedia pages 
             records = list(zip(wiki_df["Title"], wiki_df["Views"]))
