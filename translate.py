@@ -1,17 +1,32 @@
 # %%
-from typing import List
 from google.cloud import translate
 from upload_glossary import upload_to_gcs
 import sienna
 import pandas as pd
 from pathlib import Path
-import json
 import argparse
-from utils import add_translation, download_blob, extract, folder_exists, delete_folder
+from utils import download_blob, extract, folder_exists, delete_folder
 from google.cloud import storage
 
-# from google.cloud import blob
-import urllib.parse
+
+
+def check_prompt_structure(df, expected_pattern):
+    if 'prompt_type' not in df.columns:
+        raise ValueError("DataFrame does not contain 'prompt_type' column")
+    
+    pattern_length = len(expected_pattern)
+    column_values = df['prompt_type'].tolist()
+    
+    # Check if the length of the column is a multiple of the pattern length
+    if len(column_values) % pattern_length != 0:
+        return False
+    
+    # Check if the pattern repeats throughout the column
+    for i in range(0, len(column_values), pattern_length):
+        if column_values[i:i+pattern_length] != expected_pattern:
+            return False
+    
+    return True
 
 
 def translate_text_with_glossary(
@@ -86,125 +101,194 @@ def translate_text_with_glossary(
 
     return response, file_names
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Translate text using a glossary")
+    parser.add_argument(
+        "--dataset_path", default="datasets/v5/dataset.json", help="Path to the dataset"
+    )
+    parser.add_argument(
+        "--project_id", default="babeledits-trial", help="ID of the GCP project"
+    )
+    parser.add_argument(
+        "--src_bucket_name",
+        default="babeledits-transl-src",
+        help="Name of the bucket which contains files to be translated",
+    )
+    parser.add_argument(
+        "--tgt_bucket_name",
+        default="babeledits-transl-tgt",
+        help="Name of the bucket which will contain output translations",
+    )
+    parser.add_argument(
+        "--src_blob_path",
+        default="translations/v5",
+        help="Name of the path where the source files are stored",
+    )
+    parser.add_argument(
+        "--tgt_blob_path",
+        default="translations/v5/",
+        help="Name of the path where the translations will stored",
+    )
+    parser.add_argument("--glossary_id", default="multi_v5", help="ID of the glossary")
+    parser.add_argument("--src_lang", default="en", help="Source language code")
+    parser.add_argument(
+        "--tgt_langs", default=["it", "de", "fr"], nargs="+", help="Target language code(s)"
+    )
+    parser.add_argument(
+        "--output_dir", default="datasets/v5/translated", help="Output directory"
+    )
+    parser.add_argument(
+        "-d",
+        "--delete",
+        action="store_true",
+        help="Delete the target folder in GCS without asking for user confirmation",
+    )
 
-parser = argparse.ArgumentParser(description="Translate text using a glossary")
-parser.add_argument(
-    "--dataset_path", default="datasets/v4/all_langs.json", help="Path to the dataset"
-)
-parser.add_argument(
-    "--project_id", default="babeledits-trial", help="ID of the GCP project"
-)
-parser.add_argument(
-    "--src_bucket_name",
-    default="babeledits-transl-src",
-    help="Name of the bucket which contains files to be translated",
-)
-parser.add_argument(
-    "--tgt_bucket_name",
-    default="babeledits-transl-tgt",
-    help="Name of the bucket which will contain output translations",
-)
-parser.add_argument(
-    "--src_blob_path",
-    default="translations/v4",
-    help="Name of the path where the source files are stored",
-)
-parser.add_argument(
-    "--tgt_blob_path",
-    default="translations/v4/",
-    help="Name of the path where the translations will stored",
-)
-parser.add_argument("--glossary_id", default="multi_v4", help="ID of the glossary")
-parser.add_argument(
-    "--search_key", default="prompt_en", help="Key to search in the dataset"
-)
-parser.add_argument("--src_lang", default="en", help="Source language code")
-parser.add_argument(
-    "--tgt_langs", default=["it", "de", "fr"], nargs="+", help="Target language code(s)"
-)
-parser.add_argument(
-    "--output_dir", default="datasets/v4/translated", help="Output directory"
-)
-parser.add_argument(
-    "-d",
-    "--delete",
-    action="store_true",
-    help="Delete the target folder in GCS without asking for user confirmation",
-)
+    parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
+    parser.add_argument(
+        "--locality", action="store_true", help="whether to also get a locality"
+    )
+    args, _ = parser.parse_known_args()
 
-args, _ = parser.parse_known_args()
+    dataset_path = args.dataset_path + "/dataset.json"
+    project_id = args.project_id
+    glossary_id = args.glossary_id
+    src_lang = args.src_lang
+    tgt_langs = args.tgt_langs
+    output_dir = args.output_dir
+    src_bucket_name = args.src_bucket_name
+    src_blob_name = Path(args.src_blob_path) / "prompts_en.tsv"
 
-dataset_path = args.dataset_path
-project_id = args.project_id
-glossary_id = args.glossary_id
-search_key = args.search_key
-src_lang = args.src_lang
-tgt_langs = args.tgt_langs
-output_dir = args.output_dir
-src_bucket_name = args.src_bucket_name
-src_blob_name = Path(args.src_blob_path) / "prompts_en.tsv"
+    tgt_bucket_name = args.tgt_bucket_name
+    tgt_blob_path = args.tgt_blob_path
+    if not args.tgt_blob_path.endswith("/"):
+        tgt_blob_path += "/"
 
-tgt_bucket_name = args.tgt_bucket_name
-tgt_blob_path = args.tgt_blob_path
-if not args.tgt_blob_path.endswith("/"):
-    tgt_blob_path += "/"
+    data = sienna.load(dataset_path)
+    print(f"Reading dataset from {dataset_path}...")
+    prompts = extract(data, "en", "prompts")
 
-data = sienna.load(dataset_path)
-print(f"Reading dataset from {dataset_path}...")
-prompts = extract(data, 'en', 'prompts')
-
-# Convert prompts to tsv, upload to GCS
-df = pd.DataFrame(prompts, columns=["prompt"])
-tsv_src_path = Path(dataset_path).parent / "tsv" / "src"
-tsv_src_path.mkdir(parents=True, exist_ok=True)
-prompt_src_path = tsv_src_path / "prompts_en.tsv"
-df.to_csv(prompt_src_path, sep="\t")
-
-print(
-    f"Uploading prompts loaded from {prompt_src_path} to {src_bucket_name} at location {src_blob_name}..."
-)
-upload_to_gcs(str(src_bucket_name), str(prompt_src_path), str(src_blob_name))
-
-input_uri = f"gs://{src_bucket_name}/{src_blob_name}"
-output_uri = f"gs://{tgt_bucket_name}/{tgt_blob_path}"
-print(
-    f"Translating {len(prompts)} prompts from {src_lang} to {tgt_langs} using glossary {glossary_id}"
-)
-if folder_exists(output_uri):
-    if args.delete:
-        delete_folder(output_uri)
+    if args.rephrase and args.locality:
+        print(f"Adding generality and locality prompts from {dataset_path}...")
+        prompts_gen = extract(data, "en", "prompts_gen")
+        prompts_loc = extract(data, "en", "prompts_loc")
+        all_prompts = [
+            item for sublist in zip(prompts, prompts_gen, prompts_loc) for item in sublist
+        ]
+    elif args.rephrase:
+        print(f"Adding generality prompts from {dataset_path}...")
+        prompts_gen = extract(data, "en", "prompts_gen")
+        all_prompts = [item for sublist in zip(prompts, prompts_gen) for item in sublist]
+    elif args.locality:
+        print(f"Adding locality prompts from {dataset_path}...")
+        prompts_loc = extract(data, "en", "prompts_loc")
+        all_prompts = [item for sublist in zip(prompts, prompts_loc) for item in sublist]
     else:
-        user_input = input(
-            f"The URI {output_uri} exists. Do you want to delete it? (yes/no): "
-        )
-        if user_input.lower() == "yes":
+        print(f"Using only prompts from {dataset_path}...")
+        all_prompts = prompts
+
+
+    # Convert prompts to tsv, upload to GCS
+    df = pd.DataFrame(all_prompts, columns=["prompt"])
+    tsv_src_path = Path(dataset_path).parent / "tsv" / "src"
+    tsv_src_path.mkdir(parents=True, exist_ok=True)
+    prompt_src_path = tsv_src_path / "prompts_en.tsv"
+    df.to_csv(prompt_src_path, sep="\t")
+
+    print(
+        f"Uploading prompts loaded from {prompt_src_path} to {src_bucket_name} at location {src_blob_name}..."
+    )
+    upload_to_gcs(str(src_bucket_name), str(prompt_src_path), str(src_blob_name))
+
+    input_uri = f"gs://{src_bucket_name}/{src_blob_name}"
+    output_uri = f"gs://{tgt_bucket_name}/{tgt_blob_path}"
+    print(
+        f"Translating {len(all_prompts)} prompts from {src_lang} to {tgt_langs} using glossary {glossary_id}"
+    )
+    if folder_exists(output_uri):
+        if args.delete:
             delete_folder(output_uri)
         else:
-            print("Exiting...")
-            exit()
-print(f"Input URI: {input_uri}", f"Output URI: {output_uri}", sep="\n")
-response, file_names = translate_text_with_glossary(
-    project_id, glossary_id, input_uri, output_uri, src_lang, tgt_langs
-)
-print(response)
-print(f"Files produced {file_names}")
-
-# %%
-tsv_tgt_path = Path(dataset_path).parent / "tsv" / "tgt"
-tsv_tgt_path.mkdir(parents=True, exist_ok=True)
-index_blob_name = [x for x in file_names if x.endswith("index.csv")][0]
-index_path = tsv_tgt_path / "index.csv"
-print(
-    f"Downloading index as well from {tgt_bucket_name} at location {index_blob_name} to {index_path}..."
-)
-download_blob(tgt_bucket_name, index_blob_name, index_path)
-index_df = pd.read_csv(index_path, names=["orig_file", "lang", "output_file"], usecols=[0,1,2])
-
-for index, row in index_df.iterrows():
-    lang = row["lang"]
-    prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
-    tgt_blob_name = row["output_file"].replace("gs://", "").replace(tgt_bucket_name+"/", "")
-    print(
-        f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
+            user_input = input(
+                f"The URI {output_uri} exists. Do you want to delete it? (yes/no): "
+            )
+            if user_input.lower() == "yes":
+                delete_folder(output_uri)
+            else:
+                print("Exiting...")
+                exit()
+    print(f"Input URI: {input_uri}", f"Output URI: {output_uri}", sep="\n")
+    response, file_names = translate_text_with_glossary(
+        project_id, glossary_id, input_uri, output_uri, src_lang, tgt_langs
     )
-    download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
+    print(response)
+    print(f"Files produced {file_names}")
+
+    # %%
+    tsv_tgt_path = Path(dataset_path).parent / "tsv" / "tgt"
+    tsv_tgt_path.mkdir(parents=True, exist_ok=True)
+    index_blob_name = [x for x in file_names if x.endswith("index.csv")][0]
+    index_path = tsv_tgt_path / "index.csv"
+    print(
+        f"Downloading index as well from {tgt_bucket_name} at location {index_blob_name} to {index_path}..."
+    )
+    download_blob(tgt_bucket_name, index_blob_name, index_path)
+    index_df = pd.read_csv(
+        index_path, names=["orig_file", "lang", "output_file"], usecols=[0, 1, 2]
+    )
+
+    for index, row in index_df.iterrows():
+        lang = row["lang"]
+        prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
+        tgt_blob_name = (
+            row["output_file"].replace("gs://", "").replace(tgt_bucket_name + "/", "")
+        )
+        print(
+            f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
+        )
+        download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
+
+        df = pd.read_csv(
+            prompt_tgt_path,
+            sep="\t",
+            names=["req_id", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"],
+            header=0,
+        )
+        if args.rephrase and args.locality:
+            df["prompt_type"] = df["src"].apply(
+                lambda x: "prompt"
+                if x in prompts
+                else "prompt_gen"
+                if x in prompts_gen
+                else "prompt_loc"
+                if x in prompts_loc
+                else None
+            )
+            expected_pattern = ['prompt', 'prompt_gen', 'prompt_loc']
+            df.sort_values("req_id", inplace=True)
+            if not check_prompt_structure(df, expected_pattern): 
+                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+        elif args.rephrase:
+            df["prompt_type"] = df["src"].apply(
+                lambda x: "prompt" if x in prompts else "prompt_gen" if x in prompts_gen else None
+            )
+            expected_pattern = ['prompt', 'prompt_gen']
+            df.sort_values("req_id", inplace=True)
+            if not check_prompt_structure(df, expected_pattern): 
+                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+        elif args.locality:
+            df["prompt_type"] = df["src"].apply(
+                lambda x: "prompt" if x in prompts else "prompt_loc" if x in prompts_loc else None
+            )
+            expected_pattern = ['prompt', 'prompt_loc']
+            df.sort_values("req_id", inplace=True)
+            if not check_prompt_structure(df, expected_pattern): 
+                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+        else:
+            df["prompt_type"] = "prompt"
+        df = df[["req_id", "prompt_type", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"]]
+        df.sort_values("req_id", inplace=True)
+
+        if df.isnull().values.any():
+            print(f"Data for {lang} has some problems with NaN values. Please check.")
+        df.to_csv(prompt_tgt_path, sep="\t", index=False)
