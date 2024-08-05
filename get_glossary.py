@@ -77,7 +77,7 @@ langs = args.langs
 
 print(f"Reading dataset from {dataset_dir}...")
 data = sienna.load(f"{dataset_dir}/dataset.json")
-glossary = [list(x["subject_senses"].values()) for x in data.values()]
+glossary = [list(x["subjects"].values()) for x in data.values()]
 glossary_df = pd.DataFrame(glossary, columns=langs)
 glossary_df["synset_id"] = data.keys()
 glossary_df = glossary_df[["synset_id"] + langs]
