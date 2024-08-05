@@ -53,13 +53,33 @@ def add_translations(json_data, dataframe, langs):
             _, row = next(df_iter)
 
             for lang in langs:
-                # Update the prompts with translations from dataframe
-                if lang != "en":
-                    edit["prompts"][lang] = row[f"tgt_{lang}"]
-                    edit["prompts_gloss"][lang] = row[f"tgt_gloss_{lang}"]
-                else:
-                    edit["prompts"][lang] = row["src"]
-                    edit["prompts_gloss"][lang] = row["src"]
+                if row["prompt_type"] == "prompt":
+                    # Update the prompts with translations from dataframe
+                    edit["prompts"][lang] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                    edit["prompts_gloss"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+
+                elif row["prompt_type"] == "prompt_gen":
+
+                    edit["prompts_gen"] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
+
+                    if "prompts_gen_gloss" not in edit:
+                        edit["prompts_gen_gloss"] = {}
+
+                    edit["prompts_gen_gloss"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+
+                elif row["prompt_type"] == "prompt_loc":
+
+                    locality_data = edit["locality"]
+
+                    loc_relation = list(locality_data.keys())[0]
+
+                    locality_data[loc_relation]["prompts_loc"][lang] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                    
+                    if "prompts_loc_gloss" not in edit:
+                        locality_data[loc_relation]["prompts_loc_gloss"] = {}
+                    
+                    locality_data[loc_relation]["prompts_loc"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+
     return json_data
 
 
