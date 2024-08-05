@@ -116,13 +116,15 @@ def convert_to_babel_relations(relations):
     for r in relations:
         try:
             babel_relations.append(BabelPointer.from_name(r))
-        except:
+        except: # cases that for some reason are not handled by from_name
             if r == "GLOSS_DISAMBIGUATED":
                 babel_relations.append(BabelPointer.GLOSS_DISAMBIGUATED)
             elif r == "REGION_MEMBER":
                 babel_relations.append(BabelPointer.REGION_MEMBER)
             elif r == "TOPIC_MEMBER":
                 babel_relations.append(BabelPointer.TOPIC_MEMBER)
+            elif r == "DERIVATIONALLY_RELATED":
+                babel_relations.append(BabelPointer.DERIVATIONALLY_RELATED)
             else:
                 raise ValueError("Could not convert relation!")
     return babel_relations
@@ -164,10 +166,11 @@ relations = convert_to_babel_relations(relations)
 
 t_start = time.time()
 
-file_path = f"{synset_path}/syns.pkl"  
+file_path = f"{synset_path}/syns.pkl"
 print(f"Loading synsets from {file_path}")
 with open(file_path, "rb") as f:
     data = pickle.load(f)
+
 
 print(f"Loaded {len(data)} synsets from {file_path}")
 
@@ -181,8 +184,9 @@ synset_to_senses = {
 }
 
 # Get synset -> outgoing relation maps, only for the relations we selected a priori
-# Second step serves to get synset -> relation -> edge, since each synset could have multiple instances of the same relation
-# Third step puts a max cap on the number of edges per relation
+# Removes synset with no relations in the selected set
+# Third step serves to get synset -> relation -> edge, since each synset could have multiple instances of the same relation
+# Fourth step puts a max cap on the number of edges per relation
 synset_to_relations = {
     str(synset.id): [
         (e.pointer.name, e, e.target)
@@ -191,6 +195,12 @@ synset_to_relations = {
     ]
     for synset in tqdm(synset_to_senses, desc="Getting relations")
 }
+synset_to_relations = {
+    syn: rel for syn, rel in synset_to_relations.items() if len(rel) > 0
+}
+print(
+    f"Got {len(synset_to_relations)} synsets with relations in the selected set out of {len(data)}"
+)
 synset_to_relations = {
     synset: {
         str(r): [
@@ -249,13 +259,15 @@ babel_langs = set([Language.from_iso(lang) for lang in langs])
 
 print("Getting edges where target synset is in all selected languages")
 # Let's iterate over all the subject synsets and store the data from the target synsets (if we have their senses)
+
 targets_to_find = 2 if args.locality else 1
 for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
     relation_to_edges = synset_to_relations[synset]
     shuffled_relations = list(relation_to_edges.keys())
     random.shuffle(shuffled_relations)
 
-    counter = 0
+    # Dictionary to track how many edges we have found for each relation
+    relation_counter = {relation: 0 for relation in shuffled_relations}
     for relation in shuffled_relations:
         for edge in relation_to_edges[relation]:
             tgt_syn = BabelSynsetID(edge["ground_truth_id"]).to_synset()
@@ -267,27 +279,27 @@ for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
                     }
                 }
                 edge.update(targets)
-                counter += 1
-                if counter == targets_to_find:
-                    break
-        # relation_to_edges[relation] = [
-        #     edge for edge in relation_to_edges[relation] if "target_sense_en" in edge
-        # ]
-        if counter == targets_to_find:  # TODO
+                relation_counter[relation] += 1
+                break
+        if sum(list(relation_counter.values())) >= targets_to_find:
             break
-    # keep only those for which we have multi-parallel target synsets
+        # Continue to the next relation
+
+    # Keep only those relations with enough suitable edges
     synset_to_relations[synset] = {
         relation: [e for e in edge_list if "ground_truths" in e]
         for relation, edge_list in relation_to_edges.items()
         if len([e for e in edge_list if "ground_truths" in e]) > 0
     }
 
-# Remove synsets with no suitable edges
+# Remove synsets with fewer than targets_to_find distinct relations with suitable edges
 synset_to_relations = {
     synset: relations
     for synset, relations in synset_to_relations.items()
-    if len(relations) >= targets_to_find
+    if len([relation for relation, edges in relations.items() if len(edges) > 0])
+    >= targets_to_find
 }
+
 # Make it so that the key is a string (useful later)
 synset_to_senses = {str(synset.id): sense for synset, sense in synset_to_senses.items()}
 
@@ -324,7 +336,7 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
             sampled_syn = copy.deepcopy(random.choice(syn_pool))
             sampled_syn["target_id"] = sampled_syn.pop("ground_truth_id")
             sampled_syn["targets"] = sampled_syn.pop("ground_truths")
-            if "edit" in sampled_syn:
+            if "edit" in sampled_syn:  # avoid infinit recursion
                 sampled_syn.pop("edit")
             prompt = rel_df.loc[relation, "question"].replace(
                 "<subject>", synset_to_senses[synset]["en"]
@@ -337,30 +349,26 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
                 prompt_data.update({"prompts_gen": {"en": rephrase_prompt}})
             edge["edit"] = sampled_syn
             edge["edit"].update(prompt_data)
-        relation_to_edges[relation] = [
-            edge for edge in relation_to_edges[relation] if "edit" in edge
-        ]
 
-# Cleaning up
-synset_to_relations = {
-    synset: {
-        relation: edge_list
-        for relation, edge_list in relations.items()
-        if len(edge_list) > 0
-    }
-    for synset, relations in synset_to_relations.items()
-}
 
+# Keep only synsets that (i) have at least one/two relations and (ii) at least one edge with an edit
 synset_to_relations = {
     synset: relations
     for synset, relations in synset_to_relations.items()
     if len(relations) >= targets_to_find
+    and any(["edit" in edge for relation in relations for edge in relations[relation]])
 }
 
 
 def sample_one_relation(relations_to_edges):
-    relation = random.choice(list(relations_to_edges.keys()))
-    return {relation: random.choice(relations_to_edges[relation])}
+    relation_pool = {
+        rel: rel_data
+        for rel, rel_data in relations_to_edges.items()
+        if any("edit" in edge for edge in rel_data)
+    }
+    relation = random.choice(list(relation_pool.keys()))
+    relation_data = random.choice([e for e in relation_pool[relation] if "edit" in e])
+    return {relation: relation_data}
 
 
 output = {
@@ -376,16 +384,18 @@ print(f"Input size {len(data)}, Output size {len(output)}")
 if args.locality:
     print("Getting locality sets")
     for synset_id in output:
-        selected_relation = list(output[synset_id]["relations"].keys())[0]
+        selected_relation = list(output[synset_id]["relations"].keys())[
+            0
+        ]  # assumes there's only one edit per entity
         relation_pool = {
             rel: rel_data
             for rel, rel_data in synset_to_relations[synset_id].items()
             if rel != selected_relation
         }
-        sampled_rel = copy.deepcopy(sample_one_relation(relation_pool))
-        rel_name = list(sampled_rel.keys())[0]
-        sampled_rel[rel_name].pop("edit")
-        sampled_rel[rel_name].update(
+        rel_name = random.choice(list(relation_pool.keys()))
+        sampled_rel = copy.deepcopy(random.choice(relation_pool[rel_name]))
+        sampled_rel.pop("edit", None)
+        sampled_rel.update(
             {
                 "prompts_loc": {
                     "en": rel_df.loc[rel_name, "question"].replace(
@@ -394,11 +404,13 @@ if args.locality:
                 }
             }
         )
-        output[synset_id]["relations"][selected_relation]["edit"]["locality"] = sampled_rel
+        output[synset_id]["relations"][selected_relation]["edit"]["locality"] = (
+            sampled_rel
+        )
 
 print(f"Input size {len(data)}, Output size {len(output)}")
 Path(output_folder).mkdir(parents=True, exist_ok=True)
-with open(f"{output_folder}/dataset.json", "w") as f:  # TODO
+with open(f"{output_folder}/dataset.json", "w") as f:  # 
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
 
