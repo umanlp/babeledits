@@ -12,19 +12,19 @@ parser = argparse.ArgumentParser(description="Aggregate Relations")
 parser.add_argument(
     "--translation_path",
     type=str,
-    default="datasets/v4/tsv/tgt",
+    default="datasets/v5/tsv/tgt",
     help="Path to the translation files",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
-    default="datasets/v4/all_langs.json",
+    default="datasets/v5",
     help="Path to the dataset file",
 )
 parser.add_argument(
     "--output_dir",
     type=str,
-    default="datasets/v4/translated",
+    default="datasets/v5/translated",
     help="Path to the output directory",
 )
 parser.add_argument(
@@ -36,7 +36,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 translation_path = args.translation_path
-dataset_path = args.dataset_path
+dataset_path = args.dataset_path + "/dataset.json"
 output_dir = args.output_dir
 
 
@@ -67,7 +67,8 @@ tgt_langs, output_df = load_translations(translation_path)
 print(f"Adding translations to the dataset in {output_dir}...")
 langs = tgt_langs + ["en"]
 langs.sort()
-add_translations(data, output_df, langs)
+prompt_types = output_df["prompt_type"].unique().tolist()
+add_translations(data, output_df, langs, prompt_types)
 
 if (
     args.delete_same_prompt

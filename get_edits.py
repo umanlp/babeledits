@@ -16,7 +16,7 @@ from babelnet.data.relation import BabelPointer
 from tqdm import tqdm
 
 from get_synsets import check_langs
-from utils import clean
+from utils import rename_key, clean
 
 ## Params
 parser = argparse.ArgumentParser(description="Process some data.")
@@ -116,7 +116,7 @@ def convert_to_babel_relations(relations):
     for r in relations:
         try:
             babel_relations.append(BabelPointer.from_name(r))
-        except: # cases that for some reason are not handled by from_name
+        except:  # cases that for some reason are not handled by from_name
             if r == "GLOSS_DISAMBIGUATED":
                 babel_relations.append(BabelPointer.GLOSS_DISAMBIGUATED)
             elif r == "REGION_MEMBER":
@@ -346,7 +346,8 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
                 rephrase_prompt = rel_df.loc[relation, "rephrase"].replace(
                     "<subject>", synset_to_senses[synset]["en"]
                 )
-                prompt_data.update({"prompts_gen": {"en": rephrase_prompt}})
+                prompt_data["generality"] = {}
+                prompt_data["generality"].update({"prompts_gen": {"en": rephrase_prompt}})
             edge["edit"] = sampled_syn
             edge["edit"].update(prompt_data)
 
@@ -395,6 +396,8 @@ if args.locality:
         rel_name = random.choice(list(relation_pool.keys()))
         sampled_rel = copy.deepcopy(random.choice(relation_pool[rel_name]))
         sampled_rel.pop("edit", None)
+        sampled_rel = rename_key(sampled_rel, "ground_truth_id", "ground_truth_id_loc")
+        sampled_rel = rename_key(sampled_rel, "ground_truths", "ground_truths_loc")
         sampled_rel.update(
             {
                 "prompts_loc": {
@@ -404,13 +407,15 @@ if args.locality:
                 }
             }
         )
-        output[synset_id]["relations"][selected_relation]["edit"]["locality"] = (
-            sampled_rel
+        
+        output[synset_id]["relations"][selected_relation]["edit"]["locality"] = {}
+        output[synset_id]["relations"][selected_relation]["edit"]["locality"].update(
+            {rel_name: sampled_rel}
         )
 
 print(f"Input size {len(data)}, Output size {len(output)}")
 Path(output_folder).mkdir(parents=True, exist_ok=True)
-with open(f"{output_folder}/dataset.json", "w") as f:  # 
+with open(f"{output_folder}/dataset.json", "w") as f:  #
     json.dump(output, f, indent=4, ensure_ascii=False)
 f.close()
 

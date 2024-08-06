@@ -1,5 +1,6 @@
 import json
 import re
+from collections import OrderedDict
 import urllib
 
 
@@ -36,51 +37,123 @@ def extract(data, field, upper_level_field=None):
     return extracted_values
 
 
-def add_translations(json_data, dataframe, langs):
+def add_translations(json_data, dataframe, langs, prompt_types):
     # Create an iterator over the dataframe rows
     df_iter = dataframe.iterrows()
 
     # Traverse through each item in the JSON data
     for item in json_data.values():
         for relation in item["relations"].values():
-            edit = relation.get("edit", {})
+            edit = relation["edit"]
             if "prompts" not in edit:
                 edit["prompts"] = {}
             if "prompts_gloss" not in edit:
                 edit["prompts_gloss"] = {}
 
-            # Get the next row from the dataframe iterator
-            _, row = next(df_iter)
+            for _ in range(len(prompt_types)):
+                # Get the next row from the dataframe iterator
+                _, row = next(df_iter)
 
-            for lang in langs:
-                if row["prompt_type"] == "prompt":
-                    # Update the prompts with translations from dataframe
-                    edit["prompts"][lang] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
-                    edit["prompts_gloss"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+                for lang in langs:
+                    if row["prompt_type"] == "prompt":
+                        # Update the prompts with translations from dataframe
+                        edit["prompts"][lang] = (
+                            row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                        )
+                        edit["prompts_gloss"][lang] = (
+                            row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+                        )
 
-                elif row["prompt_type"] == "prompt_gen":
+                    elif row["prompt_type"] == "prompt_gen":
+                        gen_data = edit["generality"]
 
-                    edit["prompts_gen"] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                        gen_data["prompts_gen"][lang] = (
+                            row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                        )
 
-                    if "prompts_gen_gloss" not in edit:
-                        edit["prompts_gen_gloss"] = {}
+                        if "prompts_gen_gloss" not in gen_data:
+                            gen_data["prompts_gen_gloss"] = {}
 
-                    edit["prompts_gen_gloss"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+                        gen_data["prompts_gen_gloss"].update(
+                            {
+                                lang: row[f"tgt_gloss_{lang}"]
+                                if lang != "en"
+                                else row["src"]
+                            }
+                        )
 
-                elif row["prompt_type"] == "prompt_loc":
+                    elif row["prompt_type"] == "prompt_loc":
+                        locality_data = edit["locality"]
 
-                    locality_data = edit["locality"]
+                        loc_relation = list(locality_data.keys())[0]
 
-                    loc_relation = list(locality_data.keys())[0]
+                        locality_data[loc_relation]["prompts_loc"][lang] = (
+                            row[f"tgt_{lang}"] if lang != "en" else row["src"]
+                        )
 
-                    locality_data[loc_relation]["prompts_loc"][lang] = row[f"tgt_{lang}"] if lang != "en" else row["src"]
-                    
-                    if "prompts_loc_gloss" not in edit:
-                        locality_data[loc_relation]["prompts_loc_gloss"] = {}
-                    
-                    locality_data[loc_relation]["prompts_loc"][lang] = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+                        if "prompts_loc_gloss" not in locality_data[loc_relation]:
+                            locality_data[loc_relation]["prompts_loc_gloss"] = {}
 
+                        locality_data[loc_relation]["prompts_loc_gloss"].update(
+                            {
+                                lang: row[f"tgt_gloss_{lang}"]
+                                if lang != "en"
+                                else row["src"]
+                            }
+                        )
+
+        relation["edit"] = reorder_dict(edit, prompt_types)
     return json_data
+
+
+def reorder_dict(d, prompt_types):
+    ordered_keys = ["target_id", "targets", "prompts", "prompts_gloss"]
+    if "prompt_gen" in prompt_types:
+        ordered_keys.append("generality")
+        d["generality"]["prompts_gen"] = {
+            k: v for k, v in sorted(d["generality"]["prompts_gen"].items())
+        }
+        d["generality"]["prompts_gen_gloss"] = {
+            k: v for k, v in sorted(d["generality"]["prompts_gen_gloss"].items())
+        }
+    if "prompt_loc" in prompt_types:
+        ordered_keys.append("locality")
+        for loc_relation in d["locality"]:
+            d["locality"][loc_relation]["prompts_loc"] = {
+                k: v
+                for k, v in sorted(d["locality"][loc_relation]["prompts_loc"].items())
+            }
+            d["locality"][loc_relation]["prompts_loc_gloss"] = {
+                k: v
+                for k, v in sorted(
+                    d["locality"][loc_relation]["prompts_loc_gloss"].items()
+                )
+            }
+
+    d["prompts"] = {k: v for k, v in sorted(d["prompts"].items())}
+    d["prompts_gloss"] = {k: v for k, v in sorted(d["prompts_gloss"].items())}
+    d = {k: d[k] for k in ordered_keys}
+
+    return OrderedDict(d)
+
+def rename_key(d, old_key, new_key):
+    # Check if the old key exists in the dictionary
+    if old_key not in d:
+        raise KeyError(f"Key '{old_key}' not found in dictionary.")
+    
+    # Convert the dictionary to a list of tuples (key, value)
+    items = list(d.items())
+    
+    # Find the index of the old key
+    index = next(i for i, (k, v) in enumerate(items) if k == old_key)
+    
+    # Replace the old key with the new key in the list
+    items[index] = (new_key, items[index][1])
+    
+    # Create a new dictionary from the modified list
+    new_dict = dict(items)
+    
+    return new_dict
 
 
 def edit_distance(s1, s2):

@@ -10,24 +10,6 @@ from google.cloud import storage
 
 
 
-def check_prompt_structure(df, expected_pattern):
-    if 'prompt_type' not in df.columns:
-        raise ValueError("DataFrame does not contain 'prompt_type' column")
-    
-    pattern_length = len(expected_pattern)
-    column_values = df['prompt_type'].tolist()
-    
-    # Check if the length of the column is a multiple of the pattern length
-    if len(column_values) % pattern_length != 0:
-        return False
-    
-    # Check if the pattern repeats throughout the column
-    for i in range(0, len(column_values), pattern_length):
-        if column_values[i:i+pattern_length] != expected_pattern:
-            return False
-    
-    return True
-
 
 def translate_text_with_glossary(
     project_id: str = "YOUR_PROJECT_ID",
@@ -255,35 +237,17 @@ if __name__ == "__main__":
             header=0,
         )
         if args.rephrase and args.locality:
-            df["prompt_type"] = df["src"].apply(
-                lambda x: "prompt"
-                if x in prompts
-                else "prompt_gen"
-                if x in prompts_gen
-                else "prompt_loc"
-                if x in prompts_loc
-                else None
-            )
-            expected_pattern = ['prompt', 'prompt_gen', 'prompt_loc']
+            pattern = ['prompt', 'prompt_gen', 'prompt_loc']
             df.sort_values("req_id", inplace=True)
-            if not check_prompt_structure(df, expected_pattern): 
-                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+            df["prompt_type"] = pattern * (len(df) // len(pattern))
         elif args.rephrase:
-            df["prompt_type"] = df["src"].apply(
-                lambda x: "prompt" if x in prompts else "prompt_gen" if x in prompts_gen else None
-            )
-            expected_pattern = ['prompt', 'prompt_gen']
+            pattern = ['prompt', 'prompt_gen']
             df.sort_values("req_id", inplace=True)
-            if not check_prompt_structure(df, expected_pattern): 
-                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+            df["prompt_type"] = pattern * (len(df) // len(pattern))
         elif args.locality:
-            df["prompt_type"] = df["src"].apply(
-                lambda x: "prompt" if x in prompts else "prompt_loc" if x in prompts_loc else None
-            )
-            expected_pattern = ['prompt', 'prompt_loc']
+            pattern = ['prompt', 'prompt_loc']
             df.sort_values("req_id", inplace=True)
-            if not check_prompt_structure(df, expected_pattern): 
-                print(f"Data for {lang} has some problems with order of prompts. Please check.")
+            df["prompt_type"] = pattern * (len(df) // len(pattern))
         else:
             df["prompt_type"] = "prompt"
         df = df[["req_id", "prompt_type", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"]]
