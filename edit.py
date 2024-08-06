@@ -163,6 +163,8 @@ if __name__ == "__main__":
                 }
             }
         )
+    else:
+        locality_inputs = None
     if method == "FT":
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],

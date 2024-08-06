@@ -121,7 +121,7 @@ activate_and_run_script babelnet "get_edits.py" --langs en "$LANG" --output_fold
 activate_and_run_script babelnet "get_glossary.py" --langs en "$LANG" --dataset_dir "$DATASET_PATH" --output_dir "$GLOSSARY_PATH"
 activate_and_run_script babelnet "upload_glossary.py" --source_file_name "$GLOSSARY_PATH/glossary_no_id.csv" --destination_blob_name "$GLOSSARY_PATH/glossary_no_id.csv" --glossary_id "$GLOSSARY_ID"
 activate_and_run_script babelnet "translate.py" --dataset_path "$DATASET_PATH" --src_blob_path "$TRANSLATION_REM_PATH" --tgt_blob_path "$TRANSLATION_REM_PATH" --glossary_id "$GLOSSARY_ID" --tgt_langs "$LANG" --output_dir "$DATASET_PATH/translated"
-activate_and_run_script babelnet "aggregate_translations.py" --translation_path "$DATASET_PATH/tsv/tgt" --dataset_path "$DATASET_PATH/dataset.json" --output_dir "$DATASET_PATH/translated" --delete_same_prompt
+activate_and_run_script babelnet "aggregate_translations.py" --translation_path "$DATASET_PATH/tsv/tgt" --dataset_path "$DATASET_PATH" --output_dir "$DATASET_PATH/translated" --delete_same_prompt
 
 # Calculate the total execution time
 total_end_time=$(date +%s)
