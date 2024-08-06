@@ -63,6 +63,12 @@ if __name__ == "__main__":
     parser.add_argument("--log_subdir", type=str, default=None)
     parser.add_argument("--prompt_type", type=str, default=None)
     parser.add_argument("--tgt_prompt_type", type=str, default=None, nargs="+")
+    parser.add_argument(
+        "--rephrase", action="store_true", help="rephrase the questions"
+    )
+    parser.add_argument(
+        "--locality", action="store_true", help="whether to also get a locality"
+    )
     args = parser.parse_args()
 
     method = os.path.basename(os.path.dirname(args.hparam))
@@ -71,11 +77,11 @@ if __name__ == "__main__":
         f"Running {method} on {args.data_file} on device {args.device}\nUsing hparams: {args.hparam}\nLogging to: {args.log_subdir}\nMax edits: {args.max_edits}"
     )
     print("Loading data")
-    
+
     with open(args.data_file, "r", encoding="utf-8") as file:
         data = json.load(file)
-    subjects = extract(data, args.lang, "subjects", )
-    prompts = extract(data, args.lang, "prompts",)
+    subjects = extract(data, args.lang, "subjects")
+    prompts = extract(data, args.lang, "prompts")
     targets = extract(data, args.lang, "targets")
     # ground_truths = data["ground_truth"]
 
@@ -124,25 +130,46 @@ if __name__ == "__main__":
 
     max_edits = args.max_edits if args.max_edits is not None else len(prompts)
 
-    xlt_confs = [
-        (tgt_prompt_type, tgt_lang)
-        for tgt_prompt_type in args.tgt_prompt_type
-        for tgt_lang in args.tgt_langs
-    ]
-    portability_inputs = {}
-    for tgt_prompt_type, tgt_lang in xlt_confs:
-        port_key = f"{args.prompt_type}-{tgt_prompt_type}_{args.lang}-{tgt_lang}"
-        portability_inputs.update({
-            port_key: {
-                "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
-                "ground_truth": extract(data, tgt_lang, "targets")[:max_edits],
-            },
-        })
+    if args.tgt_langs is not None and args.tgt_prompt_type is not None:
+        xlt_confs = [
+            (tgt_prompt_type, tgt_lang)
+            for tgt_prompt_type in args.tgt_prompt_type
+            for tgt_lang in args.tgt_langs
+        ]
+        portability_inputs = {}
+        for tgt_prompt_type, tgt_lang in xlt_confs:
+            port_key = f"{args.prompt_type}-{tgt_prompt_type}_{args.lang}-{tgt_lang}"
+            portability_inputs.update(
+                {
+                    port_key: {
+                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
+                        "ground_truth": extract(data, tgt_lang, "targets")[:max_edits],
+                    },
+                }
+            )
+    else:
+        portability_inputs = None
+    if args.rephrase:
+        rephrase_prompts = extract(data, args.lang, "prompts_gen")[:max_edits]
+    else:
+        rephrase_prompts = None
+    if args.locality:
+        locality_inputs = {}
+        locality_inputs.update(
+            {
+                "locality": {
+                    "prompt": extract(data, args.lang, "prompts_loc")[:max_edits],
+                    "ground_truth": extract(data, args.lang, "ground_truths_loc")[:max_edits],
+                }
+            }
+        )
     if method == "FT":
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
+            rephrase_prompts=rephrase_prompts,
             target_new=targets[:max_edits],
+            locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
             sequential_edit=False,
@@ -152,8 +179,10 @@ if __name__ == "__main__":
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
+            rephrase_prompts=rephrase_prompts,
             subject=subjects[:max_edits],
             target_new=targets[:max_edits],
+            locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
             sequential_edit=False,
