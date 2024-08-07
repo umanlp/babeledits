@@ -195,8 +195,8 @@ if __name__ == "__main__":
         with open(os.path.join("logs", args.log_subdir, "results.json"), "w") as f:
             json.dump(metrics, f, indent=4)
         summary = get_summary_metrics(metrics)
-        with open(os.path.join("logs", args.log_subdir, "summary.log"), "w") as f:
-            f.write(str(summary))
+        with open(os.path.join("logs", args.log_subdir, "summary.json"), "w") as f:
+            json.dump(summary, f)
 
         # Save the command used to launch the script
         command = "python " + " ".join(sys.argv)
