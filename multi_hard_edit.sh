@@ -17,5 +17,5 @@ for lang in "$@"; do
                    --log_subdir v5_hard_prompts_$lang \
                    --prompt_type prompts \
                    --tgt_prompt_type prompts prompts_gloss \
-                   --device 6 --max_edits 2
+                   --device 0
 done
