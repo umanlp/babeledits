@@ -73,7 +73,7 @@ args, _ = parser.parse_known_args()
 
 dataset_dir = args.dataset_dir
 output_dir = args.output_dir
-langs = args.langs
+langs = sorted(args.langs)
 
 print(f"Reading dataset from {dataset_dir}...")
 data = sienna.load(f"{dataset_dir}/dataset.json")
