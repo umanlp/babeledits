@@ -2,7 +2,7 @@ alg_name: "FT"
 model_name: "meta-llama/Meta-Llama-3.1-8B"
 device: 0
 
-layers: [1]
+layers: [5]
 num_steps: 100
 batch_size: 1
 max_length: 40
