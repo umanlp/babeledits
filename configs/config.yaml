@@ -1,0 +1,15 @@
+defaults:
+  - model: llama-3-1
+  - method: rome
+  - _self_
+
+dataset: "datasets/v6/translated/dataset.json"
+edit_lang: "en"
+tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
+max_edits: null
+device: 0
+log_subdir: "new_debug"
+prompt_type: "prompts_gloss"
+tgt_prompt_type: ["prompts_gloss", "prompts"]
+rephrase: false
+locality: false

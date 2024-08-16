@@ -1,18 +1,22 @@
+import json
 import os
 import sys
-import json
 
 import yaml
 
 sys.path.append("EasyEdit")
-from utils import extract
-from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
-from EasyEdit.easyeditor.models.ike import encode_ike_facts
+from pathlib import Path
+
+import hydra
+import numpy as np
+from omegaconf import DictConfig, OmegaConf
+from sentence_transformers import SentenceTransformer
+
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
 from easy_edit_adaptations.logging import redirect_edit_logs
-from sentence_transformers import SentenceTransformer
-from pathlib import Path
-import numpy as np
+from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
+from EasyEdit.easyeditor.models.ike import encode_ike_facts
+from utils import extract
 
 
 def get_summary_metrics(all_metrics):
@@ -48,51 +52,35 @@ def get_summary_metrics(all_metrics):
     return mean_metrics
 
 
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--data_file", type=str, default="datasets/v4/translated/all_langs.json"
-    )
-    parser.add_argument("--hparam", type=str, default="hparams/ROME/llama-7b.yaml")
-    parser.add_argument("--lang", type=str, default=None)
-    parser.add_argument("--tgt_langs", type=str, default=None, nargs="+")
-    parser.add_argument("--max_edits", type=int, default=None)
-    parser.add_argument("--device", type=int, default=0)
-    parser.add_argument("--log_subdir", type=str, default=None)
-    parser.add_argument("--prompt_type", type=str, default=None)
-    parser.add_argument("--tgt_prompt_type", type=str, default=None, nargs="+")
-    parser.add_argument(
-        "--rephrase", action="store_true", help="rephrase the questions"
-    )
-    parser.add_argument(
-        "--locality", action="store_true", help="whether to also get a locality"
-    )
-    args = parser.parse_args()
-
-    method = os.path.basename(os.path.dirname(args.hparam))
+@hydra.main(version_base=None, config_path="configs", config_name="config")
+def main(cfg: DictConfig) -> None:
+    print("Edit Configuration:\n" + OmegaConf.to_yaml(cfg, resolve=True))
+    hparams = DictConfig({**cfg.model, **cfg.method})
+    method = hparams.alg_name
+    model_name = hparams.model_name.replace("/", "_")
 
     print(
-        f"Running {method} on {args.data_file} on device {args.device}\nUsing hparams: {args.hparam}\nLogging to: {args.log_subdir}\nMax edits: {args.max_edits}"
+        f"Running {method} on {cfg.dataset} on device {cfg.device}\nUsing hparams: {hparams}\nMax edits: {cfg.max_edits}"
     )
     print("Loading data")
 
-    with open(args.data_file, "r", encoding="utf-8") as file:
+    with open(cfg.dataset, "r", encoding="utf-8") as file:
         data = json.load(file)
-    subjects = extract(data, args.lang, "subjects")
-    prompts = extract(data, args.lang, "prompts")
-    targets = extract(data, args.lang, "targets")
+    subjects = extract(data, cfg.edit_lang, "subjects")
+    prompts = extract(data, cfg.edit_lang, "prompts")
+    targets = extract(data, cfg.edit_lang, "targets")
     # ground_truths = data["ground_truth"]
 
     print("Data loaded")
-    hparams = get_hparm_class(method).from_hparams(args.hparam)
-    hparams.device = args.device
+    hparams = get_hparm_class(method).from_dict_config(hparams)
+    hparams.device = cfg.device
 
     editor = BaseEditor.from_hparams(hparams)
 
-    if args.log_subdir:
-        redirect_edit_logs(args.log_subdir)
+    if cfg.log_subdir:
+        print(f"Logging to {cfg.log_subdir}")
+        log_dir = f"{cfg.log_subdir}/{model_name}/{method}"
+        redirect_edit_logs(log_dir)
 
     # Create train_ds if necessary
     if method == "IKE":
@@ -128,17 +116,17 @@ if __name__ == "__main__":
 
         print(f"Size of the dataset after filtering: {len(prompts)}")
 
-    max_edits = args.max_edits if args.max_edits is not None else len(prompts)
+    max_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
-    if args.tgt_langs is not None and args.tgt_prompt_type is not None:
+    if cfg.tgt_langs is not None and cfg.tgt_prompt_type is not None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
-            for tgt_prompt_type in args.tgt_prompt_type
-            for tgt_lang in args.tgt_langs
+            for tgt_prompt_type in cfg.tgt_prompt_type
+            for tgt_lang in cfg.tgt_langs
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            port_key = f"{args.prompt_type}-{tgt_prompt_type}_{args.lang}-{tgt_lang}"
+            port_key = f"{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
             portability_inputs.update(
                 {
                     port_key: {
@@ -149,17 +137,19 @@ if __name__ == "__main__":
             )
     else:
         portability_inputs = None
-    if args.rephrase:
-        rephrase_prompts = extract(data, args.lang, "prompts_gen")[:max_edits]
+    if cfg.rephrase:
+        rephrase_prompts = extract(data, cfg.edit_lang, "prompts_gen")[:max_edits]
     else:
         rephrase_prompts = None
-    if args.locality:
+    if cfg.locality:
         locality_inputs = {}
         locality_inputs.update(
             {
                 "locality": {
-                    "prompt": extract(data, args.lang, "prompts_loc")[:max_edits],
-                    "ground_truth": extract(data, args.lang, "ground_truths_loc")[:max_edits],
+                    "prompt": extract(data, cfg.edit_lang, "prompts_loc")[:max_edits],
+                    "ground_truth": extract(data, cfg.edit_lang, "ground_truths_loc")[
+                        :max_edits
+                    ],
                 }
             }
         )
@@ -191,30 +181,33 @@ if __name__ == "__main__":
             keep_original_weight=True,
         )
 
-    if args.log_subdir:
-        with open(os.path.join("logs", args.log_subdir, "results.json"), "w") as f:
+    if log_dir:
+        with open(os.path.join("logs", log_dir, "results.json"), "w") as f:
             json.dump(metrics, f, indent=4)
         summary = get_summary_metrics(metrics)
-        with open(os.path.join("logs", args.log_subdir, "summary.json"), "w") as f:
+        with open(os.path.join("logs", log_dir, "summary.json"), "w") as f:
             json.dump(summary, f)
 
         # Save the command used to launch the script
         command = "python " + " ".join(sys.argv)
-        with open(os.path.join("logs", args.log_subdir, "command.txt"), "w") as f:
+        with open(os.path.join("logs", log_dir, "command.txt"), "w") as f:
             f.write(command)
 
-        hparams_dict = {
-            attr: getattr(hparams, attr)
-            for attr in dir(hparams)
-            if not attr.startswith("__") and not callable(getattr(hparams, attr))
-        }
-
         with open(
-            os.path.join("logs", args.log_subdir, f"hparams_{method}.yaml"), "w"
+            os.path.join("logs", log_dir, "config.yaml"), "w"
         ) as yaml_file:
-            yaml.dump(hparams_dict, yaml_file, default_flow_style=False)
+            yaml.dump(
+                yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
+                yaml_file,
+                default_flow_style=False,
+                default_style="",
+            )
 
         print(">>> FINISHED <<<")
         print(
-            f"Logs, metrics and hyperparameters saved to {os.path.join('logs', args.log_subdir)}"
+            f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}"
         )
+
+
+if __name__ == "__main__":
+    main()
