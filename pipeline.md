@@ -3,7 +3,7 @@
 ## Language Selection
 
 - We select the 50 languages from XTREME-R. It's an easy choice since they are many and they have a good degree of typological diversity
-- langs = ["af","ar","az","bg","bn","de","el","en","es","et","eu","fa","fi","fr","gu","he","hi","ht","hr","hu","id","it","ja","jv","ka","kk","ko","lt","ml","mr","ms","my","nl","pa","pl","pt","qu","ro","ru","sw","ta","te","th","tl","tr","uk","ur","vi","yo","zh"]
+- langs = ['af', 'ar', 'az', 'bg', 'bn', 'de', 'el', 'en', 'es', 'et', 'eu', 'fa', 'fi', 'fr', 'gu', 'he', 'hi', 'ht', 'hr', 'hu', 'id', 'it', 'ja', 'jv', 'ka', 'kk', 'ko', 'lt', 'ml', 'mr', 'ms', 'my', 'nl', 'pa', 'pl', 'pt', 'qu', 'ro', 'ru', 'sw', 'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'vi', 'yo', 'zh', 'sv', 'sr', 'ca', 'cs', 'no', 'hy', 'da', 'be', 'sk', 'uz']
 
 - Babelnet TIMEOUT params /work/tgreen/miniconda3/envs/babelnet/lib/python3.8/site-packages/babelnet/apis/rpc_api.py
 ## Entity Extraction
