@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from dataclasses import asdict
-
+from omegaconf import DictConfig, OmegaConf
 
 @dataclass
 class HyperParams:
@@ -30,7 +30,11 @@ class HyperParams:
         dict = asdict(config)
         return dict
             
-        
+    @classmethod
+    def from_dict_config(cls, config: DictConfig):
+        config_dict = OmegaConf.to_container(config, resolve=True)
+        return cls(**config_dict)
+
 
     # @classmethod
     # def from_hparams(cls, hparams_name_or_path: str):
