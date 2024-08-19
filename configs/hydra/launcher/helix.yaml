@@ -1,0 +1,10 @@
+defaults:
+  - submitit_slurm
+
+_target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+# timeout_min: 20 # 2 hours
+partition: single
+mem_gb : 100
+gres: gpu:A40:1
+additional_parameters: {"time": "24:00:00", "mail-user": "tommaso.green@uni-mannheim.de", 
+"mail-type": "ALL"}
