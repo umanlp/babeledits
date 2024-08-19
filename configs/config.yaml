@@ -3,7 +3,7 @@ defaults:
   - method: rome
   - _self_
 
-dataset: "datasets/v6/translated/dataset.json"
+dataset: "datasets/v6/translated/test.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
 max_edits: null

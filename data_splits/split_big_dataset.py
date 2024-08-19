@@ -47,11 +47,11 @@ if __name__ == "__main__":
     parser.add_argument("--val_size", type=float, default=0.1)
     args = parser.parse_args()
 
-    input_file = f"datasets/{args.version}/dataset.json"
+    input_file = f"datasets/{args.version}/translated/dataset.json"
 
-    train_file = f"datasets/{args.version}/train.json"
-    test_file = f"datasets/{args.version}/test.json"
-    val_file = f"datasets/{args.version}/val.json"
+    train_file = f"datasets/{args.version}/translated/train.json"
+    test_file = f"datasets/{args.version}/translated/test.json"
+    val_file = f"datasets/{args.version}/translated/val.json"
 
     with open(input_file, "r") as f:
         data = json.load(f)
