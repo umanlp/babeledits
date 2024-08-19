@@ -142,17 +142,29 @@ def main(cfg: DictConfig) -> None:
     else:
         rephrase_prompts = None
     if cfg.locality:
+        loc_prompt_types = []
+        if "prompts" in cfg.tgt_prompt_type:
+            loc_prompt_types.append("prompts_loc")
+        if "prompts_gloss" in cfg.tgt_prompt_type:
+            loc_prompt_types.append("prompts_loc_gloss")
+        xlt_confs = [
+            (tgt_prompt_type, tgt_lang)
+            for tgt_prompt_type in loc_prompt_types
+            for tgt_lang in cfg.tgt_langs
+        ]
         locality_inputs = {}
-        locality_inputs.update(
-            {
-                "locality": {
-                    "prompt": extract(data, cfg.edit_lang, "prompts_loc")[:max_edits],
-                    "ground_truth": extract(data, cfg.edit_lang, "ground_truths_loc")[
-                        :max_edits
-                    ],
+        for tgt_prompt_type, tgt_lang in xlt_confs:
+            loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            locality_inputs.update(
+                {
+                    loc_key: {
+                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
+                        "ground_truth": extract(data, tgt_lang, "ground_truths_loc")[
+                            :max_edits
+                        ],
+                    }
                 }
-            }
-        )
+            )
     else:
         locality_inputs = None
     if method == "FT":
@@ -193,9 +205,7 @@ def main(cfg: DictConfig) -> None:
         with open(os.path.join("logs", log_dir, "command.txt"), "w") as f:
             f.write(command)
 
-        with open(
-            os.path.join("logs", log_dir, "config.yaml"), "w"
-        ) as yaml_file:
+        with open(os.path.join("logs", log_dir, "config.yaml"), "w") as yaml_file:
             yaml.dump(
                 yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
                 yaml_file,
