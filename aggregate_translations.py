@@ -45,6 +45,10 @@ def load_translations(translation_path):
     langs = [x.split(".")[0][-2:] for x in translation_files]
 
     lang_to_transl = {}
+
+    def check(prompt, prompt_gloss):
+        return prompt_gloss[:-2] == prompt[:-1]
+
     for f, lang in zip(translation_files, langs):
         df = pd.read_csv(
             f"{translation_path}/{f}",
@@ -53,6 +57,19 @@ def load_translations(translation_path):
             header=0,
         )
         df = df.sort_values("req_id", ascending=True)
+        same_prompt_mask = df.apply(
+            lambda row: check(row[f"tgt_{lang}"], row[f"tgt_gloss_{lang}"]), axis=1
+        )
+        same_prompt_mask_rev = df.apply(
+            lambda row: check(row[f"tgt_gloss_{lang}"], row[f"tgt_{lang}"]), axis=1
+        )
+
+        df.loc[same_prompt_mask, f"tgt_gloss_{lang}"] = df.loc[
+            same_prompt_mask, f"tgt_{lang}"
+        ]
+        df.loc[same_prompt_mask_rev, f"tgt_{lang}"] = df.loc[
+            same_prompt_mask_rev, f"tgt_gloss_{lang}"
+        ]
         lang_to_transl[lang] = df
 
     output_df = pd.concat(list(lang_to_transl.values()), axis=1)
