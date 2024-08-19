@@ -79,7 +79,7 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.log_subdir:
         print(f"Logging to {cfg.log_subdir}")
-        log_dir = f"{cfg.log_subdir}/{model_name}/{method}"
+        log_dir = f"{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
         redirect_edit_logs(log_dir)
 
     # Create train_ds if necessary
