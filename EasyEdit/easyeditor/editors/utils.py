@@ -36,10 +36,10 @@ def summary_metrics(all_metrics):
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for key in ["rewrite_acc", "rephrase_acc", 'rewrite_ppl']:
+        for key in ["rewrite_acc", 'rewrite_ppl']:
             if key in all_metrics[0][eval].keys():
                 mean_metrics[eval][key] = np.mean([metric[eval][key] for metric in all_metrics])
-        for key in ["locality", "portability"]:
+        for key in ["rephrase_acc", "locality", "portability"]:
             if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
                 mean_metrics[eval][key] = dict()
                 for lkey in get_all_acc_keys(all_metrics):
@@ -65,6 +65,7 @@ def _prepare_requests(prompts: Union[str, List[str]],
         'prompt': prompt,
         'target_new': target_new_,
         'ground_truth': ground_truth_,
+        'rephrase_prompt': {},
         'portability': {},
         'locality': {}
     }
@@ -89,7 +90,7 @@ def _prepare_requests(prompts: Union[str, List[str]],
         if isinstance(kwargs['loc_prompts'], str):
             kwargs['loc_prompts'] = [kwargs['loc_prompts'],]
         else:
-            assert len(kwargs['loc_prompts']) == len(prompts)
+            assert len(kwargs["loc_prompts"]) == len(prompts)
 
         for i, request in enumerate(requests):
             request.update(
@@ -99,15 +100,17 @@ def _prepare_requests(prompts: Union[str, List[str]],
             )
 
     if rephrase_prompts is not None:
-        if isinstance(rephrase_prompts, str):
-            rephrase_prompts = [rephrase_prompts,]
+        for generality_key in rephrase_prompts.keys():
+            for i, request in enumerate(requests):
+                if rephrase_prompts[generality_key]["prompt"][i] is not None:
+                    request["rephrase_prompt"].update(
+                        {
+                            generality_key: {
+                                "prompt": rephrase_prompts[generality_key]["prompt"][i],
+                            }
+                        }
+                    )
 
-        for i, request in enumerate(requests):
-            request.update(
-                {
-                    'rephrase_prompt': rephrase_prompts[i],
-                }
-            )
     if locality_inputs is not None:
         for locality_key in locality_inputs.keys():
             if isinstance(locality_inputs[locality_key]['prompt'], str):
