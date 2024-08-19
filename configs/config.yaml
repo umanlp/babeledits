@@ -11,5 +11,5 @@ device: 0
 log_subdir: "new_debug"
 prompt_type: "prompts_gloss"
 tgt_prompt_type: ["prompts_gloss", "prompts"]
-rephrase: false
+generality: false
 locality: false

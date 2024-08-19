@@ -34,12 +34,12 @@ def get_summary_metrics(all_metrics):
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for key in ["rewrite_acc", "rephrase_acc"]:
+        for key in ["rewrite_acc"]:
             if key in all_metrics[0][eval].keys():
                 mean_metrics[eval][key] = np.mean(
                     [metric[eval][key] for metric in all_metrics]
                 )
-        for key in ["locality", "portability"]:
+        for key in ["rephrase_acc", "locality", "portability"]:
             if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
                 mean_metrics[eval][key] = dict()
                 for lkey in all_metrics[0][eval][key].keys():
@@ -137,10 +137,29 @@ def main(cfg: DictConfig) -> None:
             )
     else:
         portability_inputs = None
-    if cfg.rephrase:
-        rephrase_prompts = extract(data, cfg.edit_lang, "prompts_gen")[:max_edits]
+    if cfg.generality:
+        gen_prompt_types = []
+        if "prompts" in cfg.tgt_prompt_type:
+            gen_prompt_types.append("prompts_gen")
+        if "prompts_gloss" in cfg.tgt_prompt_type:
+            gen_prompt_types.append("prompts_gen_gloss")
+        xlt_confs = [
+            (tgt_prompt_type, tgt_lang)
+            for tgt_prompt_type in gen_prompt_types
+            for tgt_lang in cfg.tgt_langs
+        ]
+        generality_inputs = {}
+        for tgt_prompt_type, tgt_lang in xlt_confs:
+            gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            generality_inputs.update(
+                {
+                    gen_key: {
+                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits]
+                    }
+                }
+            )
     else:
-        rephrase_prompts = None
+        generality_inputs = None
     if cfg.locality:
         loc_prompt_types = []
         if "prompts" in cfg.tgt_prompt_type:
@@ -171,7 +190,7 @@ def main(cfg: DictConfig) -> None:
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
-            rephrase_prompts=rephrase_prompts,
+            rephrase_prompts=generality_inputs,
             target_new=targets[:max_edits],
             locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
@@ -183,7 +202,7 @@ def main(cfg: DictConfig) -> None:
         metrics, edited_model, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
-            rephrase_prompts=rephrase_prompts,
+            rephrase_prompts=generality_inputs,
             subject=subjects[:max_edits],
             target_new=targets[:max_edits],
             locality_inputs=locality_inputs,
