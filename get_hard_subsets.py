@@ -13,21 +13,18 @@ def main():
         "--min_views", type=int, default=10000, help="Minimum number of views"
     )
     parser.add_argument(
-        "--max_views", type=int, default=100000, help="Maximum number of views"
-    )
-    parser.add_argument(
         "--sample_size", type=int, default=10000, help="Number of pages to sample"
     )
     parser.add_argument(
         "--data_path",
         type=str,
-        default="wikipedia_data/v5/raw",
+        default="wikipedia_data/v6/raw",
         help="Path to the input data",
     )
     parser.add_argument(
         "--save_path",
         type=str,
-        default="wikipedia_data/v5/hard/processed",
+        default="wikipedia_data/v6/hard/processed",
         help="Path to save the output data",
     )
     args = parser.parse_args()
@@ -41,7 +38,8 @@ def main():
     df = df[pd.to_numeric(df["Views"], errors="coerce").notnull()]
     df["Views"] = df["Views"].astype(int)
 
-    filtered_df = df[(df["Views"] >= args.min_views) & (df["Views"] <= args.max_views)]
+    # Filtering
+    filtered_df = df[(df["Views"] >= args.min_views)]
     sample_size = min(args.sample_size, len(filtered_df))
     if sample_size < len(filtered_df):
         print(f"Sampling only {sample_size} pages from {len(filtered_df)} pages")
