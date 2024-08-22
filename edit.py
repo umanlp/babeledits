@@ -66,9 +66,9 @@ def main(cfg: DictConfig) -> None:
 
     with open(cfg.dataset, "r", encoding="utf-8") as file:
         data = json.load(file)
-    subjects = extract(data, cfg.edit_lang, "subjects")
-    prompts = extract(data, cfg.edit_lang, "prompts")
-    targets = extract(data, cfg.edit_lang, "targets")
+    subjects = extract(data, cfg.edit_lang, cfg.subject_type)
+    prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
+    targets = extract(data, cfg.edit_lang, cfg.target_type)
     # ground_truths = data["ground_truth"]
 
     print("Data loaded")
@@ -79,7 +79,9 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.log_subdir:
         print(f"Logging to {cfg.log_subdir}")
-        log_dir = f"{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
+        log_dir = (
+            f"{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
+        )
         redirect_edit_logs(log_dir)
 
     # Create train_ds if necessary
@@ -100,21 +102,18 @@ def main(cfg: DictConfig) -> None:
     else:
         train_ds = None
 
-    if method == "ROME":
-        print(f"Size of the data {len(prompts)}")
-        idxs_to_remove = []
-        for idx, elem in enumerate(zip(prompts, subjects)):
-            p, s = elem
-            if p.count(s) != 1:
-                idxs_to_remove.append(idx)
-
-        for idx in reversed(idxs_to_remove):
-            del prompts[idx]
-            del subjects[idx]
-            # del ground_truth[idx]
-            del targets[idx]
-
-        print(f"Size of the dataset after filtering: {len(prompts)}")
+    if cfg.subject_in_prompt == "strict":
+        for p, s in zip(prompts, subjects):
+            assert s in p, f"Subject {s} is not present in prompt {p}"
+    elif cfg.subject_in_prompt == "loose":
+        en_subjects = extract(data, "en", "subjects")
+        for p, s, s_en in zip(prompts, subjects, en_subjects):
+            assert (
+                s in p or s_en in p
+            ), f"Neither subject {s} nor subject {s_en} are present in prompt {p} and subject_in_prompt is set to loose"
+        for idx in enumerate(subjects):
+            if subjects[idx] not in prompts[idx]:
+                subjects[idx] = en_subjects[idx]
 
     max_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
