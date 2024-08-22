@@ -1,6 +1,6 @@
 defaults:
   - model: llama-3-1
-  - method: rome
+  - method: ft
   - _self_
 
 dataset: "datasets/v6/translated/test.json"
@@ -10,6 +10,9 @@ max_edits: null
 device: 0
 log_subdir: "new_debug"
 prompt_type: "prompts_gloss"
+subject_type: "subjects"
+target_type: "targets"
 tgt_prompt_type: ["prompts_gloss", "prompts"]
+subject_in_prompt: null
 generality: false
 locality: false
