@@ -9,10 +9,10 @@ tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
 max_edits: null
 device: 0
 log_subdir: "new_debug"
-prompt_type: "prompts_gloss"
+prompt_type: "prompts"
 subject_type: "subjects"
 target_type: "targets"
-tgt_prompt_type: ["prompts_gloss", "prompts"]
+tgt_prompt_type: ["prompts", "prompts_gloss"]
 subject_in_prompt: null
 generality: false
 locality: false

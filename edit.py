@@ -4,6 +4,8 @@ import sys
 
 import yaml
 
+from easy_edit_adaptations.logging import redirect_edit_logs
+
 sys.path.append("EasyEdit")
 from pathlib import Path
 
@@ -13,10 +15,10 @@ from omegaconf import DictConfig, OmegaConf
 from sentence_transformers import SentenceTransformer
 
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
-from easy_edit_adaptations.logging import redirect_edit_logs
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from utils import extract
+from hydra.utils import to_absolute_path
 
 
 def get_summary_metrics(all_metrics):
@@ -52,7 +54,7 @@ def get_summary_metrics(all_metrics):
     return mean_metrics
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="config")
+@hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     print("Edit Configuration:\n" + OmegaConf.to_yaml(cfg, resolve=True))
     hparams = DictConfig({**cfg.model, **cfg.method})
@@ -63,8 +65,7 @@ def main(cfg: DictConfig) -> None:
         f"Running {method} on {cfg.dataset} on device {cfg.device}\nUsing hparams: {hparams}\nMax edits: {cfg.max_edits}"
     )
     print("Loading data")
-
-    with open(cfg.dataset, "r", encoding="utf-8") as file:
+    with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:
         data = json.load(file)
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
@@ -78,11 +79,12 @@ def main(cfg: DictConfig) -> None:
     editor = BaseEditor.from_hparams(hparams)
 
     if cfg.log_subdir:
-        print(f"Logging to {cfg.log_subdir}")
-        log_dir = (
-            f"{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
+        log_dir = to_absolute_path(
+            f"logs/{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
         )
         redirect_edit_logs(log_dir)
+    else:
+        log_dir = "logs"
 
     # Create train_ds if necessary
     if method == "IKE":
@@ -211,30 +213,33 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
         )
 
-    if log_dir:
-        with open(os.path.join("logs", log_dir, "results.json"), "w") as f:
-            json.dump(metrics, f, indent=4)
-        summary = get_summary_metrics(metrics)
-        with open(os.path.join("logs", log_dir, "summary.json"), "w") as f:
-            json.dump(summary, f)
+    with open(
+        to_absolute_path(os.path.join(log_dir, "results.json")), "w"
+    ) as f:
+        json.dump(metrics, f, indent=4)
+    summary = get_summary_metrics(metrics)
+    with open(
+        to_absolute_path(os.path.join(log_dir, "summary.json")), "w"
+    ) as f:
+        json.dump(summary, f)
 
-        # Save the command used to launch the script
-        command = "python " + " ".join(sys.argv)
-        with open(os.path.join("logs", log_dir, "command.txt"), "w") as f:
-            f.write(command)
+    # Save the command used to launch the script
+    command = "python " + " ".join(sys.argv)
+    with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
+        f.write(command)
 
-        with open(os.path.join("logs", log_dir, "config.yaml"), "w") as yaml_file:
-            yaml.dump(
-                yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
-                yaml_file,
-                default_flow_style=False,
-                default_style="",
-            )
-
-        print(">>> FINISHED <<<")
-        print(
-            f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}"
+    with open(
+        to_absolute_path(os.path.join(log_dir, "config.yaml")), "w"
+    ) as yaml_file:
+        yaml.dump(
+            yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
+            yaml_file,
+            default_flow_style=False,
+            default_style="",
         )
+
+    print(">>> FINISHED <<<")
+    print(f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}")
 
 
 if __name__ == "__main__":
