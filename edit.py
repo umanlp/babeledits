@@ -62,7 +62,7 @@ def main(cfg: DictConfig) -> None:
     model_name = hparams.model_name.replace("/", "_")
 
     print(
-        f"Running {method} on {cfg.dataset} on device {cfg.device}\nUsing hparams: {hparams}\nMax edits: {cfg.max_edits}"
+        f"Running {method} on {model_name} with {cfg.dataset} on device {cfg.device}\nUsing hparams: {hparams}\nMax edits: {cfg.max_edits}"
     )
     print("Loading data")
     with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:

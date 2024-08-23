@@ -14,3 +14,4 @@ norm_constraint: false
 # "target_new" corresponds to the results of FT-M.
 objective_optimization: "target_new"
 model_parallel: false
+bf16: true
