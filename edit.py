@@ -119,20 +119,21 @@ def main(cfg: DictConfig) -> None:
 
     max_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
-    if cfg.tgt_langs is not None and cfg.tgt_prompt_type is not None:
+    if cfg.tgt_langs is not None and cfg.eval_prompt_type is not None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
-            for tgt_prompt_type in cfg.tgt_prompt_type
+            for tgt_prompt_type in cfg.eval_prompt_type
             for tgt_lang in cfg.tgt_langs
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             port_key = f"{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            target_key = "targets_mt" if tgt_prompt_type == "prompts" else "targets"
             portability_inputs.update(
                 {
                     port_key: {
                         "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
-                        "ground_truth": extract(data, tgt_lang, "targets")[:max_edits],
+                        "ground_truth": extract(data, tgt_lang, target_key)[:max_edits],
                     },
                 }
             )
@@ -140,9 +141,9 @@ def main(cfg: DictConfig) -> None:
         portability_inputs = None
     if cfg.generality:
         gen_prompt_types = []
-        if "prompts" in cfg.tgt_prompt_type:
+        if "prompts" in cfg.eval_prompt_type:
             gen_prompt_types.append("prompts_gen")
-        if "prompts_gloss" in cfg.tgt_prompt_type:
+        if "prompts_gloss" in cfg.eval_prompt_type:
             gen_prompt_types.append("prompts_gen_gloss")
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
@@ -152,10 +153,12 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            target_key = "targets_mt" if tgt_prompt_type == "prompts" else "targets"
             generality_inputs.update(
                 {
                     gen_key: {
-                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits]
+                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
+                        "ground_truth": extract(data, tgt_lang, target_key)[:max_edits],
                     }
                 }
             )
@@ -163,9 +166,9 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = None
     if cfg.locality:
         loc_prompt_types = []
-        if "prompts" in cfg.tgt_prompt_type:
+        if "prompts" in cfg.eval_prompt_type:
             loc_prompt_types.append("prompts_loc")
-        if "prompts_gloss" in cfg.tgt_prompt_type:
+        if "prompts_gloss" in cfg.eval_prompt_type:
             loc_prompt_types.append("prompts_loc_gloss")
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
@@ -175,13 +178,16 @@ def main(cfg: DictConfig) -> None:
         locality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            target_key = (
+                "ground_truths_loc_mt"
+                if tgt_prompt_type == "prompts"
+                else "ground_truths_loc"
+            )
             locality_inputs.update(
                 {
                     loc_key: {
                         "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
-                        "ground_truth": extract(data, tgt_lang, "ground_truths_loc")[
-                            :max_edits
-                        ],
+                        "ground_truth": extract(data, tgt_lang, target_key)[:max_edits],
                     }
                 }
             )
@@ -213,14 +219,10 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
         )
 
-    with open(
-        to_absolute_path(os.path.join(log_dir, "results.json")), "w"
-    ) as f:
+    with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
     summary = get_summary_metrics(metrics)
-    with open(
-        to_absolute_path(os.path.join(log_dir, "summary.json")), "w"
-    ) as f:
+    with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
         json.dump(summary, f)
 
     # Save the command used to launch the script
@@ -228,9 +230,7 @@ def main(cfg: DictConfig) -> None:
     with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
         f.write(command)
 
-    with open(
-        to_absolute_path(os.path.join(log_dir, "config.yaml")), "w"
-    ) as yaml_file:
+    with open(to_absolute_path(os.path.join(log_dir, "config.yaml")), "w") as yaml_file:
         yaml.dump(
             yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
             yaml_file,
