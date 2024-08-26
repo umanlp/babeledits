@@ -153,7 +153,7 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
-            target_key = "targets_mt" if tgt_prompt_type == "prompts" else "targets"
+            target_key = "targets_mt" if tgt_prompt_type == "prompts_gen" else "targets"
             generality_inputs.update(
                 {
                     gen_key: {
@@ -180,7 +180,7 @@ def main(cfg: DictConfig) -> None:
             loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
             target_key = (
                 "ground_truths_loc_mt"
-                if tgt_prompt_type == "prompts"
+                if tgt_prompt_type == "prompts_loc"
                 else "ground_truths_loc"
             )
             locality_inputs.update(
