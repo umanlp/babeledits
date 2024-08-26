@@ -107,6 +107,7 @@ def _prepare_requests(prompts: Union[str, List[str]],
                         {
                             generality_key: {
                                 "prompt": rephrase_prompts[generality_key]["prompt"][i],
+                                "ground_truth": rephrase_prompts[generality_key]["ground_truth"][i]
                             }
                         }
                     )

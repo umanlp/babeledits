@@ -70,8 +70,8 @@ def compute_edit_quality(
     if rephrase_prompts is not None:
         for generality_key in rephrase_prompts.keys():
             rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                                    rephrase_prompts[generality_key]['prompt'], target_new, device=device, 
-                                                    test_rephrase=True, eval_metric=eval_metric)['rephrase_acc']
+                                                    rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
+                                                    device=device, test_rephrase=True, eval_metric=eval_metric)['rephrase_acc']
             ret['rephrase_acc'].update({f"{generality_key}_acc": rephrase_acc})
 
     if 'locality' in record.keys() and any(record['locality']):
