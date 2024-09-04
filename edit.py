@@ -194,7 +194,7 @@ def main(cfg: DictConfig) -> None:
     else:
         locality_inputs = None
     if method == "FT":
-        metrics, edited_model, _ = editor.edit(
+        metrics, _, _, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -206,7 +206,7 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
         )
     else:
-        metrics, edited_model, _ = editor.edit(
+        metrics, _ , _ , _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
