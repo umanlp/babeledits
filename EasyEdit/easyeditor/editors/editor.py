@@ -344,6 +344,7 @@ class BaseEditor:
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
         else:
+            weights_per_edit = []
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
@@ -360,6 +361,7 @@ class BaseEditor:
                 else:
                     with torch.no_grad():
                         for k, v in weights_copy.items():
+                            weights_per_edit.append(nethook.get_parameter(self.model, k).detach().clone())
                             nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
 
 
@@ -367,8 +369,10 @@ class BaseEditor:
             edited_model = edited_model.model
         if len(all_metrics) != 0:
             summary_metrics(all_metrics)
-
-        return all_metrics, edited_model, weights_copy
+        if sequential_edit:
+            return all_metrics, edited_model, weights_copy
+        else:   
+            return all_metrics, edited_model, weights_copy, weights_per_edit
 
     def normal_edit(
         self,
