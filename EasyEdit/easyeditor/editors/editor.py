@@ -361,7 +361,7 @@ class BaseEditor:
                 else:
                     with torch.no_grad():
                         for k, v in weights_copy.items():
-                            weights_per_edit.append(nethook.get_parameter(self.model, k).detach().clone())
+                            weights_per_edit.append(nethook.get_parameter(self.model, k).detach().clone().cpu())
                             nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
 
 
