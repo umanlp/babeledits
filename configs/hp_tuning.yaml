@@ -3,7 +3,7 @@ defaults:
   - method: ft
   - _self_
 
-dataset: "datasets/v6/translated/translated_with_entities/test.json"
+dataset: "datasets/v6/translated/translated_with_entities/val.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
 max_edits: null
@@ -12,7 +12,7 @@ log_subdir: "hp_tuning"
 prompt_type: "prompts"
 subject_type: "subjects"
 target_type: "targets"
-eval_prompt_type: ["prompts", "prompts_gloss"]
+eval_prompt_type: ["prompts_gloss"]
 subject_in_prompt: null
 generality: false
 locality: false
