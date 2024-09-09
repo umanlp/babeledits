@@ -21,31 +21,25 @@ from utils import extract
 from hydra.utils import to_absolute_path
 
 
-def get_summary_metrics(all_metrics):
+def get_summary_metrics(all_metrics, eval_metric="acc"):
     if isinstance(all_metrics, dict):
         all_metrics = [
             all_metrics,
         ]
-    logs_dir = "./logs"
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
-    output_file = os.path.join(logs_dir, "results.json")
-    with open(output_file, "w") as f:
-        json.dump(all_metrics, f, ensure_ascii=False, indent=4)
 
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for key in ["rewrite_acc"]:
+        for key in [f"rewrite_{eval_metric}"]:
             if key in all_metrics[0][eval].keys():
                 mean_metrics[eval][key] = np.mean(
                     [metric[eval][key] for metric in all_metrics]
                 )
-        for key in ["rephrase_acc", "locality", "portability"]:
+        for key in [f"rephrase_{eval_metric}", "locality", "portability"]:
             if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
                 mean_metrics[eval][key] = dict()
                 for lkey in all_metrics[0][eval][key].keys():
-                    if lkey.endswith("acc"):
+                    if lkey.endswith(eval_metric):
                         mean_metrics[eval][key][lkey] = np.mean(
                             [metric[eval][key][lkey] for metric in all_metrics]
                         )
@@ -67,6 +61,8 @@ def main(cfg: DictConfig) -> None:
     print("Loading data")
     with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:
         data = json.load(file)
+    import sienna
+    data = sienna.load(f)
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)
@@ -194,7 +190,7 @@ def main(cfg: DictConfig) -> None:
     else:
         locality_inputs = None
     if method == "FT":
-        metrics, _, _, _ = editor.edit(
+        metrics, _ , _= editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -206,7 +202,7 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
         )
     else:
-        metrics, _ , _ , _ = editor.edit(
+        metrics, _ , _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
