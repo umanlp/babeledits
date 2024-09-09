@@ -1,0 +1,34 @@
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}
+  - model=llama-3-1
+  - method=ft
+  - --config-name
+  - hp_tuning.yaml
+method: grid
+metric:
+  goal: maximize
+  name: xl_reliability_score
+name: llama3_ft_sweep
+parameters:
+  method.layers:
+    values:
+      - [1]
+      - [3]
+      - [5]
+      - [7]
+      - [9]
+      - [11]
+      - [13]
+      - [15]
+      - [17]
+      - [19]
+      - [21]
+      - [23]
+      - [25]
+      - [27]
+      - [29]
+      - [31]
+program: hp_tuning.py
