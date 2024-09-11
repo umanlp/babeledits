@@ -61,8 +61,6 @@ def main(cfg: DictConfig) -> None:
     print("Loading data")
     with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:
         data = json.load(file)
-    import sienna
-    data = sienna.load(f)
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)
@@ -190,7 +188,7 @@ def main(cfg: DictConfig) -> None:
     else:
         locality_inputs = None
     if method == "FT":
-        metrics, _ , _= editor.edit(
+        metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -202,7 +200,7 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
         )
     else:
-        metrics, _ , _ = editor.edit(
+        metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,

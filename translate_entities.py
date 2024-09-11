@@ -144,8 +144,9 @@ if not args.tgt_blob_path.endswith("/"):
 data = sienna.load(dataset_path)
 subjects = extract(data, "en", "subjects")
 objects = extract(data, "en", "targets")
+ground_truths = extract(data, "en", "ground_truths")
 locality_objects = extract(data, "en", "ground_truths_loc")
-entities = subjects + objects + locality_objects
+entities = subjects + objects + locality_objects + ground_truths
 
 df = pd.DataFrame(entities, columns=["entities"])
 tsv_src_path = Path(dataset_path).parent / "tsv" / "src"
@@ -195,16 +196,16 @@ index_df = pd.read_csv(
 entities_dfs = []
 for index, row in index_df.iterrows():
     lang = row["lang"]
-    prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
+    entities_tgt_path = tsv_tgt_path / f"entities_{lang}.tsv"
     tgt_blob_name = (
         row["output_file"].replace("gs://", "").replace(tgt_bucket_name + "/", "")
     )
     print(
-        f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
+        f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {entities_tgt_path}..."
     )
-    download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
+    download_blob(tgt_bucket_name, tgt_blob_name, entities_tgt_path)
     df = pd.read_csv(
-        prompt_tgt_path,
+        entities_tgt_path,
         sep="\t",
         names=["req_id", "src", f"tgt_{lang}"],
         header=0,
@@ -223,6 +224,7 @@ merged_df = merged_df.drop_duplicates(
 ).dropna()
 
 data_keys = ["subjects", "subjects_mt", "relations"]
+relation_keys = ["ground_truth_id", "ground_truths", "ground_truths_mt", "edit"]
 edit_keys = [
     "target_id",
     "targets",
@@ -241,7 +243,6 @@ locality_keys = [
 ]
 
 
-removed_datapoints = []
 for idx, syn_id in enumerate(data):
     data[syn_id]["subjects_mt"] = {}
     en_subject = data[syn_id]["subjects"]["en"]
@@ -264,6 +265,17 @@ for idx, syn_id in enumerate(data):
         }
     )
 
+    en_ground_truth = data[syn_id]["relations"][relation]["ground_truths"]["en"]
+    ground_truth_mt_transl = merged_df.loc[merged_df["src"] == en_ground_truth]
+    data[syn_id]["relations"][relation].update(
+        {
+            "ground_truths_mt": {
+                tgt_lang: ground_truth_mt_transl[f"tgt_{tgt_lang}"].item()
+                for tgt_lang in sorted(args.tgt_langs)
+            }
+        }
+    )
+
     loc_rel = list(data[syn_id]["relations"][relation]["edit"]["locality"].keys())[0]
     loc_gt = data[syn_id]["relations"][relation]["edit"]["locality"][loc_rel][
         "ground_truths_loc"
@@ -275,11 +287,13 @@ for idx, syn_id in enumerate(data):
                 tgt_lang: loc_mt_transl[f"tgt_{tgt_lang}"].item()
                 for tgt_lang in sorted(args.tgt_langs)
             }
-            for tgt_lang in sorted(args.tgt_langs)
         }
     )
     # # Re order
     data[syn_id] = {k: data[syn_id][k] for k in data_keys}
+    data[syn_id]["relations"][relation] = {
+        k: data[syn_id]["relations"][relation][k] for k in relation_keys
+    }
     data[syn_id]["relations"][relation]["edit"] = {
         k: data[syn_id]["relations"][relation]["edit"][k] for k in edit_keys
     }

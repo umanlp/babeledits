@@ -178,7 +178,7 @@ with open(file_path, "rb") as f:
 print(f"Loaded {len(data)} synsets from {file_path}")
 
 
-# Get synset -> senses map, for each n ot-null synset which is a subject (i.e., derived from a wikipedia title)
+# Get synset -> senses map, for each non-null synset which is a subject (i.e., derived from a wikipedia title)
 # Second step serves to only get the synset->sense map only for synsets that have senses in both the source language and target language
 synset_to_senses = {
     synset: {lang: clean(extract_main_sense(synset, lang)) for lang in langs}
