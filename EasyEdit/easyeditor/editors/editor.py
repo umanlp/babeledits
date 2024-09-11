@@ -140,6 +140,7 @@ class BaseEditor:
              portability_inputs: Optional[Dict] = None,
              sequential_edit=False,
              verbose=True,
+             return_edited_weights=False,
              **kwargs
              ):
         """
@@ -170,7 +171,7 @@ class BaseEditor:
         else:
             requests = _prepare_requests(prompts, target_new, ground_truth, rephrase_prompts, locality_inputs, portability_inputs, **kwargs)
 
-        return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, **kwargs)
+        return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, return_edited_weights=return_edited_weights, **kwargs)
 
     def batch_edit(self,
                    prompts: List[str],
@@ -256,6 +257,7 @@ class BaseEditor:
              sequential_edit=False,
              verbose=True,
              test_generation=False,
+             return_edited_weights=False,
              **kwargs
              ):
         """
@@ -341,10 +343,14 @@ class BaseEditor:
         if sequential_edit:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
+                if return_edited_weights:
+                    if i == 0:
+                        weights_per_edit = {k: [] for k in weights_copy.keys()}
+                    for k, v in weights_copy.items():
+                        weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
         else:
-            weights_per_edit = []
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
@@ -360,8 +366,11 @@ class BaseEditor:
                     self.model = edited_model
                 else:
                     with torch.no_grad():
+                        if i == 0:
+                            weights_per_edit = {k: [] for k in weights_copy.keys()}
                         for k, v in weights_copy.items():
-                            weights_per_edit.append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                            if return_edited_weights:
+                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
                             nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
 
 
@@ -369,10 +378,11 @@ class BaseEditor:
             edited_model = edited_model.model
         if len(all_metrics) != 0:
             summary_metrics(all_metrics)
-        if sequential_edit:
-            return all_metrics, edited_model, weights_copy
-        else:   
+
+        if return_edited_weights:
             return all_metrics, edited_model, weights_copy, weights_per_edit
+        else:
+            return all_metrics, edited_model, weights_copy
 
     def normal_edit(
         self,
