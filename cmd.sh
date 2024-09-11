@@ -19,9 +19,9 @@ python edit.py --data_file datasets/v5/hard/it/translated/dataset.json --hparam 
 
 
 # hard
-python get_synsets.py --save_dir synsets/v5/hard/it --data_path wikipedia_data/v5/hard/filtered/it.csv --langs en it
 python get_hard_subsets.py --lang it --sample_size 10000
 python filter_hard_pages.py --lang it --device cuda:0
+python get_synsets.py --save_dir synsets/v5/hard/it --data_path wikipedia_data/v5/hard/filtered/it.csv --langs en it
 python get_edits.py --langs en it --output_folder datasets/v5/hard/it --rel_path datasets/v5/hard/it/agg_relations_with_prompts.tsv --top_k 100 --synset_path synsets/v5/hard/it
 python get_glossary.py --dataset_dir datasets/v5/hard/it --output_dir glossaries/v5/hard/it --langs en it 
 python upload_glossary.py --source_file_name glossaries/v5/hard/it/glossary_no_id.csv --destination_blob_name glossaries/v5/hard/it/glossary_no_id.csv --glossary_id it_hard_v5
@@ -71,8 +71,33 @@ python edit.py --data_file datasets/v5/translated/test.json --hparam hparams/ROM
 python get_glossary.py --dataset_dir datasets/v6 --output_dir glossaries/v6 && python upload_glossary.py --source_file_name glossaries/v6/glossary_no_id.csv --destination_blob_name glossaries/v6/glossary_no_id.csv --glossary_id multi_v6
 time python translate.py --dataset_path datasets/v6 --src_blob_path translations/v6 --tgt_blob_path translations/v6 --glossary_id multi_v6 --tgt_langs ar de es fr hr it ja nl sw zh --output_dir datasets/v6/translated --rephrase --locality
 time python aggregate_translations.py --translation_path datasets/v6/tsv/tgt --dataset_path datasets/v6 --output_dir datasets/v6/translatedpython edit.py -m method=ft,rome max_edits=5 log_subdir=debugging device=1
+
 python edit.py -m method=ft,rome max_edits=5 log_subdir=debugging device=1
 python edit.py -m method=ft,rome max_edits=5 log_subdir=debugging device=1
 python  edit.py -m  method=ft,rome max_edits=5 log_subdir=debugging device=1
 
 python edit.py method=ft max_edits=2 log_subdir=debugging/2 device=0 locality=True generality=True
+
+python -m edit.py model=llama-3-1,aya method=ft,rome log_subdir=v6_hard_debug device=4 edit_lang=en tgt_langs='["ar", "de", "es", "fr","it", "ja", "nl", "zh"]' 
+
+python edit.py -m log_subdir=v6_corr generality=true locality=true edit_lang=it,fr,de model=llama-3-1 method=ft prompt_type=prompts subject_type=subjects_mt target_type=targets_mt device=0
+python edit.py -m log_subdir=v6_corr generality=true locality=true edit_lang=it,fr,de model=aya method=ft prompt_type=prompts subject_type=subjects_mt target_type=targets_mt device=1
+
+python edit.py -m log_subdir=v6_corr generality=true locality=true edit_lang=it,fr,de model=llama-3-1 method=ft prompt_type=prompts_gloss subject_type=subjects target_type=targets device=2
+python edit.py -m log_subdir=v6_corr generality=true locality=true edit_lang=it,fr,de model=aya method=ft prompt_type=prompts_gloss subject_type=subjects target_type=targets device=3
+
+python translate_entities.py --dataset-path datasets/v6/translated/val.json --tgt_langs ar de es fr hr it ja nl sw zh
+
+# v6_3 hp
+# llama-3-1 EN
+python edit.py log_subdir=v6_3 generality=true locality=true edit_lang=en model=llama-3-1 method=ft prompt_type=prompts subject_type=subjects target_type=targets device=4
+python edit.py log_subdir=v6_3 generality=true locality=true edit_lang=en model=llama-3-1 method=rome prompt_type=prompts subject_type=subjects target_type=targets device=5
+
+#aya-23 EN
+python edit.py log_subdir=v6_3 generality=true locality=true edit_lang=en model=aya method=ft method.layers=[7] prompt_type=prompts subject_type=subjects target_type=targets device=4
+python edit.py log_subdir=v6_3 generality=true locality=true edit_lang=en model=aya method=rome method.layers=[7] prompt_type=prompts subject_type=subjects target_type=targets device=4
+
+
+# llama-3-1 IT,FR,DE
+python edit.py -m log_subdir=v6_3 generality=true locality=true edit_lang=it,fr,de model=llama-3-1 method=ft prompt_type=prompts subject_type=subjects_mt target_type=targets_mt
+python edit.py -m log_subdir=v6_3 generality=true locality=true edit_lang=it,fr,de model=llama-3-1 method=ft prompt_type=prompts_gloss subject_type=subjects target_type=targets
