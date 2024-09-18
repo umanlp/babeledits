@@ -12,7 +12,7 @@ log_subdir: "new_debug"
 prompt_type: "prompts"
 subject_type: "subjects"
 target_type: "targets"
-eval_prompt_type: ["prompts", "prompts_gloss"]
+eval_prompt_type: ["prompts_mt", "prompts_mt_marked", "prompts_gloss"]
 subject_in_prompt: null
 generality: false
 locality: false

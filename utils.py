@@ -2,7 +2,7 @@ import json
 import re
 from collections import OrderedDict
 import urllib
-
+from google.cloud import storage, translate
 
 def extract(data, field, upper_level_field=None):
     """
@@ -274,8 +274,11 @@ def clean(sense):
     # Remove double quotes if they wrap the entire string
     if sense.startswith('"') and sense.endswith('"'):
         sense = sense[1:-1]
+    
+    sense = sense.strip()
+    sense = sense[0].upper() + sense[1:]
 
-    return sense.strip()
+    return sense
 
 
 def download_blob(bucket_name, blob_name, destination_file_name):
@@ -345,3 +348,151 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     print(
         f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}."
     )
+
+def translate_text(
+    project_id: str = "YOUR_PROJECT_ID",
+    input_uri: str = "YOUR_INPUT_URI",
+    output_uri: str = "YOUR_OUTPUT_URI",
+    source_language_code: str = "en",
+    target_language_code: str = "it",
+) -> translate.TranslateTextResponse:
+    """Translates a given text using a glossary.
+
+    Args:
+        text: The text to translate.
+        project_id: The ID of the GCP project that owns the glossary.
+        glossary_id: The ID of the glossary to use.
+
+    Returns:
+        The translated text."""
+    client = translate.TranslationServiceClient()
+    location = "us-central1"
+    parent = f"projects/{project_id}/locations/{location}"
+
+    gcs_source = {"input_uri": input_uri}
+
+    input_configs_element = {
+        "gcs_source": gcs_source,
+        "mime_type": "text/plain",  # Can be "text/plain" or "text/html".
+    }
+    gcs_destination = {"output_uri_prefix": output_uri}
+    output_config = {"gcs_destination": gcs_destination}
+
+    # Supported language codes: https://cloud.google.com/translate/docs/languages
+    operation = client.batch_translate_text(
+        request={
+            "target_language_codes": target_language_code,
+            "source_language_code": source_language_code,
+            "parent": parent,
+            "input_configs": [input_configs_element],
+            "output_config": output_config,
+        }
+    )
+
+    print("Waiting for operation to complete...")
+    response = operation.result()
+
+    print(f"Total Characters: {response.total_characters}")
+    print(f"Translated Characters: {response.translated_characters}")
+
+    # Retrieve the translated file names from the output_uri
+    storage_client = storage.Client()
+    bucket_name = output_uri.split("/")[2]
+    prefix = "/".join(output_uri.split("/")[3:])
+
+    bucket = storage_client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)
+
+    file_names = []
+    for blob in blobs:
+        print(f"Translated file: {blob.name}")
+        file_names.append(blob.name)
+
+    return response, file_names
+
+def extract_target(prompt):
+    if prompt.count("<o>") == 1 and prompt.count("</o>") == 1:
+        start_index = prompt.find("<o>") + len("<o>")
+        end_index = prompt.find("</o>")
+        target = prompt[start_index:end_index].strip()
+        if target  == "":
+            target = prompt
+    else:
+        question_marks = r'[？؟՞፧;]|\?'
+        # Find the last occurrence of any question mark
+        match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
+        if match:
+            index = match.end(1)  # End index of the matched question mark
+            if match.end(1) == len(prompt):
+                target = prompt
+            else:
+                target = prompt[index:]
+        else:
+            target = prompt
+    return target.strip()
+
+
+def extract_subject(prompt):
+    if prompt.count("<s>") == 1 and prompt.count("</s>") == 1:
+        start_index = prompt.find("<s>") + len("<s>")
+        end_index = prompt.find("</s>")
+        subject = prompt[start_index:end_index].strip()
+        if subject == "":
+            subject = prompt
+    else:
+        question_marks = r'[？؟՞፧;]|\?'
+        # Find the last occurrence of any question mark
+        match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
+        if match:
+            index = match.end(1)  # End index of the matched question mark
+            subject = prompt[:index]
+        else:
+            subject = prompt
+    return subject.strip()
+
+
+def clean_prompt(prompt):
+    prompt = (
+        prompt.replace("<s>", "")
+        .replace("</s>", "")
+        .replace("<o>", "")
+        .replace("</o>", "")
+    )
+        # Unicode patterns for question marks in various scripts
+    question_marks = r'[？؟՞፧;]|\?'
+    
+    # Find the last occurrence of any question mark
+    match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
+    
+    if match:
+        index = match.end(1)  # End index of the matched question mark
+        prompt = prompt[:index]
+        
+        # Check if there's a space before the question mark and remove it if present
+        if len(prompt) >= 2 and prompt[-2] == " ":
+            prompt = prompt[:-2] + prompt[-1]
+    
+    return prompt
+
+def format_prompt(prompt, subject, target):
+    ref_prompt = prompt.replace(subject, f"<s>{subject}</s>")
+    return ref_prompt + f" <o>{target}</o>"
+
+def remove_space(s):
+    if s[-2] == " ":
+        return s[:-2] + s[-1]
+    return s
+
+def insert_after(my_dict, key, new_key, new_value):
+    new_dict = {}
+    prev_key = None
+    for k, v in my_dict.items():
+        if prev_key is not None and prev_key == key:
+            new_dict[new_key] = new_value
+            new_dict[k] = v
+        else:
+            new_dict[k] = v
+            prev_key = k
+    if new_key not in new_dict:
+        new_dict[new_key] = new_value
+    return new_dict

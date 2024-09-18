@@ -48,6 +48,32 @@ def get_summary_metrics(all_metrics, eval_metric="acc"):
     return mean_metrics
 
 
+def prompt_to_target(prompt_type, metric_type):
+    if metric_type in ["reliability", "generality"]:
+        if "gloss" in prompt_type:
+            return "targets"
+        elif "mt_marked" in prompt_type:
+            return "targets_mt_marked"
+        elif "mt" in prompt_type:
+            return "targets_mt"
+        else:
+            if prompt_type in ["prompts", "prompts_gen"]:
+                return "targets_mt"
+            else:
+                raise ValueError(f"Unknown prompt type {prompt_type}")
+    if metric_type == "locality":
+        if "gloss" in prompt_type:
+            return "ground_truths_loc"
+        elif "mt_marked" in prompt_type:
+            return "ground_truths_loc_mt_marked"
+        elif "mt" in prompt_type:
+            return "ground_truths_loc_mt"
+        else:
+            if prompt_type == "prompts_loc":
+                return "ground_truths_loc_mt"
+            else:
+                raise ValueError(f"Unknown prompt type {prompt_type}")
+
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     print("Edit Configuration:\n" + OmegaConf.to_yaml(cfg, resolve=True))
@@ -122,7 +148,8 @@ def main(cfg: DictConfig) -> None:
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             port_key = f"{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
-            target_key = "targets_mt" if tgt_prompt_type == "prompts" else "targets"
+            target_key = prompt_to_target(tgt_prompt_type, "reliability")
+            print(f"Evaluating reliability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
             portability_inputs.update(
                 {
                     port_key: {
@@ -135,8 +162,10 @@ def main(cfg: DictConfig) -> None:
         portability_inputs = None
     if cfg.generality:
         gen_prompt_types = []
-        if "prompts" in cfg.eval_prompt_type:
-            gen_prompt_types.append("prompts_gen")
+        if "prompts_mt" in cfg.eval_prompt_type:
+            gen_prompt_types.append("prompts_gen_mt")
+        if "prompts_mt_marked" in cfg.eval_prompt_type:
+            gen_prompt_types.append("prompts_gen_mt_marked")
         if "prompts_gloss" in cfg.eval_prompt_type:
             gen_prompt_types.append("prompts_gen_gloss")
         xlt_confs = [
@@ -147,7 +176,8 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
-            target_key = "targets_mt" if tgt_prompt_type == "prompts_gen" else "targets"
+            target_key = prompt_to_target(tgt_prompt_type, "generality")
+            print(f"Evaluating generality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
             generality_inputs.update(
                 {
                     gen_key: {
@@ -160,8 +190,10 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = None
     if cfg.locality:
         loc_prompt_types = []
-        if "prompts" in cfg.eval_prompt_type:
-            loc_prompt_types.append("prompts_loc")
+        if "prompts_mt" in cfg.eval_prompt_type:
+            loc_prompt_types.append("prompts_loc_mt")
+        if "prompts_mt_marked" in cfg.eval_prompt_type:
+            loc_prompt_types.append("prompts_loc_mt_marked")
         if "prompts_gloss" in cfg.eval_prompt_type:
             loc_prompt_types.append("prompts_loc_gloss")
         xlt_confs = [
@@ -172,11 +204,8 @@ def main(cfg: DictConfig) -> None:
         locality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
-            target_key = (
-                "ground_truths_loc_mt"
-                if tgt_prompt_type == "prompts_loc"
-                else "ground_truths_loc"
-            )
+            target_key = prompt_to_target(tgt_prompt_type, "locality")
+            print(f"Evaluating locality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
             locality_inputs.update(
                 {
                     loc_key: {
