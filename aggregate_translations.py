@@ -42,6 +42,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
 def load_translations(translation_path):
     translation_files = [x for x in os.listdir(translation_path) if x.endswith(".tsv")]
     langs = [x.split(".")[0][-2:] for x in translation_files]
@@ -62,13 +63,13 @@ def load_translations(translation_path):
         lang_to_transl[lang] = df
 
     output_df = pd.concat(list(lang_to_transl.values()), axis=1)
-    output_df = output_df.T.drop_duplicates(keep="first").T
+    output_df = output_df.loc[:, ~output_df.columns.duplicated()]
     return langs, output_df
 
 
 dataset_path = args.dataset_path
 entity_path = args.entity_path
-pure_mt_path = args.translation_path 
+pure_mt_path = args.translation_path
 marked_mt_path = args.marked_translation_path
 data = sienna.load(dataset_path)
 
@@ -88,6 +89,7 @@ for f, lang in zip(translation_files, langs):
             "req_id",
             "prompt_type",
             "src",
+            f"tgt_raw_{lang}",
             f"tgt_{lang}",
             f"subject_{lang}",
             f"object_{lang}",
@@ -98,7 +100,9 @@ for f, lang in zip(translation_files, langs):
     lang_to_transl[lang] = df
 
 marked_translations = pd.concat(list(lang_to_transl.values()), axis=1)
-marked_translations = marked_translations.T.drop_duplicates(keep="first").T
+marked_translations = marked_translations.loc[
+    :, ~marked_translations.columns.duplicated()
+]
 
 index_df = pd.read_csv(
     f"{entity_path}/index.csv",
@@ -132,7 +136,6 @@ merged_df = merged_df.drop_duplicates(
 
 all_langs = sorted(langs + ["en"])
 idx = 0
-NUM_PROMPTS_PER_DATAPOINT = 3
 for syn_idx, syn_id in enumerate(data):
     # Insert subjects_mt and subjects_mt_marked
 
@@ -235,6 +238,7 @@ for syn_idx, syn_id in enumerate(data):
             gloss_prompts,
         )
         data[syn_id]["relations"][relation]["edit"].pop("prompts")
+        idx += 1
 
         # Generality
 
@@ -242,19 +246,17 @@ for syn_idx, syn_id in enumerate(data):
             "prompts_gen"
         ]["en"]
         gloss_prompts = {
-            lang: remove_space(mt_translations.loc[idx + 1, f"tgt_gloss_{lang}"])
+            lang: remove_space(mt_translations.loc[idx, f"tgt_gloss_{lang}"])
             if lang != "en"
             else en_prompt
             for lang in all_langs
         }
         mt_prompts = {
-            lang: mt_translations.loc[idx + 1, f"tgt_{lang}"]
-            if lang != "en"
-            else en_prompt
+            lang: mt_translations.loc[idx, f"tgt_{lang}"] if lang != "en" else en_prompt
             for lang in all_langs
         }
         marked_prompts = {
-            lang: marked_translations.loc[idx + 1, f"tgt_{lang}"]
+            lang: marked_translations.loc[idx, f"tgt_{lang}"]
             if lang != "en"
             else en_prompt
             for lang in all_langs
@@ -281,6 +283,7 @@ for syn_idx, syn_id in enumerate(data):
             gloss_prompts,
         )
         data[syn_id]["relations"][relation]["edit"]["generality"].pop("prompts_gen")
+        idx += 1
 
         # Locality
         for locality_relation in data[syn_id]["relations"][relation]["edit"][
@@ -323,7 +326,7 @@ for syn_idx, syn_id in enumerate(data):
                 "ground_truths_loc_mt",
                 "ground_truths_loc_mt_marked",
                 {
-                    lang: marked_translations.loc[idx + 2, f"object_{lang}"]
+                    lang: marked_translations.loc[idx, f"object_{lang}"]
                     if lang != "en"
                     else en_gt_loc
                     for lang in all_langs
@@ -334,19 +337,19 @@ for syn_idx, syn_id in enumerate(data):
                 locality_relation
             ]["prompts_loc"]["en"]
             gloss_prompts = {
-                lang: remove_space(mt_translations.loc[idx + 2, f"tgt_gloss_{lang}"])
+                lang: remove_space(mt_translations.loc[idx, f"tgt_gloss_{lang}"])
                 if lang != "en"
                 else en_prompt
                 for lang in all_langs
             }
             mt_prompts = {
-                lang: mt_translations.loc[idx + 2, f"tgt_{lang}"]
+                lang: mt_translations.loc[idx, f"tgt_{lang}"]
                 if lang != "en"
                 else en_prompt
                 for lang in all_langs
             }
             marked_prompts = {
-                lang: marked_translations.loc[idx + 2, f"tgt_{lang}"]
+                lang: marked_translations.loc[idx, f"tgt_{lang}"]
                 if lang != "en"
                 else en_prompt
                 for lang in all_langs
@@ -388,11 +391,120 @@ for syn_idx, syn_id in enumerate(data):
             data[syn_id]["relations"][relation]["edit"]["locality"][
                 locality_relation
             ].pop("prompts_loc")
+            idx += 1
 
-        idx += NUM_PROMPTS_PER_DATAPOINT
+        # Portability
+        if "portability" in data[syn_id]["relations"][relation]["edit"]:
+            for portability_relation in data[syn_id]["relations"][relation]["edit"][
+                "portability"
+            ]:
+                # Inserting portability objects
+
+                en_gt_port = data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ]["ground_truths_port"]["en"]
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ] = insert_after(
+                    data[syn_id]["relations"][relation]["edit"]["portability"][
+                        portability_relation
+                    ],
+                    "ground_truths_port",
+                    "ground_truths_port_mt",
+                    {
+                        lang: merged_df.loc[
+                            merged_df["src"]
+                            == data[syn_id]["relations"][relation]["edit"][
+                                "portability"
+                            ][portability_relation]["ground_truths_port"]["en"],
+                            f"tgt_{lang}",
+                        ].tolist()[0]
+                        if lang != "en"
+                        else en_gt_port
+                        for lang in all_langs
+                    },
+                )
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ] = insert_after(
+                    data[syn_id]["relations"][relation]["edit"]["portability"][
+                        portability_relation
+                    ],
+                    "ground_truths_port_mt",
+                    "ground_truths_port_mt_marked",
+                    {
+                        lang: marked_translations.loc[idx, f"object_{lang}"]
+                        if lang != "en"
+                        else en_gt_port
+                        for lang in all_langs
+                    },
+                )
+
+                en_prompt = data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ]["prompts_port"]["en"]
+                gloss_prompts = {
+                    lang: remove_space(mt_translations.loc[idx, f"tgt_gloss_{lang}"])
+                    if lang != "en"
+                    else en_prompt
+                    for lang in all_langs
+                }
+                mt_prompts = {
+                    lang: mt_translations.loc[idx, f"tgt_{lang}"]
+                    if lang != "en"
+                    else en_prompt
+                    for lang in all_langs
+                }
+                marked_prompts = {
+                    lang: marked_translations.loc[idx, f"tgt_{lang}"]
+                    if lang != "en"
+                    else en_prompt
+                    for lang in all_langs
+                }
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ] = insert_after(
+                    data[syn_id]["relations"][relation]["edit"]["portability"][
+                        portability_relation
+                    ],
+                    "prompts_port",
+                    "prompts_port_mt",
+                    mt_prompts,
+                )
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ] = insert_after(
+                    data[syn_id]["relations"][relation]["edit"]["portability"][
+                        portability_relation
+                    ],
+                    "prompts_port_mt",
+                    "prompts_port_mt_marked",
+                    marked_prompts,
+                )
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ] = insert_after(
+                    data[syn_id]["relations"][relation]["edit"]["portability"][
+                        portability_relation
+                    ],
+                    "prompts_port_mt_marked",
+                    "prompts_port_gloss",
+                    gloss_prompts,
+                )
+
+                data[syn_id]["relations"][relation]["edit"]["portability"][
+                    portability_relation
+                ].pop("prompts_port")
+            idx += 1
 
 
 save_path = Path(dataset_path).parent / "translated" / Path(dataset_path).name
 save_path.parent.mkdir(parents=True, exist_ok=True)
 with open(save_path, "w") as f:
     json.dump(data, f, indent=4, ensure_ascii=False)
+print(f"Translations saved to {save_path}")

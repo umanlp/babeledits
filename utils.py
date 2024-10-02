@@ -32,7 +32,7 @@ def extract(data, field, upper_level_field=None, strict=True):
                         return result
         return None
 
-    for key, value in data.items():
+    for value in data.values():
         extracted_value = extract_from_dict(value, field, upper_level_field)
         if strict:
             assert extracted_value is not None, f"Field '{field}' not found in JSON data."

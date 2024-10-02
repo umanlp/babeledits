@@ -23,8 +23,8 @@ parser.add_argument(
 )
 parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
 parser.add_argument("--generate_prompts", action="store_true", help="whether to also generate prompts")
-parser.add_argument("--dataset_path", default="datasets/v4", help="dataset path")
-parser.add_argument("--synset_path", default="synsets/v4", help="synset path")
+parser.add_argument("--dataset_path", default="datasets/v7", help="dataset path")
+parser.add_argument("--synset_path", default="synsets/v7", help="synset path")
 
 
 args, _ = parser.parse_known_args()
@@ -59,7 +59,7 @@ rel_df = rel_df[
 rel_df = rel_df.head(max_rel).reset_index(drop=True)
 print(rel_df)
 # Save all relations with their counts
-rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False)
+rel_df.to_csv(f"{dataset_path}/agg_relations_all.tsv", index=False, sep="\t")
 
 
 # %%

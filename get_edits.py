@@ -96,6 +96,9 @@ parser.add_argument("--rephrase", action="store_true", help="rephrase the questi
 parser.add_argument(
     "--locality", action="store_true", help="whether to also get a locality"
 )
+parser.add_argument(
+    "--portability", action="store_true", help="whether to also get a portability"
+)
 parser.add_argument("--synset_path", default="synsets/v4", help="synset path")
 
 args = parser.parse_args()
@@ -174,6 +177,9 @@ print(f"Loading synsets from {file_path}")
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 
+# TODO REMOVE
+data = data[:500]
+output_folder = "datasets/trash"
 
 print(f"Loaded {len(data)} synsets from {file_path}")
 
@@ -224,41 +230,23 @@ synset_to_relations = {
     for synset, edge_list in synset_to_relations.items()
 }
 
-# Extracting all the ids of target synsets (i.e., opposed synsets to subject synsets)
-# target_synset_ids = list(
-# set(
-# [
-# BabelSynsetID(edge["target_id"])
-# for relations in synset_to_relations.values()
-# for edges in relations.values()
-# for edge in edges
-# ]
-# )
-# )
-# print(f"Fetching {len(target_synset_ids)} target synsets")
-# target_synsets = bn.get_synsets(*(target_synset_ids))
+
+def get_portability_set(synset, relations, selected_relation, babel_langs):
+    edges = [
+        x
+        for x in synset.outgoing_edges()
+        if x.pointer in relations and x.pointer.name != selected_relation
+    ]
+    random.shuffle(edges)
+    for edge in edges:
+        tgt_syn = BabelSynsetID(edge.target).to_synset()
+        if check_langs(tgt_syn, babel_langs):
+            return edge.pointer.name, tgt_syn
+    return None, None
+
 
 babel_langs = set([Language.from_iso(lang) for lang in langs])
-# target_synsets = [
-#     synset
-#     for synset in target_synsets
-#     if synset is not None and check_langs(synset, babel_langs)
-# ]
 
-# # Similar to above
-# targets = {
-#     str(synset.id): {
-#         f"sense_{lang}": synset.main_sense(Language.from_iso(lang)) for lang in langs
-#     }
-#     for synset in target_synsets
-# }
-# targets = {
-#     syn_id: {
-#         f"sense_{lang}": clean(senses[f"sense_{lang}"].full_lemma) for lang in langs
-#     }
-#     for syn_id, senses in targets.items()
-#     if all(senses.values())
-# }
 
 print("Getting edges where target synset is in all selected languages")
 # Let's iterate over all the subject synsets and store the data from the target synsets (if we have their senses)
@@ -339,7 +327,7 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
             sampled_syn = copy.deepcopy(random.choice(syn_pool))
             sampled_syn["target_id"] = sampled_syn.pop("ground_truth_id")
             sampled_syn["targets"] = sampled_syn.pop("ground_truths")
-            if "edit" in sampled_syn:  # avoid infinit recursion
+            if "edit" in sampled_syn:  # avoid infinite recursion
                 sampled_syn.pop("edit")
             prompt = rel_df.loc[relation, "question"].replace(
                 "<subject>", synset_to_senses[synset]["en"]
@@ -350,7 +338,9 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
                     "<subject>", synset_to_senses[synset]["en"]
                 )
                 prompt_data["generality"] = {}
-                prompt_data["generality"].update({"prompts_gen": {"en": rephrase_prompt}})
+                prompt_data["generality"].update(
+                    {"prompts_gen": {"en": rephrase_prompt}}
+                )
             edge["edit"] = sampled_syn
             edge["edit"].update(prompt_data)
 
@@ -410,11 +400,41 @@ if args.locality:
                 }
             }
         )
-        
+
         output[synset_id]["relations"][selected_relation]["edit"]["locality"] = {}
         output[synset_id]["relations"][selected_relation]["edit"]["locality"].update(
             {rel_name: sampled_rel}
         )
+
+if args.portability:
+    print("Getting portability sets")
+    for synset_id in output:
+        selected_relation = list(output[synset_id]["relations"].keys())[0]
+        target_synset = BabelSynsetID(
+            output[synset_id]["relations"][selected_relation]["edit"]["target_id"]
+        ).to_synset()
+        # TODO  FIX ground_truth_idport
+        port_relation, port_synset = get_portability_set(
+            target_synset, relations, selected_relation, babel_langs
+        )
+        if port_relation and port_synset:
+            port_data = {
+                port_relation: {
+                    "ground_truths_id_port" : str(port_synset.id),
+                    "ground_truths_port": {
+                        lang: clean(extract_main_sense(port_synset, lang))
+                        for lang in langs
+                    },
+                    "prompts_port": "",
+                }
+            }
+            output[synset_id]["relations"][selected_relation]["edit"][
+                "portability"
+            ] = {}
+            output[synset_id]["relations"][selected_relation]["edit"][
+                "portability"
+            ].update(port_data)
+
 
 print(f"Input size {len(data)}, Output size {len(output)}")
 Path(output_folder).mkdir(parents=True, exist_ok=True)

@@ -9,8 +9,6 @@ from utils import download_blob, extract, folder_exists, delete_folder
 from google.cloud import storage
 
 
-
-
 def translate_text_with_glossary(
     project_id: str = "YOUR_PROJECT_ID",
     glossary_id: str = "YOUR_GLOSSARY_ID",
@@ -83,6 +81,7 @@ def translate_text_with_glossary(
 
     return response, file_names
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Translate text using a glossary")
     parser.add_argument(
@@ -114,7 +113,10 @@ if __name__ == "__main__":
     parser.add_argument("--glossary_id", default="multi_v5", help="ID of the glossary")
     parser.add_argument("--src_lang", default="en", help="Source language code")
     parser.add_argument(
-        "--tgt_langs", default=["it", "de", "fr"], nargs="+", help="Target language code(s)"
+        "--tgt_langs",
+        default=["it", "de", "fr"],
+        nargs="+",
+        help="Target language code(s)",
     )
     parser.add_argument(
         "--output_dir", default="datasets/v5/translated", help="Output directory"
@@ -126,9 +128,14 @@ if __name__ == "__main__":
         help="Delete the target folder in GCS without asking for user confirmation",
     )
 
-    parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
     parser.add_argument(
-        "--locality", action="store_true", help="whether to also get a locality"
+        "--rephrase", action="store_true", help="rephrase the questions"
+    )
+    parser.add_argument(
+        "--locality", action="store_true", help="whether to also get locality translated"
+    )
+    parser.add_argument(
+        "--portability", action="store_true", help="whether to also get portability translated"
     )
     args, _ = parser.parse_known_args()
 
@@ -150,24 +157,28 @@ if __name__ == "__main__":
     print(f"Reading dataset from {dataset_path}...")
     prompts = extract(data, "en", "prompts")
 
-    if args.rephrase and args.locality:
-        print(f"Adding generality and locality prompts from {dataset_path}...")
-        prompts_gen = extract(data, "en", "prompts_gen")
-        prompts_loc = extract(data, "en", "prompts_loc")
-        all_prompts = [
-            item for sublist in zip(prompts, prompts_gen, prompts_loc) for item in sublist
-        ]
-    elif args.rephrase:
-        print(f"Adding generality prompts from {dataset_path}...")
-        prompts_gen = extract(data, "en", "prompts_gen")
-        all_prompts = [item for sublist in zip(prompts, prompts_gen) for item in sublist]
-    elif args.locality:
-        print(f"Adding locality prompts from {dataset_path}...")
-        prompts_loc = extract(data, "en", "prompts_loc")
-        all_prompts = [item for sublist in zip(prompts, prompts_loc) for item in sublist]
-    else:
-        print(f"Using only prompts from {dataset_path}...")
-        all_prompts = prompts
+    prompt_types = ["prompts"]
+    if args.rephrase:
+        prompt_types.append("prompts_gen")
+    if args.locality:
+        prompt_types.append("prompts_loc")
+    if args.portability:
+        prompt_types.append("prompts_port")
+
+    prompt_types_with_strictness = [
+        (x, True) if x != "prompts_port" else (x, False) for x in prompt_types
+    ]
+    extracted_prompts = [
+        extract(data, "en", prompt_type, strict=strict_val)
+        for prompt_type, strict_val in prompt_types_with_strictness
+    ]
+
+    all_prompts = [
+        item
+        for sublist in zip(*extracted_prompts)
+        for item in sublist
+        if item is not None
+    ]
 
 
     # Convert prompts to tsv, upload to GCS
@@ -236,22 +247,23 @@ if __name__ == "__main__":
             names=["req_id", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"],
             header=0,
         )
-        if args.rephrase and args.locality:
-            pattern = ['prompt', 'prompt_gen', 'prompt_loc']
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        elif args.rephrase:
-            pattern = ['prompt', 'prompt_gen']
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        elif args.locality:
-            pattern = ['prompt', 'prompt_loc']
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        else:
-            df["prompt_type"] = "prompt"
-        df = df[["req_id", "prompt_type", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"]]
         df.sort_values("req_id", inplace=True)
+        
+        prompt_pattern = []
+        for syn_id, example in data.items():
+            relation = list(example["relations"].keys())[0]
+            if "targets" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt")
+            if "generality" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_gen")
+            if "locality" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_loc")
+            if "portability" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_port")
+        
+        df["prompt_type"] = prompt_pattern
+        df = df[["req_id", "prompt_type", "src", f"tgt_{lang}", f"tgt_gloss_{lang}"]]
+        
 
         if df.isnull().values.any():
             print(f"Data for {lang} has some problems with NaN values. Please check.")

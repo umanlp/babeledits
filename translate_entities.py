@@ -81,8 +81,10 @@ data = sienna.load(dataset_path)
 subjects = extract(data, "en", "subjects")
 objects = extract(data, "en", "targets")
 ground_truths = extract(data, "en", "ground_truths")
+ground_truths_port = extract(data, "en", "ground_truths_port", strict=False)
+ground_truths_port = [e for e in ground_truths_port if e]
 locality_objects = extract(data, "en", "ground_truths_loc")
-entities = subjects + objects + locality_objects + ground_truths
+entities = subjects + objects + locality_objects + ground_truths + ground_truths_port
 
 df = pd.DataFrame(entities, columns=["entities"])
 tsv_src_path = Path(dataset_path).parent / "tsv_entities" / "src"

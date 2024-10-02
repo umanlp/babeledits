@@ -69,7 +69,10 @@ if __name__ == "__main__":
         "--rephrase", action="store_true", help="rephrase the questions"
     )
     parser.add_argument(
-        "--locality", action="store_true", help="whether to also get a locality"
+        "--locality", action="store_true", help="whether to also get locality"
+    )
+    parser.add_argument(
+        "--portability", action="store_true", help="whether to also get portability"
     )
     args, _ = parser.parse_known_args()
 
@@ -93,51 +96,62 @@ if __name__ == "__main__":
 
     prompts = [format_prompt(p, s, t) for (p, s, t) in zip(prompts, subjects, targets)]
 
-    if args.rephrase and args.locality:
-        print(f"Adding generality and locality prompts from {dataset_path}...")
+    prompt_types = ["prompts"]
+    if args.rephrase:
+        prompt_types.append("prompts_gen")
+    if args.locality:
+        prompt_types.append("prompts_loc")
+    if args.portability:
+        prompt_types.append("prompts_port")
 
-        prompts_gen = extract(data, "en", "prompts_gen")
-        prompts_gen = [
-            format_prompt(p, s, t) for (p, s, t) in zip(prompts_gen, subjects, targets)
-        ]
+    all_prompts = []
 
-        prompts_loc = extract(data, "en", "prompts_loc")
-        targets_loc = extract(data, "en", "ground_truths_loc")
-
-        prompts_loc = [
-            format_prompt(p, s, t)
-            for (p, s, t) in zip(prompts_loc, subjects, targets_loc)
-        ]
-
-        all_prompts = [
-            item
-            for sublist in zip(prompts, prompts_gen, prompts_loc)
-            for item in sublist
-        ]
-    elif args.rephrase:
-        print(f"Adding generality prompts from {dataset_path}...")
-        prompts_gen = extract(data, "en", "prompts_gen")
-        prompts_gen = [
-            format_prompt(p, s, t) for (p, s, t) in zip(prompts_gen, subjects, targets)
-        ]
-        all_prompts = [
-            item for sublist in zip(prompts, prompts_gen) for item in sublist
-        ]
-    elif args.locality:
-        print(f"Adding locality prompts from {dataset_path}...")
-        prompts_loc = extract(data, "en", "prompts_loc")
-        targets_loc = extract(data, "en", "ground_truths_loc")
-
-        prompts_loc = [
-            format_prompt(p, s, t)
-            for (p, s, t) in zip(prompts_loc, subjects, targets_loc)
-        ]
-        all_prompts = [
-            item for sublist in zip(prompts, prompts_loc) for item in sublist
-        ]
-    else:
-        print(f"Using only prompts from {dataset_path}...")
-        all_prompts = prompts
+    for syn_id, example in data.items():
+        relation = list(example["relations"].keys())[0]
+        all_prompts.append(
+            format_prompt(
+                example["relations"][relation]["edit"]["prompts"]["en"],
+                example["subjects"]["en"],
+                example["relations"][relation]["edit"]["targets"]["en"],
+            )
+        )
+        if "generality" in example["relations"][relation]["edit"]:
+            all_prompts.append(
+                format_prompt(
+                    example["relations"][relation]["edit"]["generality"]["prompts_gen"][
+                        "en"
+                    ],
+                    example["subjects"]["en"],
+                    example["relations"][relation]["edit"]["targets"]["en"],
+                )
+            )
+        if "locality" in example["relations"][relation]["edit"]:
+            loc_relation = list(
+                example["relations"][relation]["edit"]["locality"].keys()
+            )[0]
+            all_prompts.append(
+                format_prompt(
+                    example["relations"][relation]["edit"]["locality"][loc_relation][
+                        "prompts_loc"
+                    ]["en"],
+                    example["subjects"]["en"],
+                    example["relations"][relation]["edit"]["locality"][loc_relation][
+                        "ground_truths_loc"
+                    ]["en"],
+                )
+            )
+        if "portability" in example["relations"][relation]["edit"]:
+            port_relation = list(
+                example["relations"][relation]["edit"]["portability"].keys()
+            )[0]
+            port_target = example["relations"][relation]["edit"]["portability"][port_relation][
+                "ground_truths_port"
+            ]["en"]
+            all_prompts.append(
+                example["relations"][relation]["edit"]["portability"][port_relation][
+                    "prompts_port"
+                ]["en"] + f" <o>{port_target}</o>"
+            )
 
     # Convert prompts to tsv, upload to GCS
     df = pd.DataFrame(all_prompts, columns=["prompt"])
@@ -203,29 +217,38 @@ if __name__ == "__main__":
             names=["req_id", "src", f"tgt_{lang}"],
             header=0,
         )
-        if args.rephrase and args.locality:
-            pattern = ["prompt", "prompt_gen", "prompt_loc"]
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        elif args.rephrase:
-            pattern = ["prompt", "prompt_gen"]
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        elif args.locality:
-            pattern = ["prompt", "prompt_loc"]
-            df.sort_values("req_id", inplace=True)
-            df["prompt_type"] = pattern * (len(df) // len(pattern))
-        else:
-            df["prompt_type"] = "prompt"
-        df["subject"] = [extract_subject(x) for x in df[f"tgt_{lang}"]]
+        df.sort_values("req_id", inplace=True)
+        prompt_pattern = []
+        for syn_id, example in data.items():
+            relation = list(example["relations"].keys())[0]
+            if "targets" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt")
+            if "generality" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_gen")
+            if "locality" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_loc")
+            if "portability" in example["relations"][relation]["edit"]:
+                prompt_pattern.append("prompt_port")
+        df["prompt_type"] = prompt_pattern
+        df["subject"] = [
+            extract_subject(x) if prompt_type != "prompt_port" else "-"
+            for x, prompt_type in zip(df[f"tgt_{lang}"], df["prompt_type"])
+        ]
         df["object"] = [extract_target(x) for x in df[f"tgt_{lang}"]]
         df[f"tgt_raw_{lang}"] = df[f"tgt_{lang}"]
         df[f"tgt_{lang}"] = [clean_prompt(x) for x in df[f"tgt_{lang}"]]
-        df = df[["req_id", "prompt_type", "src", f"tgt_raw_{lang}", f"tgt_{lang}", "subject", "object"]]
-
-        df.sort_values("req_id", inplace=True)
+        df = df[
+            [
+                "req_id",
+                "prompt_type",
+                "src",
+                f"tgt_raw_{lang}",
+                f"tgt_{lang}",
+                f"subject_{lang}",
+                f"object_{lang}",
+            ]
+        ]
 
         if df.isnull().values.any():
             print(f"⚠️ Data for {lang} has some problems with NaN values. Please check.")
         df.to_csv(prompt_tgt_path, sep="\t", index=False)
-
