@@ -4,35 +4,38 @@ from collections import OrderedDict
 import urllib
 from google.cloud import storage, translate
 
-def extract(data, field, upper_level_field=None):
+def extract(data, field, upper_level_field=None, strict=True):
     """
     Extracts the specified field from every entry in the given JSON data.
 
     :param data: The JSON data as a dictionary.
     :param field: The field to extract.
     :param upper_level_field: The upper-level field if the field is two letters long.
+    :param strict: If True, all extracted values must be not None. If False, None values are allowed.
     :return: A list of the extracted values.
     """
     extracted_values = []
 
     def extract_from_dict(d, field, upper_level_field=None):
-        if len(field) == 2:
-            if upper_level_field and upper_level_field in d:
-                if field in d[upper_level_field]:
-                    return d[upper_level_field][field]
-        else:
-            if field in d:
-                return d[field]
-        for key, value in d.items():
-            if isinstance(value, dict):
-                result = extract_from_dict(value, field, upper_level_field)
-                if result is not None:
-                    return result
+        if isinstance(d, dict):
+            if len(field) == 2:
+                if upper_level_field and upper_level_field in d:
+                    if field in d[upper_level_field]:
+                        return d[upper_level_field][field]
+            else:
+                if field in d:
+                    return d[field]
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    result = extract_from_dict(value, field, upper_level_field)
+                    if result is not None:
+                        return result
         return None
 
     for key, value in data.items():
         extracted_value = extract_from_dict(value, field, upper_level_field)
-        assert extracted_value is not None, f"Field '{field}' not found in JSON data."
+        if strict:
+            assert extracted_value is not None, f"Field '{field}' not found in JSON data."
         extracted_values.append(extracted_value)
 
     return extracted_values
