@@ -13,6 +13,7 @@ import babelnet as bn
 import pandas as pd
 from babelnet import BabelSynsetID, Language
 from babelnet.data.relation import BabelPointer
+from babelnet.data.source import BabelSenseSource
 from tqdm import tqdm
 
 from get_synsets import check_langs
@@ -135,6 +136,39 @@ def convert_to_babel_relations(relations):
 
 PERSON_SYN_ID = "bn:00044576n"
 IS_A_RELATION = BabelPointer.INSTANCE_OF
+ALLOWED_SOURCES = [
+    BabelSenseSource.WN,
+    BabelSenseSource.BABELNET,
+    BabelSenseSource.WIKI,
+    BabelSenseSource.WIKIDATA,
+] + [
+    member
+    for name, member in BabelSenseSource.__members__.items()
+    if name.startswith("OMWN")
+]
+
+
+def get_aliases(synset, langs, allowed_sources, primary_sense):
+    sense_filters = [
+        lambda sense: sense.is_not_automatic_translation,
+        lambda sense: sense.source in allowed_sources
+        and not sense.source.is_redirection,
+    ]
+    aliases = {lang: [] for lang in langs}
+    for lang in langs:
+        alias_list = list(
+            set(
+                [
+                    clean(sense.full_lemma)
+                    for sense in synset.senses(language=bn.Language.from_iso(lang))
+                    if all(f(sense) for f in sense_filters)
+                ]
+            )
+        )
+        if primary_sense[lang] in alias_list:
+            alias_list.remove(primary_sense[lang])
+        aliases[lang] = alias_list
+    return aliases
 
 
 def extract_main_sense(synset, lang):
@@ -172,14 +206,13 @@ relations = convert_to_babel_relations(relations)
 
 t_start = time.time()
 
-file_path = f"{synset_path}/syns.pkl"
+file_path = f"{synset_path}/synsets.pkl"
 print(f"Loading synsets from {file_path}")
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 
 # TODO REMOVE
-data = data[:500]
-output_folder = "datasets/trash"
+data = data[:200]
 
 print(f"Loaded {len(data)} synsets from {file_path}")
 
@@ -269,7 +302,15 @@ for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
                         for lang in args.langs
                     }
                 }
+                aliases = {
+                    "ground_truths_aliases": get_aliases(
+                        tgt_syn, langs, ALLOWED_SOURCES, targets["ground_truths"]
+                    )
+                }
+                domains = {"ground_truth_domains": [str(x) for x in tgt_syn.domains]}
+                edge.update(domains)
                 edge.update(targets)
+                edge.update(aliases)
                 relation_counter[relation] += 1
                 break
         if sum(list(relation_counter.values())) >= targets_to_find:
@@ -284,12 +325,13 @@ for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
     }
 
 # Remove synsets with fewer than targets_to_find distinct relations with suitable edges
-synset_to_relations = {
-    synset: relations
-    for synset, relations in synset_to_relations.items()
-    if len([relation for relation, edges in relations.items() if len(edges) > 0])
-    >= targets_to_find
-}
+# TODO double check
+# synset_to_relations = {
+# synset: relations
+# for synset, relations in synset_to_relations.items()
+# if len([relation for relation, edges in relations.items() if len(edges) > 0])
+# >= targets_to_find
+# }
 
 # Make it so that the key is a string (useful later)
 synset_to_senses = {str(synset.id): sense for synset, sense in synset_to_senses.items()}
@@ -326,7 +368,9 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
             edge = random.choice(relation_to_edges[relation])
             sampled_syn = copy.deepcopy(random.choice(syn_pool))
             sampled_syn["target_id"] = sampled_syn.pop("ground_truth_id")
+            sampled_syn["target_domains"] = sampled_syn.pop("ground_truth_domains")
             sampled_syn["targets"] = sampled_syn.pop("ground_truths")
+            sampled_syn["targets_aliases"] = sampled_syn.pop("ground_truths_aliases")
             if "edit" in sampled_syn:  # avoid infinite recursion
                 sampled_syn.pop("edit")
             prompt = rel_df.loc[relation, "question"].replace(
@@ -349,8 +393,9 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
 synset_to_relations = {
     synset: relations
     for synset, relations in synset_to_relations.items()
-    if len(relations) >= targets_to_find
-    and any(["edit" in edge for relation in relations for edge in relations[relation]])
+    if any(
+        ["edit" in edge for relation in relations for edge in relations[relation]]
+    )  # TODO double check
 }
 
 
@@ -367,7 +412,13 @@ def sample_one_relation(relations_to_edges):
 
 output = {
     synset_id: {
+        "subject_domains": [
+            str(x) for x in BabelSynsetID(synset_id).to_synset().domains
+        ],
         "subjects": senses,
+        "subjects_aliases": get_aliases(
+            BabelSynsetID(synset_id).to_synset(), langs, ALLOWED_SOURCES, senses
+        ),
         "relations": sample_one_relation(synset_to_relations[synset_id]),
     }
     for synset_id, senses in synset_to_senses.items()
@@ -386,25 +437,34 @@ if args.locality:
             for rel, rel_data in synset_to_relations[synset_id].items()
             if rel != selected_relation
         }
-        rel_name = random.choice(list(relation_pool.keys()))
-        sampled_rel = copy.deepcopy(random.choice(relation_pool[rel_name]))
-        sampled_rel.pop("edit", None)
-        sampled_rel = rename_key(sampled_rel, "ground_truth_id", "ground_truth_id_loc")
-        sampled_rel = rename_key(sampled_rel, "ground_truths", "ground_truths_loc")
-        sampled_rel.update(
-            {
-                "prompts_loc": {
-                    "en": rel_df.loc[rel_name, "question"].replace(
-                        "<subject>", output[synset_id]["subjects"]["en"]
-                    )
+        if len(relation_pool) > 0:
+            rel_name = random.choice(list(relation_pool.keys()))
+            sampled_rel = copy.deepcopy(random.choice(relation_pool[rel_name]))
+            sampled_rel.pop("edit", None)
+            sampled_rel = rename_key(
+                sampled_rel, "ground_truth_id", "ground_truth_id_loc"
+            )
+            sampled_rel = rename_key(
+                sampled_rel, "ground_truth_domains", "ground_truths_domains_loc"
+            )
+            sampled_rel = rename_key(sampled_rel, "ground_truths", "ground_truths_loc")
+            sampled_rel = rename_key(
+                sampled_rel, "ground_truths_aliases", "ground_truths_aliases_loc"
+            )
+            sampled_rel.update(
+                {
+                    "prompts_loc": {
+                        "en": rel_df.loc[rel_name, "question"].replace(
+                            "<subject>", output[synset_id]["subjects"]["en"]
+                        )
+                    }
                 }
-            }
-        )
+            )
 
-        output[synset_id]["relations"][selected_relation]["edit"]["locality"] = {}
-        output[synset_id]["relations"][selected_relation]["edit"]["locality"].update(
-            {rel_name: sampled_rel}
-        )
+            output[synset_id]["relations"][selected_relation]["edit"]["locality"] = {}
+            output[synset_id]["relations"][selected_relation]["edit"][
+                "locality"
+            ].update({rel_name: sampled_rel})
 
 if args.portability:
     print("Getting portability sets")
@@ -413,18 +473,27 @@ if args.portability:
         target_synset = BabelSynsetID(
             output[synset_id]["relations"][selected_relation]["edit"]["target_id"]
         ).to_synset()
-        # TODO  FIX ground_truth_idport
         port_relation, port_synset = get_portability_set(
             target_synset, relations, selected_relation, babel_langs
         )
         if port_relation and port_synset:
             port_data = {
                 port_relation: {
-                    "ground_truths_id_port" : str(port_synset.id),
+                    "ground_truth_id_port": str(port_synset.id),
+                    "ground_truths_domains_port": [str(x) for x in port_synset.domains],
                     "ground_truths_port": {
                         lang: clean(extract_main_sense(port_synset, lang))
                         for lang in langs
                     },
+                    "ground_truths_aliases_port": get_aliases(
+                        port_synset,
+                        langs,
+                        ALLOWED_SOURCES,
+                        {
+                            lang: clean(extract_main_sense(port_synset, lang))
+                            for lang in langs
+                        },
+                    ),
                     "prompts_port": "",
                 }
             }
@@ -433,7 +502,7 @@ if args.portability:
             ] = {}
             output[synset_id]["relations"][selected_relation]["edit"][
                 "portability"
-            ].update(port_data)
+            ].update({"multi_hop": port_data})
 
 
 print(f"Input size {len(data)}, Output size {len(output)}")
