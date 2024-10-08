@@ -16,7 +16,7 @@ from utils import (
     extract_subject,
     clean_prompt,
 )
-
+# %%
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Translate text using a glossary")
@@ -76,6 +76,7 @@ if __name__ == "__main__":
     )
     args, _ = parser.parse_known_args()
 
+    
     dataset_path = args.dataset_path
     project_id = args.project_id
     src_lang = args.src_lang
@@ -90,9 +91,9 @@ if __name__ == "__main__":
 
     data = sienna.load(dataset_path)
     print(f"Reading dataset from {dataset_path}...")
-    prompts = extract(data, "en", "prompts")
-    subjects = extract(data, "en", "subjects")
-    targets = extract(data, "en", "targets")
+    prompts = extract(data, args.src_lang, "prompts")
+    subjects = extract(data, args.src_lang, "subjects")
+    targets = extract(data, args.src_lang, "targets")
 
     prompts = [format_prompt(p, s, t) for (p, s, t) in zip(prompts, subjects, targets)]
 
@@ -110,19 +111,19 @@ if __name__ == "__main__":
         relation = list(example["relations"].keys())[0]
         all_prompts.append(
             format_prompt(
-                example["relations"][relation]["edit"]["prompts"]["en"],
-                example["subjects"]["en"],
-                example["relations"][relation]["edit"]["targets"]["en"],
+                example["relations"][relation]["edit"]["prompts"][args.src_lang],
+                example["subjects"][args.src_lang],
+                example["relations"][relation]["edit"]["targets"][args.src_lang],
             )
         )
         if "generality" in example["relations"][relation]["edit"]:
             all_prompts.append(
                 format_prompt(
                     example["relations"][relation]["edit"]["generality"]["prompts_gen"][
-                        "en"
+                        args.src_lang
                     ],
-                    example["subjects"]["en"],
-                    example["relations"][relation]["edit"]["targets"]["en"],
+                    example["subjects"][args.src_lang],
+                    example["relations"][relation]["edit"]["targets"][args.src_lang],
                 )
             )
         if "locality" in example["relations"][relation]["edit"]:
@@ -133,24 +134,24 @@ if __name__ == "__main__":
                 format_prompt(
                     example["relations"][relation]["edit"]["locality"][loc_relation][
                         "prompts_loc"
-                    ]["en"],
-                    example["subjects"]["en"],
+                    ][args.src_lang],
+                    example["subjects"][args.src_lang],
                     example["relations"][relation]["edit"]["locality"][loc_relation][
                         "ground_truths_loc"
-                    ]["en"],
+                    ][args.src_lang],
                 )
             )
         if "portability" in example["relations"][relation]["edit"]:
             port_relation = list(
-                example["relations"][relation]["edit"]["portability"].keys()
+                example["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
             )[0]
-            port_target = example["relations"][relation]["edit"]["portability"][port_relation][
+            port_target = example["relations"][relation]["edit"]["portability"]["multi_hop"][port_relation][
                 "ground_truths_port"
-            ]["en"]
+            ][args.src_lang]
             all_prompts.append(
-                example["relations"][relation]["edit"]["portability"][port_relation][
+                example["relations"][relation]["edit"]["portability"]["multi_hop"][port_relation][
                     "prompts_port"
-                ]["en"] + f" <o>{port_target}</o>"
+                ][args.src_lang] + f" <o>{port_target}</o>"
             )
 
     # Convert prompts to tsv, upload to GCS
@@ -230,11 +231,11 @@ if __name__ == "__main__":
             if "portability" in example["relations"][relation]["edit"]:
                 prompt_pattern.append("prompt_port")
         df["prompt_type"] = prompt_pattern
-        df["subject"] = [
+        df[f"subject_{lang}"] = [
             extract_subject(x) if prompt_type != "prompt_port" else "-"
             for x, prompt_type in zip(df[f"tgt_{lang}"], df["prompt_type"])
         ]
-        df["object"] = [extract_target(x) for x in df[f"tgt_{lang}"]]
+        df[f"object_{lang}"] = [extract_target(x) for x in df[f"tgt_{lang}"]]
         df[f"tgt_raw_{lang}"] = df[f"tgt_{lang}"]
         df[f"tgt_{lang}"] = [clean_prompt(x) for x in df[f"tgt_{lang}"]]
         df = df[

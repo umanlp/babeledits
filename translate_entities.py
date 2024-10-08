@@ -11,16 +11,14 @@ from utils import download_blob, extract, folder_exists, delete_folder, translat
 from upload_glossary import upload_to_gcs
 
 
-
-
 # Params
 parser = argparse.ArgumentParser(description="Translate entities.")
-parser.add_argument("--src-lang", type=str, default="en", help="Source language code")
+parser.add_argument("--src_lang", type=str, default="en", help="Source language code")
 parser.add_argument(
     "--tgt_langs", default=["it", "de", "fr"], nargs="+", help="Target language code(s)"
 )
 parser.add_argument(
-    "--project-id", type=str, default="babeledits-trial", help="Project ID"
+    "--project_id", type=str, default="babeledits-trial", help="Project ID"
 )
 parser.add_argument(
     "--dataset_path",
@@ -83,8 +81,8 @@ objects = extract(data, "en", "targets")
 ground_truths = extract(data, "en", "ground_truths")
 ground_truths_port = extract(data, "en", "ground_truths_port", strict=False)
 ground_truths_port = [e for e in ground_truths_port if e]
-locality_objects = extract(data, "en", "ground_truths_loc")
-entities = subjects + objects + locality_objects + ground_truths + ground_truths_port
+ground_truths_loc = extract(data, "en", "ground_truths_loc", strict=False)
+entities = subjects + objects + ground_truths_loc + ground_truths + ground_truths_port
 
 df = pd.DataFrame(entities, columns=["entities"])
 tsv_src_path = Path(dataset_path).parent / "tsv_entities" / "src"
@@ -150,4 +148,3 @@ for index, row in index_df.iterrows():
     df = df.sort_values("req_id", ascending=True)
     df.to_csv(entities_tgt_path, sep="\t", index=False)
     print(f"Saved entity translations for {lang} to {entities_tgt_path}")
-    

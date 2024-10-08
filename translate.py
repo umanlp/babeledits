@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
     data = sienna.load(dataset_path)
     print(f"Reading dataset from {dataset_path}...")
-    prompts = extract(data, "en", "prompts")
+    prompts = extract(data, args.src_lang, "prompts")
 
     prompt_types = ["prompts"]
     if args.rephrase:
@@ -166,10 +166,10 @@ if __name__ == "__main__":
         prompt_types.append("prompts_port")
 
     prompt_types_with_strictness = [
-        (x, True) if x != "prompts_port" else (x, False) for x in prompt_types
+        (x, True) if x not in ["prompts_loc", "prompts_port"] else (x, False) for x in prompt_types
     ]
     extracted_prompts = [
-        extract(data, "en", prompt_type, strict=strict_val)
+        extract(data, args.src_lang, prompt_type, strict=strict_val)
         for prompt_type, strict_val in prompt_types_with_strictness
     ]
 
