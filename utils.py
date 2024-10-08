@@ -279,7 +279,8 @@ def clean(sense):
         sense = sense[1:-1]
     
     sense = sense.strip()
-    sense = sense[0].upper() + sense[1:]
+    if len(sense) > 1:
+        sense = sense[0].upper() + sense[1:]
 
     return sense
 
