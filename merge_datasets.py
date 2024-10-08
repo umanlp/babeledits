@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 import os
 import matplotlib.pyplot as plt
-
+import math
 
 def uniform_sample_from_buckets(buckets, K, langs):
     N = len(buckets)
@@ -14,20 +14,34 @@ def uniform_sample_from_buckets(buckets, K, langs):
     samples = []
     global_sampled_elements = set()
 
-    for i in range(N):
-        if i < extra_samples:
-            num_samples_from_bucket = base_sample_size + 1
-        else:
-            num_samples_from_bucket = base_sample_size
+    lang_contributions = {lang: 0 for lang in langs}
 
-        bucket = buckets[i]
-        lang = langs[i]
+    for lang, bucket in zip(langs, buckets):
         sampled_elements = sample_from_bucket(
-            bucket, num_samples_from_bucket, global_sampled_elements, lang
+            bucket, base_sample_size, global_sampled_elements, lang
         )
         samples.extend(sampled_elements)
+        lang_contributions[lang] += len(sampled_elements)
         global_sampled_elements.update([elem[0] for elem in sampled_elements])
 
+    # If we still don't have enough samples, sample from the langs whose buckets contributed the least
+    if len(samples) < K:
+        remaining_samples_needed = K - len(samples)
+        sample_size = math.ceil(remaining_samples_needed / N)
+        sorted_langs_by_contribution = sorted(lang_contributions.items(), key=lambda x: x[1])
+        for lang, _ in sorted_langs_by_contribution:
+            if remaining_samples_needed <= 0:
+                break
+
+            bucket = lang_to_df[lang]
+            sampled_elements = sample_from_bucket(
+                bucket, sample_size, global_sampled_elements, lang
+            )
+            samples.extend(sampled_elements)
+            global_sampled_elements.update([elem[0] for elem in sampled_elements])
+            remaining_samples_needed -= len(sampled_elements)
+
+    assert len(samples) == K
     return samples
 
 
@@ -45,12 +59,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--wiki_path",
-        default="wikipedia_data/v5/processed",
+        default="wikipedia_data/v7/processed",
         help="Path to the wiki file",
     )
     parser.add_argument(
         "--save_path",
-        default="wikipedia_data/v5",
+        default="wikipedia_data/v7",
         help="Path to save the merged dataset",
     )
     parser.add_argument(

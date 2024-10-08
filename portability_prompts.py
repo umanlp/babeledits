@@ -2,8 +2,13 @@
 
 import sienna
 from utils import extract
+import argparse
 
-dataset_path = "datasets/trash/dataset.json"
+parser = argparse.ArgumentParser(description="Process dataset path.")
+parser.add_argument("--dataset_path", type=str, help="Path to the dataset file")
+args = parser.parse_args()
+
+dataset_path = args.dataset_path
 data = sienna.load(dataset_path)
 
 # %%
@@ -21,11 +26,11 @@ for syn_id in data:
         prompts[syn_id] = data[syn_id]["relations"][relation]["edit"]["prompts"]["en"]
         targets[syn_id] = data[syn_id]["relations"][relation]["edit"]["targets"]["en"]
         port_relation = list(
-            data[syn_id]["relations"][relation]["edit"]["portability"].keys()
+            data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
         )[0]
-        port_target = data[syn_id]["relations"][relation]["edit"]["portability"][
+        port_target = data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"][
             port_relation
-        ]["ground_truths_id_port"]
+        ]["ground_truths_port"]["en"]
         portability_data[syn_id] = {"relation": port_relation, "target": port_target}
 # %%
 
@@ -60,14 +65,14 @@ msg = """You are a helpful assistant that is able to leverage its world knowledg
     The input will be a markdown table, with five columns: subject, relation, object, relation_2, object_2. 
     Reply directly without any additional text, one question per line, no special charachters at the begining of each line.
 """
-# msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
+# msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph
 #     (for example, WordNet or Babelnet) into natural language questions. In this case we are dealing with data of the form (subject, relation, object, prompt, relation_2, object_2).
-#     Prompt is a natural language question that verbalizes the relation (subject, relation, object). 
-#     You need to formulate a natural language question which should be answered with object 2 by chaining the two triples (subject, relation, object, relation_2, object_2). 
+#     Prompt is a natural language question that verbalizes the relation (subject, relation, object).
+#     You need to formulate a natural language question which should be answered with object 2 by chaining the two triples (subject, relation, object, relation_2, object_2).
 #     Consider the case of (Messi, PLAYS_FOR, Barcelona, Which team does Messi play for, LOCATED_IN, Spain).
-#     The question that chains the two triples could be 'In which country is the team Messi plays for located?'. 
+#     The question that chains the two triples could be 'In which country is the team Messi plays for located?'.
 #     In the generated question, NEVER mention the object (in this case, Barcelona). Let me repeat it: Do NOT INCLUDE the object in the question.
-#     The input will be a markdown table, with five columns: subject, relation, object, relation_2, object_2. 
+#     The input will be a markdown table, with five columns: subject, relation, object, relation_2, object_2.
 #     Reply directly without any additional text, one question per line, no special charachters at the begining of each line.
 # """
 
@@ -87,7 +92,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 chain = prompt | llm
 
-batch_size = 100
+batch_size = 50
 batches = [df[i : i + batch_size] for i in range(0, len(df), batch_size)]
 dfs = []
 contents = []
@@ -109,11 +114,11 @@ for syn_id in data:
     relation = list(data[syn_id]["relations"].keys())[0]
     if "portability" in data[syn_id]["relations"][relation]["edit"]:
         port_relation = list(
-            data[syn_id]["relations"][relation]["edit"]["portability"].keys()
+            data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
         )[0]
-        data[syn_id]["relations"][relation]["edit"]["portability"][port_relation][
+        data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"][port_relation][
             "prompts_port"
-        ] = {"en" : flattened_contents[idx]}
+        ] = {"en": flattened_contents[idx].strip()}
         idx += 1
 
 import json
