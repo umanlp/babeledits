@@ -17,34 +17,50 @@ from sentence_transformers import SentenceTransformer
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
+from EasyEdit.easyeditor.editors.utils import get_all_acc_keys
 from utils import extract
 from hydra.utils import to_absolute_path
+from transformers import GenerationConfig
 
 
-def get_summary_metrics(all_metrics, eval_metric="acc"):
+def get_summary_metrics(all_metrics, eval_metrics):
     if isinstance(all_metrics, dict):
         all_metrics = [
             all_metrics,
         ]
+    logs_dir = "./logs"
+    if not os.path.exists(logs_dir):
+        os.makedirs(logs_dir)
+    output_file = os.path.join(logs_dir, "results.json")
+    with open(output_file, "w") as f:
+        json.dump(all_metrics, f, ensure_ascii=False, indent=4)
 
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for key in [f"rewrite_{eval_metric}"]:
-            if key in all_metrics[0][eval].keys():
-                mean_metrics[eval][key] = np.mean(
-                    [metric[eval][key] for metric in all_metrics]
-                )
-        for key in [f"rephrase_{eval_metric}", "locality", "portability"]:
-            if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
-                mean_metrics[eval][key] = dict()
-                for lkey in all_metrics[0][eval][key].keys():
-                    if lkey.endswith(eval_metric):
-                        mean_metrics[eval][key][lkey] = np.mean(
-                            [metric[eval][key][lkey] for metric in all_metrics]
-                        )
-    # mean_metrics["time"] = np.mean([metric["time"] for metric in all_metrics])
-
+        for metric_type in eval_metrics:
+            mean_metrics[eval][metric_type] = dict()
+            for key in ["rewrite_acc", "rewrite_ppl"]:
+                if key in all_metrics[0][eval][metric_type].keys():
+                    mean_metrics[eval][metric_type][key] = np.mean(
+                        [metric[eval][metric_type][key] for metric in all_metrics]
+                    )
+            for key in ["rephrase_acc", "locality", "portability"]:
+                if (
+                    key in all_metrics[0][eval][metric_type].keys()
+                    and all_metrics[0][eval][metric_type][key] != {}
+                ):
+                    mean_metrics[eval][metric_type][key] = dict()
+                    for lkey in get_all_acc_keys(all_metrics):
+                        metrics = [
+                            metric[eval][metric_type][key][lkey]
+                            for metric in all_metrics
+                            if lkey in metric[eval][metric_type][key].keys()
+                        ]
+                        if len(metrics) > 0:
+                            mean_metrics[eval][metric_type][key][lkey] = np.mean(
+                                metrics
+                            )
     return mean_metrics
 
 
@@ -73,6 +89,19 @@ def prompt_to_target(prompt_type, metric_type):
                 return "ground_truths_loc_mt"
             else:
                 raise ValueError(f"Unknown prompt type {prompt_type}")
+    if metric_type == "portability":
+        if "gloss" in prompt_type:
+            return "ground_truths_port"
+        elif "mt_marked" in prompt_type:
+            return "ground_truths_port_mt_marked"
+        elif "mt" in prompt_type:
+            return "ground_truths_port_mt"
+        else:
+            if prompt_type == "prompts_port":
+                return "ground_truths_port_mt"
+            else:
+                raise ValueError(f"Unknown prompt type {prompt_type}")
+
 
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
@@ -147,9 +176,13 @@ def main(cfg: DictConfig) -> None:
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            port_key = f"{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            port_key = (
+                f"xlt_{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            )
             target_key = prompt_to_target(tgt_prompt_type, "reliability")
-            print(f"Evaluating reliability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
+            print(
+                f"Evaluating reliability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
+            )
             portability_inputs.update(
                 {
                     port_key: {
@@ -177,7 +210,9 @@ def main(cfg: DictConfig) -> None:
         for tgt_prompt_type, tgt_lang in xlt_confs:
             gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "generality")
-            print(f"Evaluating generality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
+            print(
+                f"Evaluating generality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
+            )
             generality_inputs.update(
                 {
                     gen_key: {
@@ -205,17 +240,90 @@ def main(cfg: DictConfig) -> None:
         for tgt_prompt_type, tgt_lang in xlt_confs:
             loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "locality")
-            print(f"Evaluating locality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}")
+            print(
+                f"Evaluating locality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
+            )
             locality_inputs.update(
                 {
                     loc_key: {
-                        "prompt": extract(data, tgt_lang, tgt_prompt_type)[:max_edits],
-                        "ground_truth": extract(data, tgt_lang, target_key)[:max_edits],
+                        "prompt": extract(
+                            data, tgt_lang, tgt_prompt_type, strict=False
+                        )[:max_edits],
+                        "ground_truth": extract(
+                            data, tgt_lang, target_key, strict=False
+                        )[:max_edits],
                     }
                 }
             )
     else:
         locality_inputs = None
+
+    if cfg.portability:
+        port_prompt_types = []
+        if "prompts_mt" in cfg.eval_prompt_type:
+            port_prompt_types.append("prompts_port_mt")
+        if "prompts_mt_marked" in cfg.eval_prompt_type:
+            port_prompt_types.append("prompts_port_mt_marked")
+        if "prompts_gloss" in cfg.eval_prompt_type:
+            port_prompt_types.append("prompts_port_gloss")
+
+        xlt_confs = [
+            (tgt_prompt_type, tgt_lang)
+            for tgt_prompt_type in port_prompt_types
+            for tgt_lang in cfg.tgt_langs
+        ]
+
+        for tgt_prompt_type, tgt_lang in xlt_confs:
+            port_key = f"multi-hop_{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            target_key = prompt_to_target(tgt_prompt_type, "portability")
+            print(
+                f"Evaluating multi-hop portability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
+            )
+            portability_inputs.update(
+                {
+                    port_key: {
+                        "prompt": extract(
+                            data, tgt_lang, tgt_prompt_type, strict=False
+                        )[:max_edits],
+                        "ground_truth": extract(
+                            data, tgt_lang, target_key, strict=False
+                        )[:max_edits],
+                    }
+                }
+            )
+
+        subj_prompt_types = ["prompts_subj_alias"]
+        xlt_confs = [
+            (tgt_prompt_type, tgt_lang)
+            for tgt_prompt_type in subj_prompt_types
+            for tgt_lang in cfg.tgt_langs
+        ]
+        target_key = cfg.target_type
+
+        for tgt_prompt_type, tgt_lang in xlt_confs:
+            port_key = f"subj-alias_{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            print(
+                f"Evaluating subj-alias portability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
+            )
+            portability_inputs.update(
+                {
+                    port_key: {
+                        "prompt": extract(
+                            data, tgt_lang, tgt_prompt_type, strict=False
+                        )[:max_edits],
+                        "ground_truth": extract(
+                            data, tgt_lang, target_key, strict=False
+                        )[:max_edits],
+                    }
+                }
+            )
+
+    if cfg.decoding_strategy:
+        gen_cfg_dict = dict(cfg.decoding_strategy)
+        gen_cfg_dict.pop("type")
+        gen_cfg = GenerationConfig(**gen_cfg_dict)
+        print(f"Using generation: {vars(gen_cfg)}")
+
     if method == "FT":
         metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
@@ -227,6 +335,8 @@ def main(cfg: DictConfig) -> None:
             train_ds=train_ds,
             sequential_edit=False,
             keep_original_weight=True,
+            eval_metrics=cfg.metrics,
+            generation_conf=gen_cfg,
         )
     else:
         metrics, _, _ = editor.edit(
@@ -240,11 +350,13 @@ def main(cfg: DictConfig) -> None:
             train_ds=train_ds,
             sequential_edit=False,
             keep_original_weight=True,
+            eval_metrics=cfg.metrics,
+            generation_conf=gen_cfg,
         )
 
     with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
-    summary = get_summary_metrics(metrics)
+    summary = get_summary_metrics(metrics, cfg.metrics)
     with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
         json.dump(summary, f)
 
