@@ -1,18 +1,24 @@
 defaults:
   - model: llama-3-1
   - method: ft
+  - decoding_strategy: greedy
   - _self_
 
-dataset: "datasets/v6/translated/translated_with_entities/test.json"
+metrics: 
+  - token_em
+  - first_token_em
+  - string_em
+dataset: "datasets/v7/translated/dataset.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
 max_edits: null
 device: 0
 log_subdir: "new_debug"
-prompt_type: "prompts"
+prompt_type: "prompts_mt_marked"
 subject_type: "subjects"
 target_type: "targets"
-eval_prompt_type: ["prompts_mt", "prompts_mt_marked", "prompts_gloss"]
+eval_prompt_type: ["prompts_mt", "prompts_mt_marked"]
 subject_in_prompt: null
 generality: false
 locality: false
+portability: false
