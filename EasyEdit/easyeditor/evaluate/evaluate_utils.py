@@ -77,7 +77,8 @@ def test_seq2seq_batch_prediction_acc(model, tok, hparams, prompts, targets, dev
             return answers if type(answers[0]) is list else [answers,]
         return torch.mean((trg_tok['input_ids'][:,:-1] == ans[:,:-1]).float(), dim=-1).detach().cpu().numpy().tolist()
 
-def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=False, vanilla_generation=False):
+def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=False, vanilla_generation=False, eval_metric="token_em", generation_conf=None):
+    assert not model.training
     if vanilla_generation:
         if isinstance(prompts, str):
             prompts, targets = [prompts, ], [targets, ]
@@ -100,50 +101,125 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             else:
                 results.append(np.mean(np.equal(target_new_tokens, gen_token.detach().cpu().numpy().tolist()[0][-len(target_new_tokens):])))
         return results
+    if eval_metric == "token_em":
+        if isinstance(prompts, str):
+            prompts,targets = [prompts,], [targets,]
+        prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
+        prompt_target_tok = tok(
+            prompt_target,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        prompt_tok = tok(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        )
+        num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
+        num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
+        prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        with torch.no_grad():
+            outputs = model(**prompt_target_tok)
+            if type(outputs) is torch.Tensor:
+                logits = outputs
+            else:
+                logits = outputs.logits
+            answers = torch.argmax(logits, dim=-1).squeeze().detach().cpu().numpy().tolist()
+            labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
+            answers = slice_list(answers,prompt_len,left=True)
+            labels = slice_list(labels,prompt_len,left=False)
+            if locality:
+                return answers if type(answers[0]) is list else [answers,]
+            if isinstance(answers[0], list):
+                res = []
+                for ans,label in zip(answers,labels):
+                    temp_acc = np.mean(np.equal(ans, label))
+                    if np.isnan(temp_acc):
+                        continue
+                    res.append(temp_acc)
+                return res
+            else:
+                return [np.mean(np.equal(answers, labels))]
+    # elif eval_metric == "efficacy_magn":
+        # if isinstance(prompts, str):
+            # prompts,targets = [prompts,], [targets,]
+        # prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
+        # max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
+        # prompt_target_tok = tok(
+            # prompt_target,
+            # padding=True,
+            # truncation=True,
+            # max_length=max(hparams.max_length, max_prompt_len),
+            # return_tensors="pt",
+        # ).to(f"cuda:{device}")
+        # prompt_tok = tok(
+            # prompts,
+            # padding=True,
+            # truncation=True,
+            # max_length=max(hparams.max_length, max_prompt_len),
+            # return_tensors="pt",
+        # )
+        # num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
+        # num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
+        # prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        # with torch.no_grad():
+            # outputs = model(**prompt_target_tok)
+            # if type(outputs) is torch.Tensor:
+                # logits = outputs
+            # else:
+                # logits = outputs.logits
+        # label_tokens = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
+        # label_tokens = slice_list(label_tokens,prompt_len,left=False)
+        # log_probs = logits.log_softmax(dim=-1)
+        # res = []
+        # for idx in range(len(prompts)):
+            # p_len = prompt_len[idx]
+            # mask = torch.tensor([[p_len - 1 + pos_idx, vocab_idx] for pos_idx, vocab_idx in enumerate(label_tokens)], device=log_probs.device)
+            # sel_log_probs = log_probs[idx, mask[:, 0], mask[:, 1]]
+            # res.append({"log_probs" : sel_log_probs})
+        # return res
+    elif eval_metric == "string_em":        
+        if isinstance(prompts, str):
+            prompts, targets = [prompts, ], [targets, ]
+        results = []
+        for prompt, target_new in zip(prompts, targets):
+            # Tokenize and preprocess the prompt
+            prompt_tok = tok(
+                prompt,
+                return_tensors="pt",
+                return_special_tokens_mask=True
+            ).to(device)
 
-    if isinstance(prompts, str):
-        prompts,targets = [prompts,], [targets,]
-    prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
-    max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
-    prompt_target_tok = tok(
-        prompt_target,
-        padding=True,
-        truncation=True,
-        max_length=max(hparams.max_length, max_prompt_len),
-        return_tensors="pt",
-    ).to(f"cuda:{device}")
-    prompt_tok = tok(
-        prompts,
-        padding=True,
-        truncation=True,
-        max_length=max(hparams.max_length, max_prompt_len),
-        return_tensors="pt",
-    )
-    num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
-    num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
-    prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
-    with torch.no_grad():
-        outputs = model(**prompt_target_tok)
-        if type(outputs) is torch.Tensor:
-            logits = outputs
-        else:
-            logits = outputs.logits
-        answers = torch.argmax(logits, dim=-1).squeeze().detach().cpu().numpy().tolist()
-        labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
-        answers = slice_list(answers,prompt_len,left=True)
-        labels = slice_list(labels,prompt_len,left=False)
-        if locality:
-            return answers if type(answers[0]) is list else [answers,]
-        if isinstance(answers[0], list):
-            res = []
-            for ans,label in zip(answers,labels):
-                temp_acc = np.mean(np.equal(ans, label))
-                if np.isnan(temp_acc):
-                    continue
-                res.append(temp_acc)
-            return res
-        else:
-            return [np.mean(np.equal(answers, labels))]
+            # Calculate max number of new tokens
+            max_new_tokens = prompt_tok.input_ids.shape[1] - prompt_tok["special_tokens_mask"].sum().item()
+            generation_conf.max_new_tokens = max_new_tokens
+
+            # Generate output from the model
+            with torch.no_grad():
+                outputs = model.generate(input_ids=prompt_tok['input_ids'], attention_mask=prompt_tok['attention_mask'], generation_config=generation_conf, pad_token_id=tok.eos_token_id)
+
+            # Decode the output
+            full_output = tok.decode(outputs[0], skip_special_tokens=True)
+
+            # Extract the generated part (excluding the input prompt)
+            generated_output = full_output[len(prompt):].strip()
+            if locality:
+                results.append(generated_output)
+                continue
+
+            # Check for each answer in the generated output
+            if target_new.lower() in generated_output.lower():
+                results.append(1.0)
+            else:
+                results.append(0.0)
+        return results
+    else:
+        raise ValueError(f"Invalid eval_metric: {eval_metric}")
 
 def test_generation_quality_serac(
     model,

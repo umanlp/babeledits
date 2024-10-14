@@ -38,7 +38,8 @@ def compute_edit_quality(
     record: typing.Dict,
     device,
     eval_metric: str = 'token_em',
-    test_generation = False
+    test_generation = False,
+    generation_conf = None
 ) -> typing.Dict:
     """
     Given a rewritten model, computes generalization and specificity metrics for
@@ -61,8 +62,9 @@ def compute_edit_quality(
 
     rewrite_prompts = record["prompt"]
     rephrase_prompts = record["rephrase_prompt"] if 'rephrase_prompt' in record.keys() else None
+
     ret = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                              rewrite_prompts, target_new, device=device, eval_metric=eval_metric)
+                                              rewrite_prompts, target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)
 
     ret['locality'] = {}
     ret['portability'] = {}
@@ -71,7 +73,7 @@ def compute_edit_quality(
         for generality_key in rephrase_prompts.keys():
             rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
                                                     rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
-                                                    device=device, test_rephrase=True, eval_metric=eval_metric)['rephrase_acc']
+                                                    device=device, test_rephrase=True, eval_metric=eval_metric, generation_conf=generation_conf)['rephrase_acc']
             ret['rephrase_acc'].update({f"{generality_key}_acc": rephrase_acc})
 
     if 'locality' in record.keys() and any(record['locality']):
@@ -79,14 +81,14 @@ def compute_edit_quality(
             ret['locality'].update(
                 compute_locality_quality(model, model_name, hparams, tok, locality_key,
                                          record['locality'][locality_key]['prompt'],
-                                         record['locality'][locality_key]['ground_truth'], device=device)
+                                         record['locality'][locality_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)
             )
     if 'portability' in record.keys() and any(record['portability']):
         for portability_key in record['portability'].keys():
             ret['portability'].update(
                 compute_portability_quality(model, model_name, hparams, tok, portability_key,
                                             record['portability'][portability_key]['prompt'],
-                                            record['portability'][portability_key]['ground_truth'], device=device)
+                                            record['portability'][portability_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)
             )
     if test_generation:
         if hparams.alg_name == 'GRACE':
@@ -104,7 +106,8 @@ def compute_rewrite_or_rephrase_quality(
     target_new: str,
     device,
     test_rephrase: bool = False,
-    eval_metric: str = 'token_em'
+    eval_metric: str = 'token_em',
+    generation_conf = None
 ) -> typing.Dict:
     
     if not test_rephrase:
@@ -132,7 +135,7 @@ def compute_rewrite_or_rephrase_quality(
         if 't5' in model_name.lower():
             acc = test_seq2seq_batch_prediction_acc(model, tok, hparams, prompt, target_new, device)
         else:
-            acc = test_prediction_acc(model, tok, hparams, prompt, target_new, device)
+            acc = test_prediction_acc(model, tok, hparams, prompt, target_new, device, eval_metric=eval_metric, generation_conf=generation_conf)
         ret = {
             f"{key}_acc": acc
         }
@@ -147,12 +150,14 @@ def compute_locality_quality(
     prompt: typing.Union[str, List[str]],
     locality_ground_truth: typing.Union[str, List[str]],
     device,
+    eval_metric: str = 'token_em',
+    generation_conf = None
 ) -> typing.Dict:
 
     if 't5' in model_name.lower():
         loc_tokens = test_seq2seq_batch_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True)
     else:
-        loc_tokens = test_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True, vanilla_generation=hparams.alg_name=='GRACE')
+        loc_tokens = test_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True, vanilla_generation=hparams.alg_name=='GRACE', eval_metric=eval_metric, generation_conf=generation_conf)
 
     if type(loc_tokens) is not list:
         loc_tokens = [loc_tokens,]
@@ -171,12 +176,14 @@ def compute_portability_quality(
     prompt: typing.Union[str, List[str]],
     ground_truth: typing.Union[str, List[str]],
     device,
+    eval_metric: str = 'token_em',
+    generation_conf = None
 ) -> typing.Dict:
 
     if 't5' in model_name.lower():
         portability_correct = test_seq2seq_batch_prediction_acc(model, tok, hparams, prompt, ground_truth, device)
     else:
-        portability_correct = test_prediction_acc(model, tok, hparams, prompt, ground_truth, device, vanilla_generation=hparams.alg_name=='GRACE')
+        portability_correct = test_prediction_acc(model, tok, hparams, prompt, ground_truth, device, vanilla_generation=hparams.alg_name=='GRACE', eval_metric=eval_metric, generation_conf=generation_conf)
 
     ret = {
         f"{portability_key}_acc": portability_correct

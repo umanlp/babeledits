@@ -1,5 +1,7 @@
+from pyexpat import model
 from typing import Optional, Union, List, Tuple, Dict
 from time import time
+from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import json
 import torch
@@ -141,6 +143,8 @@ class BaseEditor:
              sequential_edit=False,
              verbose=True,
              return_edited_weights=False,
+             eval_metrics=["token_em"],
+             generation_conf=None,
              **kwargs
              ):
         """
@@ -171,7 +175,10 @@ class BaseEditor:
         else:
             requests = _prepare_requests(prompts, target_new, ground_truth, rephrase_prompts, locality_inputs, portability_inputs, **kwargs)
 
-        return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, return_edited_weights=return_edited_weights, **kwargs)
+        if locality_inputs is not None:
+            self.sent_encoder = SentenceTransformer("sentence-transformers/LaBSE", device=f"cuda:{self.hparams.device}")
+
+        return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, return_edited_weights=return_edited_weights, eval_metrics=eval_metrics, generation_conf=generation_conf, **kwargs)
 
     def batch_edit(self,
                    prompts: List[str],
@@ -258,6 +265,8 @@ class BaseEditor:
              verbose=True,
              test_generation=False,
              return_edited_weights=False,
+             eval_metrics=["token_em"],
+             generation_conf=None,
              **kwargs
              ):
         """
@@ -268,7 +277,7 @@ class BaseEditor:
         `locality_inputs`: dict
             for locality
         """
-        eval_metric= kwargs['eval_metric'] if 'eval_metric' in kwargs.keys() else 'exact match'
+        # eval_metric= kwargs['eval_metric'] if 'eval_metric' in kwargs.keys() else 'exact match'
         if hasattr(self.hparams, 'batch_size'):  # For Singleton Editing, bs=1
             assert self.hparams.batch_size == 1, 'Single Editing: batch_size should be set to 1'
         all_metrics = []
@@ -281,7 +290,9 @@ class BaseEditor:
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
                     metrics = {"pre": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, [''], request, self.hparams.device, pre_edit=True)}
                 else:
-                    metrics = {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metric=eval_metric, test_generation=test_generation)}
+                    metrics = {"pre": {}}
+                    for eval_metric in eval_metrics:
+                        metrics["pre"].update({eval_metric : compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metric=eval_metric, test_generation=test_generation, generation_conf=generation_conf)})
                 all_metrics.append(metrics)
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
                 json.dump(all_metrics, open(kwargs['pre_file'], 'w'), indent=4)
@@ -311,8 +322,7 @@ class BaseEditor:
                 )
                 icl_examples = None
             return edited_model, weights_copy, icl_examples
-        def edit_evaluation(all_metrics, request, edited_model, idx, test_generation, icl_examples, **kwargs):
-            eval_metric= kwargs['eval_metric'] if 'eval_metric' in kwargs.keys() else 'exact match'
+        def edit_evaluation(all_metrics, request, edited_model, idx, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs):
             if self.alg_name == 'IKE':
                 all_metrics[idx].update({
                     'case_id': idx,
@@ -320,21 +330,33 @@ class BaseEditor:
                     "post": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, icl_examples, request, self.hparams.device),
                 })
             else:
-                all_metrics[idx].update({
+                all_metrics[idx].update({ 
                     'case_id': idx,
                     "requested_rewrite": request,
-                    "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metric=eval_metric, test_generation=test_generation),
+                    "post": {eval_metric : compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metric=eval_metric, test_generation=test_generation, generation_conf=generation_conf) for eval_metric in eval_metrics},
                 })
                 if "metric_kwargs" in kwargs:
                     all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
-                if 'locality' in all_metrics[idx]['post'].keys():
-                    for locality_key in request['locality'].keys():
-                        locality_result = []
-                        for ans, label in zip(all_metrics[idx]['post']['locality'][f'{locality_key}_output'], all_metrics[idx]['pre']['locality'][f'{locality_key}_output']):
-                            locality_result.append(np.mean(np.equal(ans, label)))
-                        all_metrics[idx]['post']['locality'][f'{locality_key}_acc'] = locality_result
-                        all_metrics[idx]['post']['locality'].pop(f'{locality_key}_output')
-                    all_metrics[idx]['pre'].pop('locality')
+                for eval_metric in eval_metrics:
+                    if 'locality' in all_metrics[idx]['post'][eval_metric].keys():
+                        for locality_key in request['locality'].keys():
+                            locality_result = []
+                            for eval_metric in eval_metrics:
+                                for ans, label in zip(all_metrics[idx]['post'][eval_metric]['locality'][f'{locality_key}_output'], all_metrics[idx]['pre'][eval_metric]['locality'][f'{locality_key}_output']):
+                                    if eval_metric == "token_em":
+                                        score = np.mean(np.equal(ans, label))
+                                    if eval_metric == "string_em":
+                                        embeddings = self.sent_encoder.encode([ans, label])
+                                        score = self.sent_encoder.similarity(embeddings, embeddings)[0,1].item()
+                                    locality_result.append(score)
+                                
+                for eval_metric in eval_metrics:
+                    if 'locality' in all_metrics[idx]['post'][eval_metric].keys():
+                            for locality_key in request['locality'].keys():
+                                all_metrics[idx]['post'][eval_metric]['locality'][f'{locality_key}_acc'] = locality_result
+                                all_metrics[idx]['post'][eval_metric]['locality'].pop(f'{locality_key}_output')
+                    if 'locality' in all_metrics[idx]['pre'][eval_metric].keys():                    
+                        all_metrics[idx]['pre'][eval_metric].pop('locality')
 
             if verbose:
                 LOG.info(f"{idx} editing: {request['prompt']} -> {request['target_new']}  \n\n {all_metrics[idx]}")
@@ -349,11 +371,11 @@ class BaseEditor:
                     for k, v in weights_copy.items():
                         weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
             for i, request in enumerate(requests):
-                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
+                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
-                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, **kwargs)
+                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if self.alg_name == 'KN' or self.alg_name == 'GRACE' or self.alg_name == 'WISE':
                     with torch.no_grad():
                         weights_copy()
@@ -365,19 +387,19 @@ class BaseEditor:
                 elif self.alg_name == 'LoRA':
                     self.model = edited_model
                 else:
-                    with torch.no_grad():
-                        if i == 0:
-                            weights_per_edit = {k: [] for k in weights_copy.keys()}
-                        for k, v in weights_copy.items():
-                            if return_edited_weights:
-                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                    if return_edited_weights:
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {k: [] for k in weights_copy.keys()}
+                            for k, v in weights_copy.items():
+                                    weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
                             nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
 
 
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
         if len(all_metrics) != 0:
-            summary_metrics(all_metrics)
+            summary_metrics(all_metrics, eval_metrics)
 
         if return_edited_weights:
             return all_metrics, edited_model, weights_copy, weights_per_edit
