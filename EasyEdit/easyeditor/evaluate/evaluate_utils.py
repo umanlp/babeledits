@@ -145,6 +145,47 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                 return res
             else:
                 return [np.mean(np.equal(answers, labels))]
+    elif eval_metric == "first_token_em":
+        if isinstance(prompts, str):
+            prompts,targets = [prompts,], [targets,]
+        prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
+        prompt_tok = tok(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        prompt_target_tok = tok(
+            prompt_target,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
+        num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
+        prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        with torch.no_grad():
+            logits = model(**prompt_tok).logits
+        last_non_masked = prompt_tok["attention_mask"].sum(1) - 1
+        to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
+        gathered = torch.gather(logits, 1, to_gather).squeeze(1)
+        answers = torch.argmax(gathered, dim=1)
+        labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
+        labels = slice_list(labels,prompt_len,left=False)
+        if isinstance(answers[0], list):
+            res = []
+            for ans,label in zip(answers,labels):
+                temp_acc = np.mean(np.equal(ans, label[0]))
+                if np.isnan(temp_acc):
+                    continue
+                res.append(temp_acc)
+            return res
+        else:
+            answers = answers.squeeze().detach().cpu().numpy().tolist()
+            return [np.mean(np.equal(answers, labels[0]))]
     # elif eval_metric == "efficacy_magn":
         # if isinstance(prompts, str):
             # prompts,targets = [prompts,], [targets,]
