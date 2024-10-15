@@ -291,7 +291,7 @@ class BaseEditor:
             all_metrics = metrics
         else:
             for i, request in enumerate(tqdm(requests)):
-                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device)['perplexities']
+                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
                 ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
                 print(f"Perplexities: {ppl_per_lang}")
                 if self.alg_name == 'IKE':
@@ -404,7 +404,7 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if ppl_cfg is not None:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device)['perplexities']
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
                     ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
                     all_metrics[i]['post'].update({"ppl":ppl_per_lang})
                 if self.alg_name == 'KN' or self.alg_name == 'GRACE' or self.alg_name == 'WISE':
