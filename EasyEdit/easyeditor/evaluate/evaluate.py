@@ -37,9 +37,10 @@ def compute_edit_quality(
     tok: AutoTokenizer,
     record: typing.Dict,
     device,
-    eval_metric: str = 'token_em',
+    eval_metrics = ['token_em'],
     test_generation = False,
-    generation_conf = None
+    generation_conf = None,
+    locality_metrics = ['token_em']
 ) -> typing.Dict:
     """
     Given a rewritten model, computes generalization and specificity metrics for
@@ -63,33 +64,40 @@ def compute_edit_quality(
     rewrite_prompts = record["prompt"]
     rephrase_prompts = record["rephrase_prompt"] if 'rephrase_prompt' in record.keys() else None
 
-    ret = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                              rewrite_prompts, target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)
+    ret = {"rewrite_acc" : {}}
+    for eval_metric in eval_metrics:
+        reliability_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
+                                              rewrite_prompts, target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)['rewrite_acc']
+        ret["rewrite_acc"].update({eval_metric : reliability_acc})
 
     ret['locality'] = {}
     ret['portability'] = {}
     ret['rephrase_acc'] = {}
     if rephrase_prompts is not None:
         for generality_key in rephrase_prompts.keys():
-            rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                                    rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
-                                                    device=device, test_rephrase=True, eval_metric=eval_metric, generation_conf=generation_conf)['rephrase_acc']
-            ret['rephrase_acc'].update({f"{generality_key}_acc": rephrase_acc})
+            ret['rephrase_acc'].update({generality_key: {}})
+            for eval_metric in eval_metrics:
+                rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
+                                                        rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
+                                                        device=device, test_rephrase=True, eval_metric=eval_metric, generation_conf=generation_conf)['rephrase_acc']
+                ret['rephrase_acc'][generality_key].update({eval_metric : rephrase_acc})
 
     if 'locality' in record.keys() and any(record['locality']):
         for locality_key in record['locality'].keys():
-            ret['locality'].update(
-                compute_locality_quality(model, model_name, hparams, tok, locality_key,
-                                         record['locality'][locality_key]['prompt'],
-                                         record['locality'][locality_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)
-            )
+            ret['locality'].update({locality_key: {}})
+            for loc_metric in locality_metrics:
+                loc_output = compute_locality_quality(model, model_name, hparams, tok, locality_key,
+                                             record['locality'][locality_key]['prompt'],
+                                             record['locality'][locality_key]['ground_truth'], device=device, eval_metric=loc_metric)
+                ret['locality'][locality_key].update({loc_metric : loc_output})
     if 'portability' in record.keys() and any(record['portability']):
         for portability_key in record['portability'].keys():
-            ret['portability'].update(
-                compute_portability_quality(model, model_name, hparams, tok, portability_key,
-                                            record['portability'][portability_key]['prompt'],
-                                            record['portability'][portability_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)
-            )
+            ret['portability'].update({portability_key: {}})
+            for eval_metric in eval_metrics:
+                port_output = compute_portability_quality(model, model_name, hparams, tok, portability_key,
+                                                record['portability'][portability_key]['prompt'],
+                                                record['portability'][portability_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)[f"{portability_key}_acc"]
+                ret['portability'][portability_key].update({eval_metric : port_output})
     if test_generation:
         if hparams.alg_name == 'GRACE':
             ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=rewrite_prompts if isinstance(rewrite_prompts,list) else [rewrite_prompts,], max_out_len=100, vanilla_generation=True)
@@ -151,20 +159,39 @@ def compute_locality_quality(
     locality_ground_truth: typing.Union[str, List[str]],
     device,
     eval_metric: str = 'token_em',
-    generation_conf = None
 ) -> typing.Dict:
 
-    if 't5' in model_name.lower():
-        loc_tokens = test_seq2seq_batch_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True)
-    else:
-        loc_tokens = test_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True, vanilla_generation=hparams.alg_name=='GRACE', eval_metric=eval_metric, generation_conf=generation_conf)
+    if eval_metric == "token_em":
+        if 't5' in model_name.lower():
+            loc_tokens = test_seq2seq_batch_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True)
+        else:
+            loc_tokens = test_prediction_acc(model, tok, hparams, prompt, locality_ground_truth, device, locality=True, vanilla_generation=hparams.alg_name=='GRACE', eval_metric=eval_metric)
 
-    if type(loc_tokens) is not list:
-        loc_tokens = [loc_tokens,]
+        if type(loc_tokens) is not list:
+            loc_tokens = [loc_tokens,]
 
-    ret = {
-        f"{locality_key}_output": loc_tokens
-    }
+        ret = {
+            f"{locality_key}_output": loc_tokens
+        }
+    if eval_metric == "nkl":
+        if isinstance(prompt, str):
+            prompts, targets = [prompt,], [locality_ground_truth,]
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompts]) + 1
+        prompt_tok = tok(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        with torch.no_grad():
+            logits = model(**prompt_tok).logits
+        last_non_masked = prompt_tok["attention_mask"].sum(1) - 1      
+        to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
+        log_probs  =  (torch.gather(logits, 1, to_gather).squeeze(1)).log_softmax(dim=-1)
+        ret = {
+            f"{locality_key}_logprobs": log_probs}
+
     return ret
 
 def compute_portability_quality(

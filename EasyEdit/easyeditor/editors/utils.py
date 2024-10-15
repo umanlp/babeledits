@@ -23,7 +23,7 @@ def get_all_acc_keys(dict_list):
 
     return all_keys
     
-def summary_metrics(all_metrics, eval_metrics):
+def summary_metrics(all_metrics, eval_metrics, locality_metrics):
     if isinstance(all_metrics, dict):
         all_metrics = [all_metrics, ]
     logs_dir = './logs'
@@ -36,18 +36,30 @@ def summary_metrics(all_metrics, eval_metrics):
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for metric_type in eval_metrics:
-            mean_metrics[eval][metric_type] = dict()
-            for key in ["rewrite_acc", 'rewrite_ppl']:
-                if key in all_metrics[0][eval].keys():
-                    mean_metrics[eval][key] = np.mean([metric[eval][key] for metric in all_metrics])
+        for key in ["rewrite_acc", "rewrite_ppl"]:
+            if key in all_metrics[0][eval].keys():
+                mean_metrics[eval][key] = dict()
+            else:
+                continue
+            for metric_type in eval_metrics:
+                mean_metrics[eval][key].update({metric_type : np.mean([score[eval][key][metric_type] for score in all_metrics])})
+        if "ppl" in all_metrics[0][eval].keys():
+            mean_metrics[eval]["ppl"] = dict()
+            for lang in all_metrics[0][eval]["ppl"]:
+                mean_metrics[eval]["ppl"][lang] = np.mean([score[eval]["ppl"][lang] for score in all_metrics])
         for key in ["rephrase_acc", "locality", "portability"]:
-                if key in all_metrics[0][eval][metric_type].keys() and all_metrics[0][eval][metric_type][key] != {}:
-                    mean_metrics[eval][metric_type][key] = dict()
-                    for lkey in get_all_acc_keys(all_metrics):
-                        metrics = [metric[eval][metric_type][key][lkey] for metric in all_metrics if lkey in metric[eval][metric_type][key].keys()]
-                        if len(metrics) > 0:
-                            mean_metrics[eval][metric_type][key][lkey] = np.mean(metrics)
+                mean_metrics[eval][key] = dict()
+                if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
+                    for prompt_type in all_metrics[0][eval][key]:
+                        mean_metrics[eval][key][prompt_type] = dict()
+                        metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
+                        for metric_type in metrics_to_gather:
+                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([score[eval][key][prompt_type][metric_type] for score in all_metrics])})
+
+                    # for lkey in get_all_acc_keys(all_metrics):
+                    #     metrics = [metric[eval][metric_type][key][lkey] for metric in all_metrics if lkey in metric[eval][metric_type][key].keys()]
+                    #     if len(metrics) > 0:
+                    #         mean_metrics[eval][metric_type][key][lkey] = np.mean(metrics)
                         # mean_metrics[eval][key][lkey] = np.mean(
                         #     [metric[eval][key][lkey] for metric in all_metrics])
     # mean_metrics["time"] = np.mean([metric["time"] for metric in all_metrics])
