@@ -35,7 +35,9 @@ def extract(data, field, upper_level_field=None, strict=True):
     for value in data.values():
         extracted_value = extract_from_dict(value, field, upper_level_field)
         if strict:
-            assert extracted_value is not None, f"Field '{field}' not found in JSON data."
+            assert (
+                extracted_value is not None
+            ), f"Field '{field}' not found in JSON data."
         extracted_values.append(extracted_value)
 
     return extracted_values
@@ -140,23 +142,24 @@ def reorder_dict(d, prompt_types):
 
     return OrderedDict(d)
 
+
 def rename_key(d, old_key, new_key):
     # Check if the old key exists in the dictionary
     if old_key not in d:
         raise KeyError(f"Key '{old_key}' not found in dictionary.")
-    
+
     # Convert the dictionary to a list of tuples (key, value)
     items = list(d.items())
-    
+
     # Find the index of the old key
     index = next(i for i, (k, v) in enumerate(items) if k == old_key)
-    
+
     # Replace the old key with the new key in the list
     items[index] = (new_key, items[index][1])
-    
+
     # Create a new dictionary from the modified list
     new_dict = dict(items)
-    
+
     return new_dict
 
 
@@ -277,7 +280,7 @@ def clean(sense):
     # Remove double quotes if they wrap the entire string
     if sense.startswith('"') and sense.endswith('"'):
         sense = sense[1:-1]
-    
+
     sense = sense.strip()
     if len(sense) > 1:
         sense = sense[0].upper() + sense[1:]
@@ -353,6 +356,7 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
         f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}."
     )
 
+
 def translate_text(
     project_id: str = "YOUR_PROJECT_ID",
     input_uri: str = "YOUR_INPUT_URI",
@@ -414,17 +418,18 @@ def translate_text(
 
     return response, file_names
 
+
 def extract_target(prompt):
     if prompt.count("<o>") == 1 and prompt.count("</o>") == 1:
         start_index = prompt.find("<o>") + len("<o>")
         end_index = prompt.find("</o>")
         target = prompt[start_index:end_index].strip()
-        if target  == "":
+        if target == "":
             target = prompt
     else:
-        question_marks = r'[？؟՞፧;]|\?'
+        question_marks = r"[？؟՞፧;]|\?"
         # Find the last occurrence of any question mark
-        match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
+        match = re.search(f".*({question_marks})", prompt, re.DOTALL)
         if match:
             index = match.end(1)  # End index of the matched question mark
             if match.end(1) == len(prompt):
@@ -444,9 +449,9 @@ def extract_subject(prompt):
         if subject == "":
             subject = prompt
     else:
-        question_marks = r'[？؟՞፧;]|\?'
+        question_marks = r"[？؟՞፧;]|\?"
         # Find the last occurrence of any question mark
-        match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
+        match = re.search(f".*({question_marks})", prompt, re.DOTALL)
         if match:
             index = match.end(1)  # End index of the matched question mark
             subject = prompt[:index]
@@ -462,30 +467,33 @@ def clean_prompt(prompt):
         .replace("<o>", "")
         .replace("</o>", "")
     )
-        # Unicode patterns for question marks in various scripts
-    question_marks = r'[？؟՞፧;]|\?'
-    
+    # Unicode patterns for question marks in various scripts
+    question_marks = r"[？؟՞፧;]|\?"
+
     # Find the last occurrence of any question mark
-    match = re.search(f'.*({question_marks})', prompt, re.DOTALL)
-    
+    match = re.search(f".*({question_marks})", prompt, re.DOTALL)
+
     if match:
         index = match.end(1)  # End index of the matched question mark
         prompt = prompt[:index]
-        
+
         # Check if there's a space before the question mark and remove it if present
         if len(prompt) >= 2 and prompt[-2] == " ":
             prompt = prompt[:-2] + prompt[-1]
-    
+
     return prompt
+
 
 def format_prompt(prompt, subject, target):
     ref_prompt = prompt.replace(subject, f"<s>{subject}</s>")
     return ref_prompt + f" <o>{target}</o>"
 
+
 def remove_space(s):
     if s[-2] == " ":
         return s[:-2] + s[-1]
     return s
+
 
 def insert_after(my_dict, key, new_key, new_value):
     new_dict = {}

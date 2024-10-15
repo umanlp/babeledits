@@ -23,46 +23,50 @@ from hydra.utils import to_absolute_path
 from transformers import GenerationConfig
 
 
-def get_summary_metrics(all_metrics, eval_metrics):
+def get_summary_metrics(all_metrics, eval_metrics, locality_metrics):
     if isinstance(all_metrics, dict):
         all_metrics = [
             all_metrics,
         ]
-    logs_dir = "./logs"
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
-    output_file = os.path.join(logs_dir, "results.json")
-    with open(output_file, "w") as f:
-        json.dump(all_metrics, f, ensure_ascii=False, indent=4)
-
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
-        for metric_type in eval_metrics:
-            mean_metrics[eval][metric_type] = dict()
-            for key in ["rewrite_acc", "rewrite_ppl"]:
-                if key in all_metrics[0][eval][metric_type].keys():
-                    mean_metrics[eval][metric_type][key] = np.mean(
-                        [metric[eval][metric_type][key] for metric in all_metrics]
+        for key in ["rewrite_acc", "rewrite_ppl"]:
+            if key in all_metrics[0][eval].keys():
+                mean_metrics[eval][key] = dict()
+            else:
+                continue
+            for metric_type in eval_metrics:
+                mean_metrics[eval][key].update(
+                    {
+                        metric_type: np.mean(
+                            [score[eval][key][metric_type] for score in all_metrics]
+                        )
+                    }
+                )
+        if "ppl" in all_metrics[0][eval].keys():
+            mean_metrics[eval]["ppl"] = dict()
+            for lang in all_metrics[0][eval]["ppl"]:
+                mean_metrics[eval]["ppl"][lang] = np.mean([score[eval]["ppl"][lang] for score in all_metrics])
+        for key in ["rephrase_acc", "locality", "portability"]:
+            mean_metrics[eval][key] = dict()
+            if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
+                for prompt_type in all_metrics[0][eval][key]:
+                    mean_metrics[eval][key][prompt_type] = dict()
+                    metrics_to_gather = (
+                        eval_metrics if key != "locality" else locality_metrics
                     )
-            for key in ["rephrase_acc", "locality", "portability"]:
-                if (
-                    key in all_metrics[0][eval][metric_type].keys()
-                    and all_metrics[0][eval][metric_type][key] != {}
-                ):
-                    mean_metrics[eval][metric_type][key] = dict()
-                    for lkey in get_all_acc_keys(all_metrics):
-                        metrics = [
-                            metric[eval][metric_type][key][lkey]
-                            for metric in all_metrics
-                            if lkey in metric[eval][metric_type][key].keys()
-                        ]
-                        if len(metrics) > 0:
-                            mean_metrics[eval][metric_type][key][lkey] = np.mean(
-                                metrics
-                            )
-    return mean_metrics
-
+                    for metric_type in metrics_to_gather:
+                        mean_metrics[eval][key][prompt_type].update(
+                            {
+                                metric_type: np.mean(
+                                    [
+                                        score[eval][key][prompt_type][metric_type]
+                                        for score in all_metrics
+                                    ]
+                                )
+                            }
+                        )
 
 def prompt_to_target(prompt_type, metric_type):
     if metric_type in ["reliability", "generality"]:
@@ -119,8 +123,14 @@ def main(cfg: DictConfig) -> None:
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)
+    if cfg.tgt_langs:
+        tgt_langs = sorted(cfg.tgt_langs)
+        all_langs = sorted(list(set(tgt_langs + [cfg.edit_lang])))
+    else:
+        tgt_langs = None
+        all_langs = [cfg.edit_lang]
+    
     # ground_truths = data["ground_truth"]
-
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
     hparams.device = cfg.device
@@ -168,11 +178,11 @@ def main(cfg: DictConfig) -> None:
 
     max_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
-    if cfg.tgt_langs is not None and cfg.eval_prompt_type is not None:
+    if tgt_langs is not None and cfg.eval_prompt_type is not None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in cfg.eval_prompt_type
-            for tgt_lang in cfg.tgt_langs
+            for tgt_lang in tgt_langs
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -204,7 +214,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in gen_prompt_types
-            for tgt_lang in cfg.tgt_langs
+            for tgt_lang in tgt_langs
         ]
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -234,7 +244,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in loc_prompt_types
-            for tgt_lang in cfg.tgt_langs
+            for tgt_lang in tgt_langs
         ]
         locality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -270,7 +280,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in port_prompt_types
-            for tgt_lang in cfg.tgt_langs
+            for tgt_lang in tgt_langs
         ]
 
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -296,7 +306,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in subj_prompt_types
-            for tgt_lang in cfg.tgt_langs
+            for tgt_lang in tgt_langs
         ]
         target_key = cfg.target_type
 
@@ -324,6 +334,19 @@ def main(cfg: DictConfig) -> None:
         gen_cfg = GenerationConfig(**gen_cfg_dict)
         print(f"Using generation: {vars(gen_cfg)}")
 
+    if cfg.eval_ppl:
+        with open(to_absolute_path(cfg.data_ppl), "r", encoding="utf-8") as file:
+            data_ppl = json.load(file)
+        prompts_ppl = [x["Text"][lang] for x in data_ppl for lang in all_langs]
+        ppl_cfg = {
+            "prompts": prompts_ppl,
+            "batch_size": cfg.batch_size_ppl,
+            "langs": all_langs,
+            "num_sent_per_lang": len(data_ppl),
+        }
+    else:
+        ppl_cfg = None
+
     if method == "FT":
         metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
@@ -337,6 +360,8 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
+            locality_metrics=cfg.locality_metrics,
+            ppl_cfg=ppl_cfg,
         )
     else:
         metrics, _, _ = editor.edit(
@@ -352,11 +377,13 @@ def main(cfg: DictConfig) -> None:
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
+            locality_metrics=cfg.locality_metrics,
+            ppl_cfg=ppl_cfg,
         )
 
     with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
-    summary = get_summary_metrics(metrics, cfg.metrics)
+    summary = get_summary_metrics(metrics, cfg.metrics, cfg.locality_metrics)
     with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
         json.dump(summary, f)
 

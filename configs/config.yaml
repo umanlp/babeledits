@@ -8,6 +8,9 @@ metrics:
   - token_em
   - first_token_em
   - string_em
+locality_metrics:
+  - token_em
+  - nkl
 dataset: "datasets/v7/translated/dataset.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
@@ -22,3 +25,6 @@ subject_in_prompt: null
 generality: false
 locality: false
 portability: false
+eval_ppl: false
+data_ppl : "data_ppl/ME-PPL_50_translated.json"
+batch_size_ppl: 64
