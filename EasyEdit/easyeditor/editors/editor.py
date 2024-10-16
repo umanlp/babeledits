@@ -295,11 +295,6 @@ class BaseEditor:
             all_metrics = metrics
         else:
             for i, request in enumerate(tqdm(requests)):
-                if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
-                    print(f"Perplexities before editing: {ppl_per_lang}")
-                    metrics['pre'].update({"ppl":ppl_per_lang})
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
                     metrics = {"pre": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, [''], request, self.hparams.device, pre_edit=True)}
@@ -316,6 +311,11 @@ class BaseEditor:
                                                             #  request['locality'][locality_key]['prompt'],
                                                             #  request['locality'][locality_key]['ground_truth'], device=self.hparams.device, eval_metric=loc_metric)}
                                 # )
+                if ppl_cfg:
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    print(f"Perplexities before editing: {ppl_per_lang}")
+                    metrics['pre'].update({"ppl":ppl_per_lang})
                 all_metrics.append(metrics)
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
                 json.dump(all_metrics, open(kwargs['pre_file'], 'w'), indent=4)
