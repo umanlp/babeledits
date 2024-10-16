@@ -315,7 +315,8 @@ class BaseEditor:
                                                             #  request['locality'][locality_key]['prompt'],
                                                             #  request['locality'][locality_key]['ground_truth'], device=self.hparams.device, eval_metric=loc_metric)}
                                 # )
-                metrics['pre'].update({"ppl":ppl_per_lang})
+                if ppl_cfg:
+                    metrics['pre'].update({"ppl":ppl_per_lang})
                 all_metrics.append(metrics)
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
                 json.dump(all_metrics, open(kwargs['pre_file'], 'w'), indent=4)
