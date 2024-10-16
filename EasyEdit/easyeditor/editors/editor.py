@@ -117,15 +117,19 @@ class BaseEditor:
             elif 'aya' in self.model_name.lower():
                 self.model = AutoModelForCausalLM.from_pretrained(self.model_name, torch_dtype=torch_dtype, device_map=device_map)
                 self.tok = AutoTokenizer.from_pretrained(self.model_name)
+                self.tok.pad_token_id = self.tok.eos_token_id
             else:
                 raise NotImplementedError
 
-            if self.tok is not None and (isinstance(self.tok, GPT2Tokenizer) or isinstance(self.tok, GPT2TokenizerFast) or isinstance(self.tok, LlamaTokenizer)) and (hparams.alg_name not in ['ROME', 'MEMIT', 'EMMET', 'R-ROME']):
-                LOG.info('AutoRegressive Model detected, set the padding side of Tokenizer to left...')
+            if "Causal" in self.model.__class__.__name__:
                 self.tok.padding_side = 'left'
-            if self.tok is not None and ('mistral' in self.model_name.lower() or 'llama' in self.model_name.lower() or 'qwen' in self.model_name.lower()) and (hparams.alg_name in ['ROME', 'MEMIT', 'EMMET', 'R-ROME']):
-                LOG.info('AutoRegressive Model detected, set the padding side of Tokenizer to right...')
-                self.tok.padding_side = 'right'
+            # if self.tok is not None and (isinstance(self.tok, GPT2Tokenizer) or isinstance(self.tok, GPT2TokenizerFast) or isinstance(self.tok, LlamaTokenizer)) and (hparams.alg_name not in ['ROME', 'MEMIT', 'EMMET', 'R-ROME']):
+                # LOG.info('AutoRegressive Model detected, set the padding side of Tokenizer to left...')
+                # self.tok.padding_side = 'left'
+            # if self.tok is not None and ('mistral' in self.model_name.lower() or 'llama' in self.model_name.lower() or 'qwen' in self.model_name.lower()) and (hparams.alg_name in ['ROME', 'MEMIT', 'EMMET', 'R-ROME']):
+                # LOG.info('AutoRegressive Model detected, set the padding side of Tokenizer to right...')
+                # self.tok.padding_side = 'right'
+            
         else:
             self.model, self.tok = self.model_name
 
@@ -291,9 +295,10 @@ class BaseEditor:
             all_metrics = metrics
         else:
             for i, request in enumerate(tqdm(requests)):
-                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
-                print(f"Perplexities: {ppl_per_lang}")
+                if ppl_cfg:
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    print(f"Perplexities before editing: {ppl_per_lang}")
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
                     metrics = {"pre": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, [''], request, self.hparams.device, pre_edit=True)}
@@ -403,7 +408,7 @@ class BaseEditor:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                if ppl_cfg is not None:
+                if ppl_cfg:
                     ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
                     ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
                     all_metrics[i]['post'].update({"ppl":ppl_per_lang})
