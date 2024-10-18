@@ -23,7 +23,8 @@ def get_all_acc_keys(dict_list):
 
     return all_keys
     
-def summary_metrics(all_metrics, eval_metrics, locality_metrics):
+def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics=None):
+    rewrite_metrics = rewrite_metrics or eval_metrics
     if isinstance(all_metrics, dict):
         all_metrics = [all_metrics, ]
     logs_dir = './logs'
@@ -41,7 +42,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics):
                 mean_metrics[eval][key] = dict()
             else:
                 continue
-            for metric_type in eval_metrics:
+            for metric_type in rewrite_metrics:
                 mean_metrics[eval][key].update({metric_type : np.mean([np.max(score[eval][key][metric_type]) for score in all_metrics])})
         if "ppl" in all_metrics[0][eval].keys():
             mean_metrics[eval]["ppl"] = dict()
