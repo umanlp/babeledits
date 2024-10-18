@@ -14,6 +14,7 @@ locality_metrics:
 dataset: "datasets/v7/translated/dataset.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
+multi_answer_eval: true
 max_edits: null
 device: 0
 log_subdir: "new_debug"

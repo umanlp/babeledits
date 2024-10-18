@@ -17,56 +17,11 @@ from sentence_transformers import SentenceTransformer
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
-from EasyEdit.easyeditor.editors.utils import get_all_acc_keys
-from utils import extract
+from EasyEdit.easyeditor.editors.utils import summary_metrics
+from utils import extract, extract_aliases
 from hydra.utils import to_absolute_path
 from transformers import GenerationConfig
 
-
-def get_summary_metrics(all_metrics, eval_metrics, locality_metrics):
-    if isinstance(all_metrics, dict):
-        all_metrics = [
-            all_metrics,
-        ]
-    mean_metrics = dict()
-    for eval in ["pre", "post"]:
-        mean_metrics[eval] = dict()
-        for key in ["rewrite_acc", "rewrite_ppl"]:
-            if key in all_metrics[0][eval].keys():
-                mean_metrics[eval][key] = dict()
-            else:
-                continue
-            for metric_type in eval_metrics:
-                mean_metrics[eval][key].update(
-                    {
-                        metric_type: np.mean(
-                            [score[eval][key][metric_type] for score in all_metrics]
-                        )
-                    }
-                )
-        if "ppl" in all_metrics[0][eval].keys():
-            mean_metrics[eval]["ppl"] = dict()
-            for lang in all_metrics[0][eval]["ppl"]:
-                mean_metrics[eval]["ppl"][lang] = np.mean([score[eval]["ppl"][lang] for score in all_metrics])
-        for key in ["rephrase_acc", "locality", "portability"]:
-            mean_metrics[eval][key] = dict()
-            if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
-                for prompt_type in all_metrics[0][eval][key]:
-                    mean_metrics[eval][key][prompt_type] = dict()
-                    metrics_to_gather = (
-                        eval_metrics if key != "locality" else locality_metrics
-                    )
-                    for metric_type in metrics_to_gather:
-                        mean_metrics[eval][key][prompt_type].update(
-                            {
-                                metric_type: np.mean(
-                                    [
-                                        score[eval][key][prompt_type][metric_type]
-                                        for score in all_metrics
-                                    ]
-                                )
-                            }
-                        )
 
 def prompt_to_target(prompt_type, metric_type):
     if metric_type in ["reliability", "generality"]:
@@ -129,7 +84,7 @@ def main(cfg: DictConfig) -> None:
     else:
         tgt_langs = None
         all_langs = [cfg.edit_lang]
-    
+
     # ground_truths = data["ground_truth"]
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
@@ -327,6 +282,10 @@ def main(cfg: DictConfig) -> None:
                     }
                 }
             )
+            portability_inputs[port_key]["prompt"] = [
+                x[0] if isinstance(x, list) else x
+                for x in portability_inputs[port_key]["prompt"]
+            ]  # TODO fix this in the dataset
 
     if cfg.decoding_strategy:
         gen_cfg_dict = dict(cfg.decoding_strategy)
@@ -347,6 +306,11 @@ def main(cfg: DictConfig) -> None:
     else:
         ppl_cfg = None
 
+    if cfg.multi_answer_eval:
+        aliases = extract_aliases(data, cfg.edit_lang, tgt_langs)
+    else:
+        aliases = None
+
     if method == "FT":
         metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
@@ -362,6 +326,8 @@ def main(cfg: DictConfig) -> None:
             generation_conf=gen_cfg,
             locality_metrics=cfg.locality_metrics,
             ppl_cfg=ppl_cfg,
+            aliases=aliases,
+            edit_lang=cfg.edit_lang,
         )
     else:
         metrics, _, _ = editor.edit(
@@ -379,13 +345,15 @@ def main(cfg: DictConfig) -> None:
             generation_conf=gen_cfg,
             locality_metrics=cfg.locality_metrics,
             ppl_cfg=ppl_cfg,
+            aliases=aliases,
+            edit_lang=cfg.edit_lang,
         )
 
     with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
-    summary = get_summary_metrics(metrics, cfg.metrics, cfg.locality_metrics)
+    summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics)
     with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
-        json.dump(summary, f)
+        json.dump(summary, f, indent=4)
 
     # Save the command used to launch the script
     command = "python " + " ".join(sys.argv)

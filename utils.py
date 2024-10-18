@@ -4,6 +4,7 @@ from collections import OrderedDict
 import urllib
 from google.cloud import storage, translate
 
+
 def extract(data, field, upper_level_field=None, strict=True):
     """
     Extracts the specified field from every entry in the given JSON data.
@@ -508,3 +509,29 @@ def insert_after(my_dict, key, new_key, new_value):
     if new_key not in new_dict:
         new_dict[new_key] = new_value
     return new_dict
+
+
+def extract_aliases(data, src_lang, tgt_lang):
+    all_langs = sorted(list(set([src_lang] + tgt_lang)))
+    rel_aliases = [
+        {lang: alias_lang for lang, alias_lang in x.items() if lang == src_lang}
+        for x in extract(data, "targets_aliases")
+    ]
+    gen_aliases = [
+        {lang: alias_lang for lang, alias_lang in x.items() if lang in all_langs}
+        for x in extract(data, "targets_aliases")
+    ]
+    xlt_port_aliases = gen_aliases
+    multi_hop_aliases = [
+        {lang: alias_lang for lang, alias_lang in x.items() if lang in all_langs} if x else {}
+        for x in extract(data, "ground_truths_port_aliases", strict=False)
+    ]
+    subj_aliases = gen_aliases
+
+    return {
+        "rel_aliases": rel_aliases,
+        "gen_aliases": gen_aliases,
+        "xlt_aliases": xlt_port_aliases,
+        "multi-hop_aliases": multi_hop_aliases,
+        "subj_aliases": subj_aliases,
+    }
