@@ -277,7 +277,7 @@ class BaseEditor:
                         for loc_metric in locality_metrics:
                             locality_result = []
                             suffix = "output" if loc_metric == "token_em" else "logprobs"
-                            for loc_pre, loc_post in zip(chunk_metrics[i]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], chunk_metrics[i]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
+                            for loc_pre, loc_post in zip(chunk_metrics[i]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], chunk_metrics[i]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
                                 if loc_metric == "token_em":
                                     locality_result.append(np.mean(np.equal(loc_pre, loc_post)))
                                 elif loc_metric == "nkl":
@@ -410,7 +410,7 @@ class BaseEditor:
                         for loc_metric in locality_metrics:
                             locality_result = []
                             suffix = "output" if loc_metric == "token_em" else "logprobs"
-                            for loc_pre, loc_post in zip(all_metrics[idx]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], all_metrics[idx]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
+                            for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], all_metrics[idx]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
                                 if loc_metric == "token_em":
                                     locality_result.append(np.mean(np.equal(loc_pre, loc_post)))
                                 elif loc_metric == "nkl":
