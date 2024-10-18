@@ -42,7 +42,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics):
             else:
                 continue
             for metric_type in eval_metrics:
-                mean_metrics[eval][key].update({metric_type : np.mean([score[eval][key][metric_type] for score in all_metrics])})
+                mean_metrics[eval][key].update({metric_type : np.mean([np.max(score[eval][key][metric_type]) for score in all_metrics])})
         if "ppl" in all_metrics[0][eval].keys():
             mean_metrics[eval]["ppl"] = dict()
             for lang in all_metrics[0][eval]["ppl"]:
@@ -54,7 +54,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics):
                         mean_metrics[eval][key][prompt_type] = dict()
                         metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
                         for metric_type in metrics_to_gather:
-                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([score[eval][key][prompt_type][metric_type] for score in all_metrics])})
+                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([np.max(score[eval][key][prompt_type][metric_type]) for score in all_metrics])})
 
                     # for lkey in get_all_acc_keys(all_metrics):
                     #     metrics = [metric[eval][metric_type][key][lkey] for metric in all_metrics if lkey in metric[eval][metric_type][key].keys()]
@@ -64,7 +64,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics):
                         #     [metric[eval][key][lkey] for metric in all_metrics])
     # mean_metrics["time"] = np.mean([metric["time"] for metric in all_metrics])
 
-    print("Metrics Summary: ", mean_metrics)
+    return mean_metrics
 
 def _prepare_requests(prompts: Union[str, List[str]],
                       target_new: Union[str, List[str]],
@@ -85,6 +85,12 @@ def _prepare_requests(prompts: Union[str, List[str]],
     }
     for prompt, ground_truth_, target_new_ in zip(prompts, ground_truth, target_new)
     ]
+
+    if 'aliases' in kwargs:
+        aliases = kwargs['aliases']
+        for idx, req in enumerate(requests):
+            if kwargs['edit_lang'] in aliases['rel_aliases'][idx]:
+                req['aliases'] = aliases['rel_aliases'][idx][kwargs['edit_lang']]
 
     if 'subject' in kwargs:
         if isinstance(kwargs['subject'], str):
@@ -125,6 +131,11 @@ def _prepare_requests(prompts: Union[str, List[str]],
                             }
                         }
                     )
+                    if 'aliases' in kwargs and 'gen_aliases' in aliases:
+                        tgt_lang = generality_key[-2:]
+                        if tgt_lang in aliases['gen_aliases'][i]:
+                            request['rephrase_prompt'][generality_key]['ground_truth'] = [request['rephrase_prompt'][generality_key]['ground_truth'], *aliases['gen_aliases'][i][tgt_lang]]
+                            request['rephrase_prompt'][generality_key]['prompt'] = [request['rephrase_prompt'][generality_key]['prompt']]*(len(request['rephrase_prompt'][generality_key]['ground_truth']))
 
     if locality_inputs is not None:
         for locality_key in locality_inputs.keys():
@@ -163,4 +174,20 @@ def _prepare_requests(prompts: Union[str, List[str]],
                             }
                         }
                     )
+                    if 'aliases' in kwargs and any([port_type in aliases for port_type in ['xlt_port_aliases', 'multi-hop_aliases', 'subj_aliases']]):
+                        if "xlt" in portability_key:
+                            tgt_lang = portability_key[-2:]
+                            if tgt_lang in aliases['xlt_aliases'][i]:
+                                request['portability'][portability_key]['ground_truth'] = [request['portability'][portability_key]['ground_truth'], *aliases['xlt_aliases'][i][tgt_lang]]
+                        if "multi-hop" in portability_key:
+                            tgt_lang = portability_key[-2:]
+                            if tgt_lang in aliases['multi-hop_aliases'][i]:
+                                request['portability'][portability_key]['ground_truth'] = [request['portability'][portability_key]['ground_truth'], *aliases['multi-hop_aliases'][i][tgt_lang]]
+                        if "subj" in portability_key:
+                            tgt_lang = portability_key[-2:]
+                            if tgt_lang in aliases['subj_aliases'][i]:
+                                request['portability'][portability_key]['ground_truth'] = [request['portability'][portability_key]['ground_truth'], *aliases['subj_aliases'][i][tgt_lang]]
+                        
+                        request['portability'][portability_key]['prompt'] = [request['portability'][portability_key]['prompt']]*len(request['portability'][portability_key]['ground_truth'])
+                        
     return requests
