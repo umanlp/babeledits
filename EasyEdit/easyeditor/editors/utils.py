@@ -54,7 +54,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics):
                         mean_metrics[eval][key][prompt_type] = dict()
                         metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
                         for metric_type in metrics_to_gather:
-                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([np.max(score[eval][key][prompt_type][metric_type]) for score in all_metrics])})
+                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([np.max(score[eval][key][prompt_type][metric_type]) for score in all_metrics if prompt_type in score[eval][key]])})
 
                     # for lkey in get_all_acc_keys(all_metrics):
                     #     metrics = [metric[eval][metric_type][key][lkey] for metric in all_metrics if lkey in metric[eval][metric_type][key].keys()]
