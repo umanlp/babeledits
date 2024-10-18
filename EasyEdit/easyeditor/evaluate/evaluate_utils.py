@@ -154,7 +154,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
         max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
         prompt_tok = tok(
-            prompts,
+            prompts[0] if len(set(prompts)) == 1 and len(prompts) > 1 else prompts, # A single repeated prompt
             padding=True,
             truncation=True,
             max_length=max(hparams.max_length, max_prompt_len),
@@ -163,7 +163,6 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         prompt_target_tok = tok(
             prompt_target,
             padding=True,
-            truncation=True,
             max_length=max(hparams.max_length, max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
@@ -175,10 +174,13 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         last_non_masked = prompt_tok["attention_mask"].sum(1) - 1
         to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
         gathered = torch.gather(logits, 1, to_gather).squeeze(1)
-        answers = torch.argmax(gathered, dim=1)
+        answers = torch.argmax(gathered, dim=1).detach().cpu().numpy().tolist()
+        if len(prompts) > 1 and len(set(prompts)) == 1:
+            answers = answers * len(prompts)
         labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
-        labels = slice_list(labels,prompt_len,left=False)
-        if isinstance(answers[0], list):
+        labels = slice_list(labels,prompt_len,left=False) # get the answer in isolation
+        if isinstance(labels[0], list):
+            assert(prompts == [prompts[0]] * len(prompts))
             res = []
             for ans,label in zip(answers,labels):
                 temp_acc = np.mean(np.equal(ans, label[0]))
@@ -187,7 +189,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                 res.append(temp_acc)
             return res
         else:
-            answers = answers.squeeze().detach().cpu().numpy().tolist()
+            assert len(prompts) == 1
             return [np.mean(np.equal(answers, labels[0]))]
     # elif eval_metric == "efficacy_magn":
         # if isinstance(prompts, str):
@@ -231,39 +233,62 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         if isinstance(prompts, str):
             prompts, targets = [prompts, ], [targets, ]
         results = []
-        for prompt, target_new in zip(prompts, targets):
-            # Tokenize and preprocess the prompt
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompts]) + 1
+
+        if len(set(prompts)) == 1 and len(prompts) > 1: # A single repeated prompt
             prompt_tok = tok(
-                prompt,
+                prompts[0] ,
+                padding=True,
+                truncation=True,
+                max_length=max(hparams.max_length, max_prompt_len),
+                return_special_tokens_mask=True,
                 return_tensors="pt",
-                return_special_tokens_mask=True
-            ).to(device)
+            ).to(f"cuda:{device}")
+            generation_conf.max_new_tokens = prompt_tok.input_ids.shape[1] - prompt_tok["special_tokens_mask"].sum().item()
 
-            # Calculate max number of new tokens
-            max_new_tokens = prompt_tok.input_ids.shape[1] - prompt_tok["special_tokens_mask"].sum().item()
-            generation_conf.max_new_tokens = max_new_tokens
+            full_output = generate_answer(model, prompt_tok, tok, generation_conf)
+            generated_output = full_output[len(prompts[0]):].strip()
 
-            # Generate output from the model
-            with torch.no_grad():
-                outputs = model.generate(input_ids=prompt_tok['input_ids'], attention_mask=prompt_tok['attention_mask'], generation_config=generation_conf, pad_token_id=tok.eos_token_id)
+            for target_new in targets:
+                # Check for each answer in the generated output
+                if target_new.lower() in generated_output.lower():
+                    results.append(1.0)
+                else:
+                    results.append(0.0)
+        else:
+            for prompt, target_new in zip(prompts, targets):
+                # Tokenize and preprocess the prompt
+                prompt_tok = tok(
+                    prompt,
+                    return_tensors="pt",
+                    return_special_tokens_mask=True,
+                    truncation=True,
+                    max_length=max(hparams.max_length, max_prompt_len)
+                ).to(device)
 
-            # Decode the output
-            full_output = tok.decode(outputs[0], skip_special_tokens=True)
+                generation_conf.max_new_tokens = prompt_tok.input_ids.shape[1] - prompt_tok["special_tokens_mask"].sum().item()
 
-            # Extract the generated part (excluding the input prompt)
-            generated_output = full_output[len(prompt):].strip()
-            if locality:
-                results.append(generated_output)
-                continue
+                full_output = generate_answer(model, prompt_tok, tok, generation_conf)
+                generated_output = full_output[len(prompt):].strip()
 
-            # Check for each answer in the generated output
-            if target_new.lower() in generated_output.lower():
-                results.append(1.0)
-            else:
-                results.append(0.0)
+                # Check for each answer in the generated output
+                if target_new.lower() in generated_output.lower():
+                    results.append(1.0)
+                else:
+                    results.append(0.0)
         return results
     else:
         raise ValueError(f"Invalid eval_metric: {eval_metric}")
+
+def generate_answer(model, prompt_tok, tok, generation_conf):
+    # Generate output from the model
+    with torch.no_grad():
+        outputs = model.generate(input_ids=prompt_tok['input_ids'], attention_mask=prompt_tok['attention_mask'], generation_config=generation_conf, pad_token_id=tok.eos_token_id)
+
+    # Decode the output
+    full_output = tok.decode(outputs[0], skip_special_tokens=True)
+    
+    return full_output
 
 def test_generation_quality_serac(
     model,

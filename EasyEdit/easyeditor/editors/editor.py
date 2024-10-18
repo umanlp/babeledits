@@ -329,24 +329,14 @@ class BaseEditor:
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
                     metrics = {"pre": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, [''], request, self.hparams.device, pre_edit=True)}
                 else:
-                    metrics = {"pre": {}}
-                    for eval_metric in eval_metrics:
-                        metrics["pre"].update(compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics))
-                    # if 'locality' in request.keys() and any(request['locality']):
-                        # metrics["pre"].update({"locality": {}})
-                        # for loc_metric in locality_metrics:
-                            # for locality_key in request['locality'].keys():
-                                # metrics["pre"]["locality"].update({loc_metric:
-                                    # compute_locality_quality(self.model, self.model_name, self.hparams, self.tok, locality_key,
-                                                            #  request['locality'][locality_key]['prompt'],
-                                                            #  request['locality'][locality_key]['ground_truth'], device=self.hparams.device, eval_metric=loc_metric)}
-                                # )
-                if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
-                    print(f"Perplexities before editing: {ppl_per_lang}")
-                    metrics['pre'].update({"ppl":ppl_per_lang})
+                    metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
+            if ppl_cfg:
+                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                print(f"Perplexities before editing: {ppl_per_lang}")
+                for evaluation in all_metrics:
+                    evaluation["pre"].update({"ppl": ppl_per_lang})
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
                 json.dump(all_metrics, open(kwargs['pre_file'], 'w'), indent=4)
 
@@ -390,20 +380,6 @@ class BaseEditor:
                 })
                 if "metric_kwargs" in kwargs:
                     all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
-                
-                # locality_result = {}
-                # import torch.nn.functional as F
-                # for loc_metric in locality_metrics:
-                    # if 'locality' in all_metrics[idx]['post'][loc_metric].keys():
-                        # for locality_key in request['locality'].keys():
-                            # locality_result = []
-                            # suffix = "output" if loc_metric == "token_em" else "logprobs"
-                            # for ans, label in zip(all_metrics[idx]['post']['locality'][f'{locality_key}_{suffix}'], all_metrics[idx]['pre']['locality'][f'{locality_key}_{suffix}']):
-                                # if loc_metric == "token_em":
-                                    # score = np.mean(np.equal(ans, label))
-                                # if loc_metric == "nkl":
-                                    # score = F.kl_div(ans, label, reduction='batchmean', log_target=True)
-                                # locality_result.append(score)
 
                 if 'locality' in all_metrics[idx]['post'].keys():
                     for locality_key in request['locality'].keys():
@@ -469,7 +445,7 @@ class BaseEditor:
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
         if len(all_metrics) != 0:
-            summary_metrics(all_metrics, eval_metrics, locality_metrics)
+            print(summary_metrics(all_metrics, eval_metrics, locality_metrics))
 
         if return_edited_weights:
             return all_metrics, edited_model, weights_copy, weights_per_edit

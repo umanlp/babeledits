@@ -40,7 +40,7 @@ def compute_edit_quality(
     eval_metrics = ['token_em'],
     test_generation = False,
     generation_conf = None,
-    locality_metrics = ['token_em']
+    locality_metrics = ['token_em'],
 ) -> typing.Dict:
     """
     Given a rewritten model, computes generalization and specificity metrics for
@@ -57,11 +57,13 @@ def compute_edit_quality(
     if isinstance(model,LORA):
         model=model.model
     # First, unpack rewrite evaluation record.
-    target_new, ground_truth = (
-        record[x] for x in ["target_new", "ground_truth"]
-    )
 
-    rewrite_prompts = record["prompt"]
+    rewrite_prompts = record["prompt"] 
+    if "aliases" in record.keys():
+        rewrite_prompts = [record["prompt"]]*(1+len(record["aliases"]))
+        target_new = [record["target_new"], *record["aliases"]]
+    else:
+        target_new = record["target_new"]
     rephrase_prompts = record["rephrase_prompt"] if 'rephrase_prompt' in record.keys() else None
 
     ret = {"rewrite_acc" : {}}
