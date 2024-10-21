@@ -196,6 +196,10 @@ class BaseEditor:
                    locality_ground_truth: Optional[List[str]] = None,
                    keep_original_weight=False,
                    verbose=True,
+                   eval_metrics=["token_em"],
+                   generation_conf=None,
+                   locality_metrics=["token_em"],
+                   ppl_cfg = None,
                    **kwargs
                    ):
         """
@@ -222,6 +226,11 @@ class BaseEditor:
 
         assert hasattr(self.hparams, 'batch_size'), f'Method {self.alg_name} found, pls specify the batch_size....'
         all_metrics = []
+        
+        if ppl_cfg:
+            ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+            print(f"Perplexities before editing: {ppl_per_lang}")
+
         for record_chunks in _chunks(requests, self.hparams.batch_size):
             start = time()
 
@@ -245,9 +254,14 @@ class BaseEditor:
                     'case_id': i,
                     "requested_rewrite": request,
                     "time": exec_time,
-                    "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, test_generation=test_generation),
+                    "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics),
                 }
 
+                if ppl_cfg:
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    metrics['post'].update({"ppl":ppl_per_lang})
+                
                 chunk_metrics.append(metrics)
 
             with torch.no_grad():
@@ -255,7 +269,26 @@ class BaseEditor:
                     nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
 
             for i, request in enumerate(record_chunks):
-                chunk_metrics[i]["pre"] = compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, test_generation=test_generation)
+                chunk_metrics[i]["pre"] = compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)
+
+                if ppl_cfg:
+                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    chunk_metrics[i]['pre'].update({"ppl":ppl_per_lang})
+                
+                if 'locality' in chunk_metrics[i]['post'].keys():
+                    for locality_key in request['locality'].keys():
+                        for loc_metric in locality_metrics:
+                            locality_result = []
+                            suffix = "output" if loc_metric == "token_em" else "logprobs"
+                            for loc_pre, loc_post in zip(chunk_metrics[i]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], chunk_metrics[i]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
+                                if loc_metric == "token_em":
+                                    locality_result.append(np.mean(np.equal(loc_pre, loc_post)))
+                                elif loc_metric == "nkl":
+                                    locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
+                            chunk_metrics[i]['post']['locality'][locality_key][loc_metric].pop(f'{locality_key}_{suffix}')
+                            chunk_metrics[i]['post']['locality'][locality_key][loc_metric] = locality_result
+
+                    chunk_metrics[i]['pre'].pop('locality')
 
                 if verbose:
                     LOG.info(
@@ -380,6 +413,10 @@ class BaseEditor:
                         weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                if ppl_cfg:
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    all_metrics[i]['post'].update({"ppl":ppl_per_lang})
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
