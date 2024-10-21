@@ -154,7 +154,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
         max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
         prompt_tok = tok(
-            prompts[0] if len(set(prompts)) == 1 and len(prompts) > 1 else prompts, # A single repeated prompt
+            prompts, # A single repeated prompt
             padding=True,
             truncation=True,
             max_length=max(hparams.max_length, max_prompt_len),
@@ -169,9 +169,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
         num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
         prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        if len(set(prompts)) == 1 and len(prompts) > 1:
+            # Single repeated prompt
+            input_tok = {"input_ids": prompt_tok["input_ids"][None, 0], "attention_mask": prompt_tok["attention_mask"][None, 0]}
+        else:
+            input_tok = prompt_tok
         with torch.no_grad():
-            logits = model(**prompt_tok).logits
-        last_non_masked = prompt_tok["attention_mask"].sum(1) - 1
+            logits = model(**input_tok).logits
+        last_non_masked = input_tok["attention_mask"].sum(1) - 1
         to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
         gathered = torch.gather(logits, 1, to_gather).squeeze(1)
         answers = torch.argmax(gathered, dim=1).detach().cpu().numpy().tolist()
