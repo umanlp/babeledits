@@ -90,8 +90,7 @@ def _prepare_requests(prompts: Union[str, List[str]],
     if 'aliases' in kwargs:
         aliases = kwargs['aliases']
         for idx, req in enumerate(requests):
-            if kwargs['edit_lang'] in aliases['rel_aliases'][idx]:
-                req['aliases'] = aliases['rel_aliases'][idx][kwargs['edit_lang']]
+            req['aliases'] = aliases['rel_aliases'][idx]
 
     if 'subject' in kwargs:
         if isinstance(kwargs['subject'], str):
