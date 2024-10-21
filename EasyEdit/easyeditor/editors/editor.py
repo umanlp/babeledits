@@ -226,6 +226,11 @@ class BaseEditor:
 
         assert hasattr(self.hparams, 'batch_size'), f'Method {self.alg_name} found, pls specify the batch_size....'
         all_metrics = []
+        
+        if ppl_cfg:
+            ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+            print(f"Perplexities before editing: {ppl_per_lang}")
+
         for record_chunks in _chunks(requests, self.hparams.batch_size):
             start = time()
 
@@ -267,9 +272,7 @@ class BaseEditor:
                 chunk_metrics[i]["pre"] = compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)
 
                 if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
                     ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
-                    print(f"Perplexities before editing: {ppl_per_lang}")
                     chunk_metrics[i]['pre'].update({"ppl":ppl_per_lang})
                 
                 if 'locality' in chunk_metrics[i]['post'].keys():
