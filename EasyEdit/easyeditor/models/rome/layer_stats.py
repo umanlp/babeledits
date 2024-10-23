@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, get_dataset_config_names
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -99,9 +99,12 @@ def layer_stats(
         # from datasets import Dataset
         # raw_ds = Dataset.from_file('XXX/XXX/wikipedia-train.arrow')
         # raw_ds = {'train': raw_ds}
+        configs = get_dataset_config_names(ds_name)
+        english_configs = [c for c in configs if c.endswith(".en")]
+        config_name = english_configs[0]
         raw_ds = load_dataset(
             ds_name,
-            dict(wikitext="wikitext-103-raw-v1", wikipedia="20200501.en")[ds_name]
+            dict(wikitext="wikitext-103-raw-v1", wikipedia=config_name)[ds_name]
         )
         if hasattr(model.config, 'n_positions'):
             maxlen = model.config.n_positions
