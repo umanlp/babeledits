@@ -153,7 +153,9 @@ if __name__ == "__main__":
     rel_df = rel_df.head(args.max_rel).reset_index(drop=True)
     print(rel_df)
     # Save all relations with their counts
-    rel_df.to_csv(f"{args.dataset_path}/agg_relations_all.tsv", index=False, sep="\t")
+    dataset_path = Path(args.dataset_path)
+    dataset_path.mkdir(parents=True, exist_ok=True)
+    rel_df.to_csv(dataset_path / "agg_relations_all.tsv", index=False, sep="\t")
 
     subj_and_obj = defaultdict(dict)
 
