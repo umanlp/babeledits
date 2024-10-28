@@ -1,19 +1,11 @@
 # %%
 import argparse
-import pickle
-import random
-from collections import Counter, defaultdict
 from io import StringIO
-from pathlib import Path
 
-import babelnet as bn
 import pandas as pd
-from babelnet import Language
-from babelnet.resources import BabelSynsetID
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from utils import clean
 
 # %%
 # Params
@@ -21,6 +13,7 @@ parser = argparse.ArgumentParser(description="Process relations data.")
 parser.add_argument(
     "--max_rel", type=int, default=200, help="maximum number of relations"
 )
+parser.add_argument("--rel_path", default="datasets/v7/agg_relations_with_subj_obj_filtered.tsv", help="relations path")
 parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
 parser.add_argument("--dataset_path", default="datasets/v7", help="dataset path")
 
@@ -29,8 +22,7 @@ args, _ = parser.parse_known_args()
 
 max_rel = args.max_rel
 dataset_path = args.dataset_path
-relation_data = f"{dataset_path}/agg_relations_with_subj_obj_filtered.tsv"
-rel_df = pd.read_csv(relation_data, sep="\t")
+rel_df = pd.read_csv(args.rel_path, sep="\t")
 relations = rel_df["relation_name"].tolist()
 
 llm = ChatOpenAI(
