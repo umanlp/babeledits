@@ -211,8 +211,6 @@ print(f"Loading synsets from {file_path}")
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 
-# TODO REMOVE
-data = data[:200]
 
 print(f"Loaded {len(data)} synsets from {file_path}")
 
@@ -324,15 +322,6 @@ for synset in tqdm(synset_to_relations, desc="Getting target synsets"):
         if len([e for e in edge_list if "ground_truths" in e]) > 0
     }
 
-# Remove synsets with fewer than targets_to_find distinct relations with suitable edges
-# TODO double check
-# synset_to_relations = {
-# synset: relations
-# for synset, relations in synset_to_relations.items()
-# if len([relation for relation, edges in relations.items() if len(edges) > 0])
-# >= targets_to_find
-# }
-
 # Make it so that the key is a string (useful later)
 synset_to_senses = {str(synset.id): sense for synset, sense in synset_to_senses.items()}
 
@@ -350,10 +339,13 @@ for rel in rel_to_synsets:
     rel_to_synsets[rel] = list(unique_synsets.values())
 
 # Iterating over the main structure of synset -> relations -> edges
+relation_counter = defaultdict(int)
+
 for synset in tqdm(synset_to_relations, desc="Creating edits"):
     relation_to_edges = synset_to_relations[synset]
     shuffled_relations = list(relation_to_edges.keys())
-    random.shuffle(shuffled_relations)
+    shuffled_relations.sort(key=lambda x: relation_counter[x])
+
     for relation in shuffled_relations:
         # Creating the pool of target synsets that we can sample from, excluding the ones that the subject synset is already linked to
         target_synsets = [
@@ -387,6 +379,8 @@ for synset in tqdm(synset_to_relations, desc="Creating edits"):
                 )
             edge["edit"] = sampled_syn
             edge["edit"].update(prompt_data)
+            relation_counter[relation] += 1
+            break  # Break out of the shuffled_relations loop as soon as an edit is found
 
 
 # Keep only synsets that (i) have at least one/two relations and (ii) at least one edge with an edit
@@ -467,7 +461,7 @@ if args.locality:
             ].update({rel_name: sampled_rel})
 
 if args.portability:
-    print("Getting portability sets")
+    print("Getting portability multi-hop sets")
     for synset_id in output:
         selected_relation = list(output[synset_id]["relations"].keys())[0]
         target_synset = BabelSynsetID(

@@ -49,21 +49,21 @@ for lang in langs:
 
     df = df[df["prompt_type"] == "prompt"].reset_index(drop=True)
     for idx, row in df.iterrows():
-        for subj_alias in subject_alias[idx][lang]:
-            prompt = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
-            subj = subjects[idx][lang]
-            if subj not in prompt:
-                errors.append((idx, subj, prompt))
-            else:
-                prompt_alias.append(
-                    {
-                        "syn_id": list(dataset.keys())[idx],
-                        "lang": lang,
-                        "prompt": prompt,
-                        "subject_alias": subj_alias,
-                        "prompt_alias": prompt.replace(subj, subj_alias),
-                    }
-                )
+        subj_alias = random.sample(subject_alias[idx][lang], 1)[0]
+        prompt = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+        subj = subjects[idx][lang]
+        if subj not in prompt:
+            errors.append((idx, subj, prompt))
+        else:
+            prompt_alias.append(
+                {
+                    "syn_id": list(dataset.keys())[idx],
+                    "lang": lang,
+                    "prompt": prompt,
+                    "subject_alias": subj_alias,
+                    "prompt_alias": prompt.replace(subj, subj_alias),
+                }
+            )
 
 alias_df = pd.DataFrame(prompt_alias)
 print(alias_df)

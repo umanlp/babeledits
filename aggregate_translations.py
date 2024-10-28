@@ -1,6 +1,5 @@
 # %%
 import argparse
-from ast import alias
 import json
 import os
 from pathlib import Path
@@ -191,6 +190,12 @@ for syn_idx, syn_id in enumerate(data):
                 for lang in all_langs
             },
         )
+
+        data[syn_id]["relations"][relation]["ground_truth_aliases"] = {
+            lang: alias
+            for lang, alias in data[syn_id]["relations"][relation]["ground_truth_aliases"].items()
+            if alias
+        }
 
         # Insert targets_mt and targets_mt_marked
 
