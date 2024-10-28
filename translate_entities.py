@@ -82,6 +82,7 @@ ground_truths = extract(data, "en", "ground_truths")
 ground_truths_port = extract(data, "en", "ground_truths_port", strict=False)
 ground_truths_port = [e for e in ground_truths_port if e]
 ground_truths_loc = extract(data, "en", "ground_truths_loc", strict=False)
+ground_truths_loc = [e for e in ground_truths_loc if e]
 entities = subjects + objects + ground_truths_loc + ground_truths + ground_truths_port
 
 df = pd.DataFrame(entities, columns=["entities"])

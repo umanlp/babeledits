@@ -1,5 +1,6 @@
 # %%
 
+import re
 import sienna
 from utils import extract
 import argparse
@@ -8,6 +9,7 @@ parser = argparse.ArgumentParser(description="Process dataset path.")
 parser.add_argument("--dataset_path", type=str, help="Path to the dataset file")
 args = parser.parse_args()
 
+# dataset_path = "datasets/v8/dataset.json" # args.dataset_path
 dataset_path = args.dataset_path
 data = sienna.load(dataset_path)
 
@@ -26,11 +28,13 @@ for syn_id in data:
         prompts[syn_id] = data[syn_id]["relations"][relation]["edit"]["prompts"]["en"]
         targets[syn_id] = data[syn_id]["relations"][relation]["edit"]["targets"]["en"]
         port_relation = list(
-            data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
+            data[syn_id]["relations"][relation]["edit"]["portability"][
+                "multi_hop"
+            ].keys()
         )[0]
-        port_target = data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"][
-            port_relation
-        ]["ground_truths_port"]["en"]
+        port_target = data[syn_id]["relations"][relation]["edit"]["portability"][
+            "multi_hop"
+        ][port_relation]["ground_truths_port"]["en"]
         portability_data[syn_id] = {"relation": port_relation, "target": port_target}
 # %%
 
@@ -60,10 +64,10 @@ llm = ChatOpenAI(
 msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph 
     (for example, WordNet or Babelnet) into natural language questions. In this case we are dealing with joined triples of the form (subject, relation, object, relation_2, object_2).
     You need to formulate a natural language question which should be answered with object 2. Consider the case of (Messi, PLAYS_FOR, Barcelona, LOCATED_IN, Spain).
-    The question could be 'In which country is the team Messi plays for located?'. In the generated question, NEVER mention the object (in this case, Barcelona).
+    The question could be 'In which country is the team that Messi plays for located?'. In the generated question, NEVER mention the object (in this case, Barcelona).
     Let me repeat: Do NOT INCLUDE the object in the question.
     The input will be a markdown table, with five columns: subject, relation, object, relation_2, object_2. 
-    Reply directly without any additional text, one question per line, no special charachters at the begining of each line.
+    Reply directly without any additional text, one question per line, no special charachters at the begining of each line and terminate each line with a SINGLE newline character.
 """
 # msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph
 #     (for example, WordNet or Babelnet) into natural language questions. In this case we are dealing with data of the form (subject, relation, object, prompt, relation_2, object_2).
@@ -92,20 +96,67 @@ prompt = ChatPromptTemplate.from_messages(
 
 chain = prompt | llm
 
-batch_size = 50
+batch_size = 20
 batches = [df[i : i + batch_size] for i in range(0, len(df), batch_size)]
 dfs = []
 contents = []
+max_retries = 10
 for idx, batch in enumerate(batches):
     # Convert batch to markdown
     batch_md = batch.to_markdown(index=False)
     # Invoke llm with batch_md
-    with get_openai_callback() as cb:
-        result = chain.invoke(batch_md)
-        print(cb)
+    attempt_idx = 0
+    while attempt_idx < max_retries:
+        with get_openai_callback() as cb:
+            result = chain.invoke(batch_md)
+            print(cb)
+        if len(result.content.split("\n")) == len(batch):
+            print(f"Batch {idx+1}/{len(batches)} generated successfully")
+            break
+        elif len(result.content.split("\n")) > len(batch):
+            num_lines = len(result.content.split("\n"))
+            print(f"result.content has {num_lines} lines")
+            if len(result.content.split("\n\n")) == len(batch):
+                print(result.content)
+                break
+            print(batch_md)
+            print("----- //// -----")
+            print(result.content)
+            raise ValueError("Generated more prompts than expected")
+        else:
+            print(
+                f"Batch {idx+1}/{len(batches)} was NOT generated successfully...retrying ({attempt_idx+1}/{max_retries})"
+            )
+            attempt_idx += 1
+            processed_elements = len(result.content.split("\n"))
+            # Add a message to the LLM chain
+            new_prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        msg,
+                    ),
+                    (
+                        "human",
+                        """Input:\n
+                        {input}""",
+                    ),
+                    ("assistant", result.content),
+                    (
+                        "human",
+                        f"You forgot a few elements in your response above, I am only getting {processed_elements} out of {batch_size} elements from your output. REMEMBER TO PROCESS ALL THE ROWS IN THE INPUT TABLE.",
+                    ),
+                ]
+            )
+            print(f"Retrying with message {new_prompt}")
+            chain = new_prompt | llm
+    if attempt_idx == max_retries:
+        raise ValueError(f"Failed to generate prompts for batch {idx}")
     # Convert result to a dataframe
     contents.append(result.content)
+    chain = prompt | llm
 
+contents = [sublist.replace("\n\n", "\n") for sublist in contents]
 flattened_contents = [item for sublist in contents for item in sublist.split("\n")]
 assert len(flattened_contents) == len(df)
 # %%
@@ -114,11 +165,13 @@ for syn_id in data:
     relation = list(data[syn_id]["relations"].keys())[0]
     if "portability" in data[syn_id]["relations"][relation]["edit"]:
         port_relation = list(
-            data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
+            data[syn_id]["relations"][relation]["edit"]["portability"][
+                "multi_hop"
+            ].keys()
         )[0]
-        data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"][port_relation][
-            "prompts_port"
-        ] = {"en": flattened_contents[idx].strip()}
+        data[syn_id]["relations"][relation]["edit"]["portability"]["multi_hop"][
+            port_relation
+        ]["prompts_port"] = {"en": flattened_contents[idx].strip()}
         idx += 1
 
 import json
