@@ -23,9 +23,9 @@ subject_type: "subjects"
 target_type: "targets"
 eval_prompt_type: ["prompts_mt", "prompts_mt_marked"]
 subject_in_prompt: null
-generality: false
-locality: false
-portability: false
-eval_ppl: false
+generality: true
+locality: true
+portability: true
+eval_ppl: true
 data_ppl : "data_ppl/ME-PPL_50_translated.json"
 batch_size_ppl: 64
