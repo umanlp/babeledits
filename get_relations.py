@@ -3,7 +3,7 @@ import argparse
 from io import StringIO
 
 import pandas as pd
-from langchain_community.callbacks import get_openai_callback
+import langchain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -17,6 +17,9 @@ parser.add_argument("--rel_path", default="datasets/v7/agg_relations_with_subj_o
 parser.add_argument("--rephrase", action="store_true", help="rephrase the questions")
 parser.add_argument("--dataset_path", default="datasets/v7", help="dataset path")
 
+langchain.verbose = False
+langchain.debug = False
+langchain.llm_cache = False
 
 args, _ = parser.parse_known_args()
 
@@ -76,9 +79,7 @@ for idx, batch in enumerate(batches):
     # Convert batch to markdown
     batch_md = batch.to_markdown(index=False)
     # Invoke llm with batch_md
-    with get_openai_callback() as cb:
-        result = chain.invoke(batch_md)
-        print(cb)
+    result = chain.invoke(batch_md)
     # Convert result to a dataframe
     contents.append(result.content)
     start_idx = [

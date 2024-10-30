@@ -1,6 +1,6 @@
 # %%
 
-import re
+import langchain
 import sienna
 from utils import extract
 import argparse
@@ -8,6 +8,10 @@ import argparse
 parser = argparse.ArgumentParser(description="Process dataset path.")
 parser.add_argument("--dataset_path", type=str, help="Path to the dataset file")
 args = parser.parse_args()
+
+langchain.verbose = False
+langchain.debug = False
+langchain.llm_cache = False
 
 # dataset_path = "datasets/v8/dataset.json" # args.dataset_path
 dataset_path = args.dataset_path
@@ -53,7 +57,6 @@ df = pd.DataFrame(table)
 print(df.to_markdown(index=False))
 
 # %%
-from langchain_community.callbacks import get_openai_callback
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -67,7 +70,8 @@ msg = """You are a helpful assistant that is able to leverage its world knowledg
     The question could be 'In which country is the team that Messi plays for located?'. In the generated question, NEVER mention the object (in this case, Barcelona).
     Let me repeat: Do NOT INCLUDE the object in the question.
     The input will be a markdown table, with five columns: subject, relation, object, relation_2, object_2. 
-    Reply directly without any additional text, one question per line, no special charachters at the begining of each line and terminate each line with a SINGLE newline character.
+    Please reply directly without any additional text, one question per line, no special characters at the beginning of each line and separate each line with a SINGLE newline character and not two.
+    Just a reminder: only one question per line, only one newline character at the end of each line.
 """
 # msg = """You are a helpful assistant that is able to leverage its world knowledge to convert relations extracted from a knowledge graph
 #     (for example, WordNet or Babelnet) into natural language questions. In this case we are dealing with data of the form (subject, relation, object, prompt, relation_2, object_2).
@@ -96,7 +100,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 chain = prompt | llm
 
-batch_size = 20
+batch_size = 10
 batches = [df[i : i + batch_size] for i in range(0, len(df), batch_size)]
 dfs = []
 contents = []
@@ -107,9 +111,7 @@ for idx, batch in enumerate(batches):
     # Invoke llm with batch_md
     attempt_idx = 0
     while attempt_idx < max_retries:
-        with get_openai_callback() as cb:
-            result = chain.invoke(batch_md)
-            print(cb)
+        result = chain.invoke(batch_md)
         if len(result.content.split("\n")) == len(batch):
             print(f"Batch {idx+1}/{len(batches)} generated successfully")
             break

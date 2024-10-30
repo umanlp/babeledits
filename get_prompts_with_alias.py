@@ -17,6 +17,8 @@ parser.add_argument(
 parser.add_argument(
     "--device", type=str, default="cuda:0", help="Device to use for computation"
 )
+parser.add_argument('--batch_size', type=int, default=64, 
+                   help='Batch size for translation (default: 64)')
 
 args = parser.parse_args()
 
@@ -49,21 +51,22 @@ for lang in langs:
 
     df = df[df["prompt_type"] == "prompt"].reset_index(drop=True)
     for idx, row in df.iterrows():
-        subj_alias = random.sample(subject_alias[idx][lang], 1)[0]
-        prompt = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
-        subj = subjects[idx][lang]
-        if subj not in prompt:
-            errors.append((idx, subj, prompt))
-        else:
-            prompt_alias.append(
-                {
-                    "syn_id": list(dataset.keys())[idx],
-                    "lang": lang,
-                    "prompt": prompt,
-                    "subject_alias": subj_alias,
-                    "prompt_alias": prompt.replace(subj, subj_alias),
-                }
-            )
+        if len(subject_alias[idx][lang]) > 0:
+            subj_alias = random.sample(subject_alias[idx][lang], 1)[0]
+            prompt = row[f"tgt_gloss_{lang}"] if lang != "en" else row["src"]
+            subj = subjects[idx][lang]
+            if subj not in prompt:
+                errors.append((idx, subj, prompt))
+            else:
+                prompt_alias.append(
+                    {
+                        "syn_id": list(dataset.keys())[idx],
+                        "lang": lang,
+                        "prompt": prompt,
+                        "subject_alias": subj_alias,
+                        "prompt_alias": prompt.replace(subj, subj_alias),
+                    }
+                )
 
 alias_df = pd.DataFrame(prompt_alias)
 print(alias_df)
@@ -115,14 +118,20 @@ for lang in langs:
         padding_side="left",
     )
     tokenizer.pad_token = tokenizer.eos_token
-    inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
-    inputs = {k: v.to(device) for k, v in inputs.items()}
-    translated_tokens = model.generate(
-        **inputs,
-        forced_bos_token_id=tokenizer.convert_tokens_to_ids(nllb_lang),
-        max_length=30,
-    )
-    translations = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+
+    translations = []
+    for i in range(0, len(prompts), args.batch_size):
+        batch_prompts = prompts[i:i + args.batch_size]
+        inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        translated_tokens = model.generate(
+            **inputs,
+            forced_bos_token_id=tokenizer.convert_tokens_to_ids(nllb_lang),
+            max_length=30,
+        )
+        batch_translations = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+        translations.extend(batch_translations)
+    
     alias_df.loc[alias_df["lang"] == lang, "prompts_corrected"] = translations
 
 alias_df.to_csv(f"{dataset_dir}/prompts_with_alias.csv", index=False)
