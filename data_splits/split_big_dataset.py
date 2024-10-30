@@ -42,18 +42,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", type=str, default="v5")
+    parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset")
     parser.add_argument("--random_state", type=int, default=42)
     parser.add_argument("--test_size", type=float, default=0.1)
     parser.add_argument("--val_size", type=float, default=0.1)
     args = parser.parse_args()
 
-    input_file = f"datasets/{args.version}/translated/dataset.json"
-
     train_file = f"datasets/{args.version}/translated/train.json"
     test_file = f"datasets/{args.version}/translated/test.json"
     val_file = f"datasets/{args.version}/translated/val.json"
 
-    with open(input_file, "r") as f:
+    with open(args.dataset_path, "r") as f:
         data = json.load(f)
     
     train_keys, test_keys, val_keys = split_data(data, random_state=args.random_state, test_size=args.test_size, val_size=args.val_size)
