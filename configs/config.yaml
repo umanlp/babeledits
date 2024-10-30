@@ -11,7 +11,7 @@ metrics:
 locality_metrics:
   - token_em
   - nkl
-dataset: "datasets/v7/translated/dataset.json"
+dataset: "datasets/v8/translated/dataset.json"
 edit_lang: "en"
 tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
 multi_answer_eval: true

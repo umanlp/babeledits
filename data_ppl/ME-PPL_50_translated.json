@@ -2,501 +2,801 @@
     {
         "Corpus": "Wikipedia",
         "Text": {
+            "ar": "المناطق والمدن تتكون أستراليا من ست ولايات، وإقليمين رئيسيين في البر الرئيسي، وأقاليم ثانوية أخرى",
             "de": "Regionen und Städte Australien hat sechs Staaten, zwei große Festlandgebiete und andere kleinere Gebiete",
             "en": "Regions and cities Australia has six states, two major mainland territories, and other minor territories",
             "fr": "Régions et villes L'Australie compte six États, deux grands territoires continentaux et d'autres territoires mineurs",
+            "hr": "Regije i gradovi Australija ima šest država, dva velika kopnena teritorija i druge manje teritorije",
             "it": "Regioni e città L'Australia ha sei stati, due grandi territori continentali e altri territori minori",
-            "ja": "地域と都市 オーストラリアには6つの州、2つの主要な本土領土、その他の小さな領土があります"
+            "ja": "地域と都市 オーストラリアには6つの州、2つの主要な本土領土、その他の小さな領土があります",
+            "ka": "რეგიონები და ქალაქები ავსტრალიას აქვს ექვსი შტატი, ორი ძირითადი მატერიკული ტერიტორია და სხვა მცირე ტერიტორიები",
+            "my": "ဩစတြေးလျတွင် ပြည်နယ်ခြောက်ခု၊ အဓိကကုန်းမကြီးနယ်မြေနှစ်ခုနှင့် အခြားအသေးစားနယ်မြေများ ရှိသည်။",
+            "qu": "Regionkuna, llaqtakuna Australiaqa suqta suyuyuqmi, iskay hatun hatun allpayuqmi, huk huch'uy suyuyuqmi",
+            "zh": "地区和城市 澳大利亚有六个州、两个主要大陆领地和其他小领地"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "أعلم أنه يمتلك القوة في كلتا يديه، لكن الإمساك بتيم برادلي سيكون صعبًا للغاية",
             "de": "Ich weiß, dass er Kraft in beiden Händen hat, aber Tim Bradley einzuholen, wird sehr schwer werden.",
             "en": "I know he has power in both hands, but to catch Tim Bradley is going to be very hard",
             "fr": "Je sais qu'il a du pouvoir dans ses deux mains, mais attraper Tim Bradley va être très difficile",
+            "hr": "Znam da ima moć u obje ruke, ali uhvatiti Tima Bradleya bit će jako teško",
             "it": "So che ha il potere in entrambe le mani, ma catturare Tim Bradley sarà molto difficile",
-            "ja": "彼が両手にパワーを持っていることは分かっているが、ティム・ブラッドリーを捕まえるのは非常に難しいだろう"
+            "ja": "彼が両手にパワーを持っていることは分かっているが、ティム・ブラッドリーを捕まえるのは非常に難しいだろう",
+            "ka": "ვიცი, რომ მას ორივე ხელში აქვს ძალა, მაგრამ ტიმ ბრედლის დაჭერა ძალიან რთული იქნება",
+            "my": "သူ့မှာ လက်နှစ်ဖက်လုံးမှာ ပါဝါရှိတယ်ဆိုတာ ကျွန်တော်သိပေမယ့် Tim Bradley ကို ဖမ်းဖို့က အရမ်းခက်ခဲပါတယ်။",
+            "qu": "Yachanim iskaynin makinpi atiyniyuq kasqanmanta, ichaqa Tim Bradleyta hapiyqa ancha sasam kanqa",
+            "zh": "我知道他双手都握有权力，但要赶上蒂姆·布拉德利将会非常困难"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "قال المدرب الرئيسي جيريمي كوليتون إن التغييرات يتم إجراؤها للتأكد من أن الشاب لن يحترق مثلما يحدث للعديد من المبتدئين خلال موسمهم الأول",
             "de": "Cheftrainer Jeremy Colliton sagte, die Änderungen würden vorgenommen, um sicherzustellen, dass der Nachwuchsspieler nicht ausbrennt, wie es vielen Neulingen in ihrer ersten Saison passiert.",
             "en": "Head coach Jeremy Colliton said the changes are being made to make sure the youngster won’t burn out like many rookies do during their first season",
             "fr": "L'entraîneur-chef Jeremy Colliton a déclaré que les changements sont apportés pour s'assurer que le jeune ne s'épuise pas comme le font de nombreuses recrues lors de leur première saison.",
+            "hr": "Glavni trener Jeremy Colliton rekao je da su promjene napravljene kako bi se osiguralo da mladić neće izgorjeti kao što to čine mnogi novajlije tijekom prve sezone",
             "it": "L'allenatore Jeremy Colliton ha detto che i cambiamenti sono stati fatti per assicurarsi che il giovane non si bruci come succede a molti principianti durante la loro prima stagione",
-            "ja": "ヘッドコーチのジェレミー・コリトンは、多くの新人が最初のシーズンで経験する燃え尽き症候群に陥らないように、この変更が行われていると語った。"
+            "ja": "ヘッドコーチのジェレミー・コリトンは、多くの新人が最初のシーズンで経験する燃え尽き症候群に陥らないように、この変更が行われていると語った。",
+            "ka": "მთავარმა მწვრთნელმა ჯერემი კოლიტონმა თქვა, რომ ცვლილებები ხდება იმისთვის, რომ ახალგაზრდა არ დაიწვას, როგორც ბევრი ახალბედა აკეთებს პირველ სეზონში.",
+            "my": "နည်းပြချုပ် Jeremy Colliton က လူငယ်သည် ၎င်းတို့၏ ပထမရာသီတွင် လူသစ်များကဲ့သို့ ပူလောင်မည်မဟုတ်ကြောင်း သေချာစေရန် အပြောင်းအလဲများ ပြုလုပ်ထားကြောင်း ပြောကြားခဲ့သည်။",
+            "qu": "Umalliq entrenador Jeremy Colliton nirqan chay t’ikraykunata ruwakushan chay wayna mana ruphananpaq imaynan askha qallariqkuna ruwanku hina ñawpaq kaq temporadapi",
+            "zh": "主教练杰里米·科利顿表示，做出这些改变是为了确保这名年轻球员不会像许多新秀一样在第一个赛季就精疲力竭"
         }
     },
     {
         "Corpus": "cc_news",
         "Text": {
-            "de": "Wade betonte, dass sie einen Richter unterstützen wolle, der Respekt vor geltendem Recht wie der Roe-Entscheidung zeigen würde.",
+            "ar": "وايد، مؤكدة أنها تريد دعم القاضي الذي سيظهر الاحترام للقانون المستقر مثل قرار روي",
+            "de": "Wade betonte, dass sie einen Richter unterstützen wolle, der Respekt für geltendes Recht wie die Roe-Entscheidung zeigen würde.",
             "en": "Wade, stressing she wants to back a judge who would show respect for settled law such as the Roe decision",
             "fr": "Wade, soulignant qu'elle souhaite soutenir un juge qui respecterait le droit établi, comme la décision Roe",
+            "hr": "Wade, naglašavajući da želi podržati suca koji bi iskazao poštovanje prema ustaljenom zakonu kao što je odluka u predmetu Roe",
             "it": "Wade, sottolineando che vuole sostenere un giudice che dimostri rispetto per il diritto consolidato come la decisione Roe",
-            "ja": "ウェイド氏は、ロー判決のような確立された法律を尊重する判事を支持したいと強調した。"
+            "ja": "ウェイド氏は、ロー判決のような確立された法律を尊重する判事を支持したいと強調した。",
+            "ka": "უეიდი, ხაზგასმით აღნიშნა, რომ მას სურს მხარი დაუჭიროს მოსამართლეს, რომელიც პატივს სცემს დადგენილ კანონს, როგორიცაა Roe გადაწყვეტილება",
+            "my": "Wade သည် Roe ကဲ့သို့သော တရားစီရင်မှုဆိုင်ရာ ဥပဒေများကို လေးစားမှုပြသမည့် တရားသူကြီးတစ်ဦးအား ထောက်ခံလိုကြောင်း အလေးပေးပြောကြားခဲ့သည်။",
+            "qu": "Wade, resaltaspa payqa munan yanapayta huk juezta, paymi rikuchinman respetowan allichasqa kamachikuykunata ahinataq Roe decisión",
+            "zh": "韦德强调，她希望支持一位尊重既定法律（如罗诉韦德案判决）的法官"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "لذا أعتقد أن ما أريد قوله هو أن هذه ليست لعبة ذات جودة فائقة، لكنها ممتعة للغاية وهي جيدة فيما تفعله",
             "de": "Ich denke, worauf ich hinaus will, ist, dass dies kein Spiel von höchster Qualität ist, aber es macht jede Menge Spaß und ist gut in dem, was es tut",
             "en": "So I guess what I’m getting at is that this isn’t a super quality game, but it’s loads of fun and it’s good at what it does",
             "fr": "Donc je suppose que ce que je veux dire, c'est que ce n'est pas un jeu de super qualité, mais il est très amusant et il est bon dans ce qu'il fait.",
+            "hr": "Pretpostavljam da ovo nije igra super kvalitete, ali je jako zabavna i dobra je u onome što radi",
             "it": "Quindi credo che quello che voglio dire è che questo non è un gioco di qualità super, ma è molto divertente ed è bravo in quello che fa",
-            "ja": "つまり、このゲームは超高品質のゲームではないが、とても楽しく、その機能も優れているということだ。"
+            "ja": "つまり、このゲームは超高品質のゲームではないが、とても楽しく、その機能も優れているということだ。",
+            "ka": "ასე რომ, ვფიქრობ, რასაც მივხვდი, არის ის, რომ ეს არ არის სუპერ ხარისხის თამაში, მაგრამ ის ძალიან სახალისოა და კარგია რასაც აკეთებს",
+            "my": "ဒီတော့ ငါရလာတာက ဒီဂိမ်းဟာ အရည်အသွေးမြင့်တဲ့ဂိမ်းမဟုတ်ပေမယ့် ပျော်စရာကောင်းပြီး ဆော့လို့ကောင်းတယ်",
+            "qu": "Chaymi suyasaq imamanchus chayashani kayqa manan huk super calidad pukllaychu, ichaqa cargakuna kusikuymi hinaspapas allinmi ima ruwasqanpi",
+            "zh": "所以我想说的是，这不是一款高质量的游戏，但它很有趣，而且它做得很好"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "\"كانت لارا كروفت أول بطلة رئيسية لألعاب الفيديو",
             "de": "„Lara Croft war die erste große weibliche Videospiel-Protagonistin",
             "en": "\" Lara Croft was the first major female video game protagonist",
             "fr": "\" Lara Croft a été la première héroïne majeure d'un jeu vidéo",
+            "hr": "\" Lara Croft bila je prva velika ženska protagonistica video igrica",
             "it": "\"Lara Croft è stata la prima grande protagonista femminile di un videogioco",
-            "ja": "「ララ・クロフトはビデオゲームの最初の主要な女性主人公でした"
+            "ja": "「ララ・クロフトはビデオゲームの最初の主要な女性主人公でした",
+            "ka": "\"ლარა კროფტი იყო ვიდეო თამაშების პირველი მთავარი გმირი ქალი",
+            "my": "\" Lara Croft သည် ပထမဆုံး အမျိုးသမီး ဗီဒီယိုဂိမ်း ဇာတ်ကောင်ဖြစ်သည်။",
+            "qu": "\" Lara Croft sutiyuq warmiqa ñawpaq hatun warmi videojuegos protagonista karqan.\"",
+            "zh": "“劳拉·克劳馥是第一位电子游戏主要女性主角"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "سواء كنت في حاجة إلى خدمة طوارئ، أو كنت ببساطة تبحث عن جدولة الصيانة الدورية لحفرة الصرف الصحي أو نظام الصرف الصحي الخاص بك، فامنح المساعدة",
             "de": "Egal, ob Sie einen Notfalldienst benötigen oder einfach nur eine regelmäßige Wartung für Ihre Senkgrube oder Ihr Abwassersystem planen möchten, geben Sie Hilfe",
             "en": "Whether you're in need of emergency service, or you simply are looking to schedule regular maintenance for your Cesspool or Sewer System, give Help",
             "fr": "Que vous ayez besoin d'un service d'urgence ou que vous cherchiez simplement à planifier un entretien régulier de votre puisard ou de votre système d'égouts, donnez de l'aide",
+            "hr": "Bilo da vam je potrebna hitna usluga ili jednostavno želite zakazati redovito održavanje vaše septičke jame ili kanalizacijskog sustava, pružite pomoć",
             "it": "Che tu abbia bisogno di un servizio di emergenza o che tu stia semplicemente cercando di programmare una manutenzione regolare per il tuo pozzo nero o sistema fognario, fornisci aiuto",
-            "ja": "緊急サービスが必要な場合でも、単に汚水溜めや下水道システムの定期的なメンテナンスを計画している場合でも、ヘルプにご連絡ください。"
+            "ja": "緊急サービスが必要な場合でも、単に汚水溜めや下水道システムの定期的なメンテナンスを計画している場合でも、ヘルプにご連絡ください。",
+            "ka": "თუ თქვენ გჭირდებათ სასწრაფო დახმარება, ან უბრალოდ ეძებთ დაგეგმოთ რეგულარული მოვლა თქვენი Cesspool ან კანალიზაციის სისტემისთვის, მიეცით დახმარება",
+            "my": "သင်သည် အရေးပေါ်ဝန်ဆောင်မှု လိုအပ်သည်ဖြစ်စေ သို့မဟုတ် သင်၏ Cesspool သို့မဟုတ် Sewer System အတွက် ပုံမှန်ပြုပြင်ထိန်းသိမ်းရန် အချိန်ဇယားဆွဲရန် အကူအညီတောင်းပါ။",
+            "qu": "Ichapas servicio de emergencia necesitanki, utaq sapallayki maskachkanki programayta sapa kuti mantenimientota Cesspool utaq Sistema de Alcantarilladoykipaq, Yanapakuyta quy",
+            "zh": "无论您需要紧急服务，还是只是想为您的污水池或下水道系统安排定期维护，都可以提供帮助"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "وقد تقدم الطلاب المهتمون بالامتحان للامتحان عبر الإنترنت",
             "de": "Die an der Prüfung interessierten Studierenden haben sich online für die Prüfung angemeldet",
             "en": "The students interested in the exam have applied for the exam through online",
             "fr": "Les étudiants intéressés par l'examen ont postulé à l'examen en ligne",
+            "hr": "Studenti zainteresirani za ispit prijavili su se putem interneta",
             "it": "Gli studenti interessati all'esame hanno fatto domanda di iscrizione all'esame tramite online",
-            "ja": "試験に興味のある学生はオンラインで試験に申し込んだ。"
+            "ja": "試験に興味のある学生はオンラインで試験に申し込んだ。",
+            "ka": "გამოცდით დაინტერესებულმა სტუდენტებმა გამოცდაზე განაცხადი ონლაინ რეჟიმში შეიტანეს",
+            "my": "စာမေးပွဲကို စိတ်ပါဝင်စားသော ကျောင်းသားများသည် အွန်လိုင်းမှတစ်ဆင့် စာမေးပွဲဖြေဆိုရန် လျှောက်ထားကြသည်။",
+            "qu": "Chay examenpi interesakuq estudiantekunaqa internetnintakamam examenpaq mañakurqaku",
+            "zh": "有意参加考试的同学已通过网上报名"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "تعكس هذه الإجراءات النهج الذي تتبناه شركات الطيران الرائدة في جميع أنحاء العالم وقد تم تطبيقها منذ بعض الوقت",
             "de": "Diese Verfahren spiegeln den Ansatz führender Fluggesellschaften auf der ganzen Welt wider und sind seit einiger Zeit in Kraft.",
             "en": "These procedures reflect the approach adopted by leading airlines around the world and have been in place for some time",
             "fr": "Ces procédures reflètent l’approche adoptée par les principales compagnies aériennes du monde entier et sont en place depuis un certain temps.",
+            "hr": "Ovi postupci odražavaju pristup koji su usvojile vodeće svjetske zrakoplovne tvrtke i postoje već neko vrijeme",
             "it": "Tali procedure riflettono l'approccio adottato dalle principali compagnie aeree di tutto il mondo e sono in vigore da tempo.",
-            "ja": "これらの手順は、世界中の大手航空会社が採用しているアプローチを反映しており、しばらく前から実施されています。"
+            "ja": "これらの手順は、世界中の大手航空会社が採用しているアプローチを反映しており、しばらく前から実施されています。",
+            "ka": "ეს პროცედურები ასახავს მიდგომას, რომელიც მიღებულ იქნა წამყვანი ავიაკომპანიების მიერ მთელს მსოფლიოში და გარკვეული პერიოდის განმავლობაში არსებობს",
+            "my": "ဤလုပ်ထုံးလုပ်နည်းများသည် ကမ္ဘာတစ်ဝှမ်းရှိ ထိပ်တန်းလေကြောင်းလိုင်းများမှ လက်ခံကျင့်သုံးသည့် ချဉ်းကပ်မှုကို ရောင်ပြန်ဟပ်ပြီး အချိန်အတန်ကြာ တည်ရှိနေခဲ့သည်။",
+            "qu": "Kay ruwaykunaqa rikuchinmi pachantinpi umalliq avión compañiakunaq ruwasqankuta, chaymi unayña kashan",
+            "zh": "这些程序反映了全球领先航空公司所采用的做法，并且已经实施了一段时间"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "نضمن لك أن عملية شراء شاحن بطارية PANASONIC CGR-B/202A1B ستكون آمنة بنسبة 100%",
             "de": "uk garantiert, dass Ihre Transaktion für PANASONIC CGR-B/202A1B Akkuladegeräte 100% sicher ist",
             "en": "uk guarantee your PANASONIC CGR-B/202A1B battery chargers transaction will be 100% safe",
             "fr": "UK garantit que votre transaction de chargeurs de batterie PANASONIC CGR-B/202A1B sera 100% sûre",
-            "it": "uk garantisce che la tua transazione con caricabatterie PANASONIC CGR-B/202A1B sarà sicura al 100%",
-            "ja": "英国は、PANASONIC CGR-B/202A1Bバッテリー充電器の取引が100％安全であることを保証します"
+            "hr": "uk jamči da će vaša transakcija punjača baterija PANASONIC CGR-B/202A1B biti 100% sigurna",
+            "it": "uk garantisce che la tua transazione relativa ai caricabatterie PANASONIC CGR-B/202A1B sarà sicura al 100%",
+            "ja": "英国は、PANASONIC CGR-B/202A1Bバッテリー充電器の取引が100％安全であることを保証します",
+            "ka": "დიდი ბრიტანეთი გარანტიას გაძლევთ თქვენი PANASONIC CGR-B/202A1B ბატარეის დამტენის ტრანზაქცია 100% უსაფრთხო იქნება",
+            "my": "သင်၏ PANASONIC CGR-B/202A1B ဘက်ထရီအားသွင်းကိရိယာများ အရောင်းအ၀ယ် 100% ဘေးကင်းလိမ့်မည်ဟု ယူကေ အာမခံသည်",
+            "qu": "uk garantizay PANASONIC CGR-B/202A1B cargadores de baterías transacción 100% seguro kanqa",
+            "zh": "英国保证您的 PANASONIC CGR-B/202A1B 电池充电器交易将 100% 安全"
         }
     },
     {
         "Corpus": "Roots",
         "Text": {
+            "ar": "أدى تفجير طائرة بان آم الرحلة 103 المتجهة من لندن إلى نيويورك إلى مقتل 270 شخصًا، بما في ذلك جميع ركاب الطائرة البالغ عددهم 259 شخصًا وأحد عشر شخصًا على الأرض.",
             "de": "Bei dem Bombenanschlag auf den Pan-Am-Flug 103 von London nach New York kamen 270 Menschen ums Leben, darunter alle 259 Insassen des Flugzeugs und elf Personen am Boden.",
             "en": "The bombing of Pan Am Flight 103 from London to New York resulted in 270 fatalities, including all 259 of the airplane's occupants and eleven individuals on the ground",
             "fr": "L'attentat contre le vol Pan Am 103 reliant Londres à New York a fait 270 morts, dont les 259 occupants de l'avion et onze personnes au sol.",
+            "hr": "Bombaški napad na Pan Amov let 103 iz Londona za New York rezultirao je s 270 smrtnih slučajeva, uključujući svih 259 putnika u zrakoplovu i jedanaest osoba na zemlji",
             "it": "L'attentato al volo Pan Am 103 da Londra a New York provocò 270 vittime, tra cui tutti i 259 occupanti dell'aereo e undici persone a terra.",
-            "ja": "ロンドン発ニューヨーク行きのパンアメリカン航空103便爆破事件では、乗客259人全員と地上にいた11人を含む270人が死亡した。"
+            "ja": "ロンドン発ニューヨーク行きのパンアメリカン航空103便爆破事件では、乗客259人全員と地上にいた11人を含む270人が死亡した。",
+            "ka": "ლონდონიდან ნიუ-იორკის მიმართულებით ფრენის 103 Pan Am-ის დაბომბვის შედეგად დაიღუპა 270 ადამიანი, მათ შორის თვითმფრინავის 259 მგზავრი და თერთმეტი ადამიანი ადგილზე.",
+            "my": "လန်ဒန်မှ နယူးယောက်မြို့သို့ Pan Am Flight 103 ဗုံးကြဲတိုက်ခိုက်မှုကြောင့် လေယာဉ်စီးနင်းသူ ၂၅၉ ဦးနှင့် မြေပြင်ပေါ်ရှိ လူ ၁၁ ဦး အပါအဝင် လူ ၂၇၀ သေဆုံးခဲ့သည်။",
+            "qu": "Pan Am 103 nisqa avión Londres llaqtamanta Nueva York llaqtaman bombardeasqankupin 270 runakuna wañurqanku, chaypin kasharqanku llapa 259 avionpi tiyaqkuna, chunka hukniyoq runakunapas pampapi kasharqanku",
+            "zh": "泛美航空 103 号航班从伦敦飞往纽约的爆炸事件导致 270 人死亡，其中包括机上所有 259 名乘客和地面上的 11 名人员"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "\"إنهم يقتلوننا ويجوعوننا الآن\"، هذا ما قاله.",
             "de": "Sie lassen uns verhungern, jetzt bringen sie uns um\", sagte er",
             "en": "They are starving us, now they are killing us,\" he said",
             "fr": "« Ils nous affament, maintenant ils nous tuent », a-t-il déclaré.",
+            "hr": "Izgladnjuju nas, sad nas ubijaju”, rekao je",
             "it": "Ci stanno facendo morire di fame, ora ci stanno uccidendo\", ha detto",
-            "ja": "彼らは私たちを飢えさせ、今度は私たちを殺している」と彼は言った。"
+            "ja": "彼らは私たちを飢えさせ、今度は私たちを殺している」と彼は言った。",
+            "ka": "შიმშილობენ, ახლა გვკლავენ“, - განაცხადა მან",
+            "my": "သူတို့က ငါတို့ကို ငတ်နေတယ်၊ ​​အခု ငါတို့ကို သတ်နေတယ်” ဟု ပြောသည်။",
+            "qu": "Yarqaymanta wañuchiwanchik, kunanqa wañuchiwanchik, nispa",
+            "zh": "他们让我们挨饿，现在他们又要杀死我们，”他说"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "ربما لهذا السبب لم أستطع أن أتقبل شخصيته السخيفة في الدراما الرئيسية",
             "de": "Wahrscheinlich konnte ich mich deshalb mit seinem kitschigen Charakter im Boss-Drama nicht anfreunden, lol",
             "en": "Probably that's why I couldn't warm up to his cheesy character on the boss drama lol",
             "fr": "C'est probablement pour ça que je n'ai pas pu m'habituer à son personnage ringard dans le drame du boss mdr",
+            "hr": "Vjerojatno se zato nisam mogao zagrijati za njegov bezobrazni lik u drami o šefu lol",
             "it": "Probabilmente è per questo che non sono riuscito ad apprezzare il suo personaggio sdolcinato nel drama del boss lol",
-            "ja": "たぶんそれが、ボスドラマでの彼の安っぽいキャラクターに馴染めなかった理由でしょう（笑）"
+            "ja": "たぶんそれが、ボスドラマでの彼の安っぽいキャラクターに馴染めなかった理由でしょう（笑）",
+            "ka": "ალბათ ამიტომაც ვერ მოვახერხე მისი გახურებული პერსონაჟი ბოსის დრამაში :lol:",
+            "my": "အဲ့ဒါကြောင့် ဘော့စ်ဒရာမာမှာ သူ့ရဲ့ ချိုမြိန်တဲ့ ဇာတ်ကောင်ကို ငါ မပူလောင်နိုင်ခဲ့တာ ဖြစ်နိုင်တယ်။",
+            "qu": "Yaqapaschá chayrayku mana atirqanichu q’uñikuyta paypa queso personajenwan jefe dramapi lol",
+            "zh": "这可能就是为什么我无法接受他在老板剧中扮演的俗气角色，哈哈"
         }
     },
     {
         "Corpus": "Roots",
         "Text": {
+            "ar": "أجرت ويكي نيوز مقابلة معه حول قيمه وخبرته وحملته",
             "de": "Wikinews interviewte ihn zu seinen Werten, seiner Erfahrung und seiner Kampagne",
             "en": "Wikinews interviewed him regarding his values, his experience, and his campaign",
             "fr": "Wikinews l'a interviewé sur ses valeurs, son expérience et sa campagne",
+            "hr": "Wikinews ga je intervjuirao o njegovim vrijednostima, iskustvu i kampanji",
             "it": "Wikinews lo ha intervistato sui suoi valori, la sua esperienza e la sua campagna",
-            "ja": "ウィキニュースは彼の価値観、経験、そしてキャンペーンについてインタビューした。"
+            "ja": "ウィキニュースは彼の価値観、経験、そしてキャンペーンについてインタビューした。",
+            "ka": "Wikinews-მა ინტერვიუ ჩაატარა მის ღირებულებებთან, გამოცდილებასთან და მის კამპანიასთან დაკავშირებით",
+            "my": "Wikinews သည် သူ၏တန်ဖိုးများ၊ သူ၏အတွေ့အကြုံနှင့် သူ၏စည်းရုံးလှုံ့ဆော်မှုတို့နှင့် ပတ်သက်၍ အင်တာဗျူးခဲ့သည်။",
+            "qu": "Wikinews payta tapurqan chaninchayninkunamanta, experiencianmanta, campaña ruwasqanmanta",
+            "zh": "维基新闻采访了他，谈到了他的价值观、他的经历和他的运动"
         }
     },
     {
         "Corpus": "Gutenberg",
         "Text": {
+            "ar": "أخذ المسافرون أماكنهم في العربة، ومرة ​​أخرى رتابة الطريق، وخطوات الخيول الثابتة، وكلمات التشجيع المبهجة من سائقهم، احتكرت أفكار العقول النائمة.",
             "de": "Die Reisenden nahmen ihre Plätze im Wagen ein, und wieder beherrschte die Monotonie der Straße, der gleichmäßige Trab der Pferde, die singenden, aufmunternden Worte ihres Kutschers die Gedanken der schläfrigen Gemüter.",
             "en": "The travellers took their places in the carriage , and again the monotony of the road , the steady trot of the horses , the sing-song words of encouragement of their driver , monopolised the thoughts of sleepy minds",
             "fr": "Les voyageurs prirent place dans la voiture, et de nouveau la monotonie de la route, le trot régulier des chevaux, les paroles chantantes d'encouragement de leur chauffeur, monopolisèrent les pensées des esprits endormis.",
+            "hr": "Putnici su zauzeli svoja mjesta u kočiji, i opet su monotonija puta, ujednačen kas konja, pjevne riječi ohrabrenja njihovog vozača, monopolizirale misli pospanih umova.",
             "it": "I viaggiatori presero posto nella carrozza e di nuovo la monotonia della strada, il trotto costante dei cavalli, le parole cantilenanti di incoraggiamento del loro conducente, monopolizzarono i pensieri delle menti assonnate.",
-            "ja": "旅人たちは馬車に乗り込み、再び道の単調さ、馬の安定した速歩、御者の歌うような励ましの言葉が、眠い心の考えを独占した。"
+            "ja": "旅人たちは馬車に乗り込み、再び道の単調さ、馬の安定した速歩、御者の歌うような励ましの言葉が、眠い心を独占した。",
+            "ka": "მოგზაურებმა თავიანთი ადგილები დაიკავეს ეტლში და ისევ გზის ერთფეროვნება, ცხენების მუდმივი ტრიალი, მათი მძღოლის გამამხნევებელი სიტყვები, მონოპოლიზებული იყო მძინარე გონების ფიქრები.",
+            "my": "ခရီးသွားများသည် ရထားပေါ်၌ နေရာယူကြပြီး လမ်း၏ နီရဲနေသော မြင်းစီးသံများ၊ ယာဉ်မောင်းသူ၏ အားပေးစကား သီချင်းဆိုသံများက အိပ်ငိုက်နေသော အတွေးများကို လက်ဝါးကြီးအုပ်ထားပြန်သည်။",
+            "qu": "Viajerokunaqa carropi tiyanankuta hap’irqanku , yapamantataq ñanpa monotonía nisqa , caballokunaq mana sayaspa trotesqan , choferninkuq kallpachaq taki-taki simikuna , puñuq yuyaykunata monopolizarqan",
+            "zh": "旅客们坐进马车，单调的道路、马匹稳健的奔跑和车夫鼓励的话语再次占据了昏昏欲睡的头脑。"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "تم نقل ما لا يقل عن 23 آخرين إلى المستشفى، بعضهم مصاب بإصابات داخلية متعددة.",
             "de": "Mindestens 23 weitere wurden ins Krankenhaus eingeliefert, einige mit mehreren inneren Verletzungen",
             "en": "At least 23 others were hospitalized, some with multiple internal injuries",
             "fr": "Au moins 23 autres personnes ont été hospitalisées, certaines avec de multiples blessures internes.",
+            "hr": "Najmanje 23 druga su hospitalizirana, neki s višestrukim unutarnjim ozljedama",
             "it": "Almeno altre 23 persone sono state ricoverate in ospedale, alcune con ferite interne multiple",
-            "ja": "少なくとも23人が入院し、中には複数の内傷を負った人もいる。"
+            "ja": "少なくとも23人が入院し、中には複数の内傷を負った人もいる。",
+            "ka": "სულ მცირე 23 სხვა საავადმყოფოში გადაიყვანეს, ზოგიერთს შინაგანი მრავლობითი დაზიანებები აღენიშნებოდა",
+            "my": "ဒဏ်ရာရသူ ၂၃ ဦးထက်မနည်းကို ဆေးရုံတင်ထားရပြီး အချို့မှာ အတွင်းပိုင်းဒဏ်ရာများ ရရှိခဲ့သည်။",
+            "qu": "23 runakunallapas hospitalmanmi churasqa karqanku, wakintaq askha kutita ukhupi k’irisqa karqanku",
+            "zh": "至少有 23 人被送往医院，其中一些人有多处内伤"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "أراد الزوجان تصميمًا بسيطًا ومريحًا للمناظر الطبيعية يستخدم أضواءً موضعية دقيقة ومتناثرة تضيء الواجهات الحجرية الخارجية للمزرعة",
             "de": "Das Paar wollte eine einfache und entspannende Landschaftsgestaltung, bei der dezente und verstreute Scheinwerfer die äußeren Steinfassaden des Bauernhauses beleuchteten.",
             "en": "The couple wanted a simple and relaxing landscape design that employed subtle and scattered spot lights which illuminated the exterior stone facades of the farmhouse",
             "fr": "Le couple souhaitait un aménagement paysager simple et relaxant qui utilisait des spots subtils et dispersés qui illuminaient les façades extérieures en pierre de la ferme.",
+            "hr": "Par je želio jednostavan i opuštajući dizajn krajolika koji je koristio suptilna i raspršena svjetla koja su osvjetljavala vanjska kamena pročelja seoske kuće",
             "it": "La coppia desiderava un design paesaggistico semplice e rilassante che utilizzasse luci spot discrete e sparse che illuminassero le facciate esterne in pietra della fattoria",
-            "ja": "夫婦は、農家の石造りの外観を照らす、控えめで散りばめられたスポットライトを採用したシンプルでリラックスできる景観デザインを望んでいました。"
+            "ja": "夫婦は、農家の石造りの外観を照らす、控えめで散りばめられたスポットライトを採用したシンプルでリラックスできる景観デザインを望んでいました。",
+            "ka": "წყვილს სურდა მარტივი და დამამშვიდებელი ლანდშაფტის დიზაინი, რომელიც გამოიყენებდა დახვეწილ და მიმოფანტული ლაქების განათებას, რომელიც ანათებდა ფერმის სახლის გარე ქვის ფასადებს.",
+            "my": "သူတို့ဇနီးမောင်နှံသည် လယ်ယာအိမ်၏အပြင်ပိုင်း ကျောက်သားမျက်နှာစာများကို လင်းလက်တောက်ပစေသည့် သိမ်မွေ့ပြီး ပြန့်ကျဲနေသော အစက်အပြောက်မီးများကို အသုံးပြုကာ ရိုးရှင်းပြီး စိတ်အပန်းဖြေသည့် ရှုခင်းဒီဇိုင်းကို လိုချင်ကြသည်။",
+            "qu": "Chay casarasqakunaqa munarqankun huk diseño de paisaje simple y relajante nisqa, chaypin emplearqanku sutil hinallataq ch’eqesqa k’anchaykunata, chaykunan k’ancharichirqan hacienda wasiq rumimanta hawan fachadankunata",
+            "zh": "这对夫妇想要一个简单而轻松的景观设计，采用微妙和分散的聚光灯照亮农舍的外部石材立面"
         }
     },
     {
         "Corpus": "Wikipedia",
         "Text": {
+            "ar": "27 أغسطس 1883: انفجر بركان كراكاتوا في مضيق سوندا بين سومطرة وجاوة، بعد ثوران عنيف للغاية.",
             "de": "27. August 1883: Krakatau in der Sundastraße zwischen Sumatra und Java explodiert nach einem sehr heftigen Ausbruch",
             "en": "August 27 1883: Krakatoa, in the Sunda Strait between Sumatra and Java, explodes, after a very violent eruption",
             "fr": "27 août 1883 : le Krakatoa, dans le détroit de la Sonde entre Sumatra et Java, explose, après une éruption très violente",
+            "hr": "27. kolovoza 1883.: Krakatoa, u Sundskom tjesnacu između Sumatre i Jave, eksplodira nakon vrlo nasilne erupcije",
             "it": "27 agosto 1883: il Krakatoa, nello stretto della Sonda tra Sumatra e Giava, esplode, dopo un'eruzione molto violenta",
-            "ja": "1883年8月27日：スマトラ島とジャワ島の間のスンダ海峡にあるクラカタウ火山が、非常に激しい噴火を起こして爆発した。"
+            "ja": "1883年8月27日：スマトラ島とジャワ島の間のスンダ海峡にあるクラカタウ火山が、非常に激しい噴火を起こして爆発した。",
+            "ka": "1883 წლის 27 აგვისტო: კრაკატოა, სუნდას სრუტეში, სუმატრასა და ჯავას შორის, აფეთქდა ძალიან ძალადობრივი ამოფრქვევის შემდეგ.",
+            "my": "ဩဂုတ်လ 27 ရက် 1883 - ဆူမားတြားနှင့် ဂျာဗားကြားရှိ Sunda ရေလက်ကြားရှိ Krakatoa သည် အလွန်ပြင်းထန်သော မီးတောင်ပေါက်ကွဲပြီးနောက် ပေါက်ကွဲခဲ့သည်။",
+            "qu": "27 ñiqin anta situwa killapi 1883 watapi: Krakatoa, Sumatrawan Javawan chawpipi Sunda estrechopi, phatarirqan, ancha sinchi ruphaymanta",
+            "zh": "1883 年 8 月 27 日：位于苏门答腊和爪哇之间巽他海峡的喀拉喀托火山在一次非常猛烈的喷发后爆发"
         }
     },
     {
         "Corpus": "Wikipedia",
         "Text": {
+            "ar": "تم إزالة مجموعة الاضطرابات، بما في ذلك اضطراب النمو الشامل غير المحدد، والتوحد، ومتلازمة أسبرجر، ومتلازمة ريت، واضطراب النمو الحركي، واستبدالها بالمصطلح العام لاضطرابات طيف التوحد",
             "de": "Die Gruppierung der Störungen, darunter PDD-NOS, Autismus, Asperger-Syndrom, Rett-Syndrom und CDD, wurde entfernt und durch den allgemeinen Begriff „Autismus-Spektrum-Störungen“ ersetzt.",
             "en": "The grouping of disorders, including PDD-NOS, autism, Asperger syndrome, Rett syndrome, and CDD, has been removed and replaced with the general term of Autism Spectrum Disorders",
-            "fr": "Le regroupement des troubles, notamment les troubles du spectre autistique non spécifiés (TED-NOS), l'autisme, le syndrome d'Asperger, le syndrome de Rett et le trouble déficitaire de l'attention (TDAH), a été supprimé et remplacé par le terme général de troubles du spectre autistique.",
+            "fr": "Le regroupement des troubles, notamment les troubles du spectre autistique (TED-NOS), l'autisme, le syndrome d'Asperger, le syndrome de Rett et le trouble déficitaire de l'attention (TDAH), a été supprimé et remplacé par le terme général de troubles du spectre autistique.",
+            "hr": "Grupiranje poremećaja, uključujući PDD-NOS, autizam, Aspergerov sindrom, Rettov sindrom i CDD, uklonjeno je i zamijenjeno općim pojmom poremećaja autističnog spektra",
             "it": "Il raggruppamento di disturbi, tra cui PDD-NOS, autismo, sindrome di Asperger, sindrome di Rett e CDD, è stato rimosso e sostituito con il termine generale di disturbi dello spettro autistico",
-            "ja": "PDD-NOS、自閉症、アスペルガー症候群、レット症候群、CDDを含む障害の分類は削除され、自閉症スペクトラム障害という一般用語に置き換えられました。"
+            "ja": "PDD-NOS、自閉症、アスペルガー症候群、レット症候群、CDDを含む障害の分類は削除され、自閉症スペクトラム障害という一般用語に置き換えられました。",
+            "ka": "დარღვევების დაჯგუფება, მათ შორის PDD-NOS, აუტიზმი, ასპერგერის სინდრომი, რეტის სინდრომი და CDD, ამოღებულია და შეიცვალა აუტიზმის სპექტრის აშლილობის ზოგადი ტერმინით.",
+            "my": "PDD-NOS၊ Autism၊ Asperger Syndrome၊ Rett Syndrome နှင့် CDD အပါအဝင် ရောဂါအုပ်စုများကို ဖယ်ရှားပြီး Autism Spectrum Disorders ၏ ယေဘုယျအသုံးအနှုန်းဖြင့် အစားထိုးထားသည်။",
+            "qu": "Kay qutuchakuy kay unquykunamanta, kay PDD-NOS, autismo, kay síndrome de Asperger, kay síndrome de Rett chanta kay CDD kaqwan ima, hurqusqa chanta kay término general kaqwan kay Trastornos del Espectro Autista kaqwan tikrasqa",
+            "zh": "包括 PDD-NOS、自闭症、阿斯伯格综合征、雷特综合征和 CDD 在内的疾病分组已被删除，并替换为自闭症谱系障碍这一通用术语"
         }
     },
     {
         "Corpus": "cc_news",
         "Text": {
+            "ar": "ربما نجد تفسيراً محتملاً في معلومة أخرى قدمتها وكالة التجسس في كوريا الجنوبية: لقد قامت الصين منذ فترة طويلة بحماية كيم جونج نام وعائلته في قاعدتهم في ماكاو.",
             "de": "Eine mögliche Erklärung könnte in einem weiteren Nugget des südkoreanischen Geheimdienstes zu finden sein: China hatte Kim Jong Nam und seine Familie in ihrer Heimatbasis Macau lange Zeit geschützt.",
             "en": "A possible explanation might be found in another nugget provided by South Korea’s spy agency: China had long protected Kim Jong Nam and his family in their home base of Macau",
             "fr": "Une autre explication possible pourrait être trouvée dans une autre pépite fournie par l’agence d’espionnage sud-coréenne : la Chine a longtemps protégé Kim Jong Nam et sa famille dans leur base d’origine de Macao.",
+            "hr": "Moguće objašnjenje moglo bi se pronaći u još jednom podatku koji je dala južnokorejska špijunska agencija: Kina je dugo štitila Kim Jong Nama i njegovu obitelj u njihovoj matičnoj bazi Macau",
             "it": "Una possibile spiegazione potrebbe essere trovata in un’altra chicca fornita dall’agenzia di spionaggio della Corea del Sud: la Cina ha a lungo protetto Kim Jong Nam e la sua famiglia nella loro base di Macao.",
-            "ja": "韓国の情報機関が提供した別の情報にも、考えられる説明があるかもしれない。中国は長い間、マカオの拠点で金正男とその家族を保護してきたのだ。"
+            "ja": "韓国の情報機関が提供した別の情報にも、考えられる説明があるかもしれない。中国は長い間、マカオの拠点で金正男とその家族を保護してきたのだ。",
+            "ka": "შესაძლო ახსნა შეიძლება მოიძებნოს სამხრეთ კორეის ჯაშუშური სააგენტოს მიერ მოწოდებულ სხვა ნაგლეჯში: ჩინეთი დიდი ხანია იცავდა კიმ ჩენ ნამს და მის ოჯახს მაკაოში.",
+            "my": "ဖြစ်နိုင်ချေရှိသော ရှင်းပြချက်ကို တောင်ကိုရီးယားသူလျှိုအေဂျင်စီက ပံ့ပိုးပေးသည့် အခြားအတုံးအခဲတစ်ခုတွင် တရုတ်သည် ကင်ဂျုံနမ်နှင့် ၎င်း၏မိသားစုကို မကာအိုရှိ ၎င်းတို့၏နေအိမ်အခြေစိုက်စခန်းတွင် ကာလကြာရှည်စွာ အကာအကွယ်ပေးခဲ့သည်။",
+            "qu": "Huk sut’inchayta tarikunman huk nugget nisqapi, chaytan qorqan Corea del Sur nacionpa espía nisqa agencian: Chinaqa unayñan Kim Jong Nam familiantawan amacharqan Macau llaqtapi tiyasqankupi",
+            "zh": "韩国情报机构提供的另一个线索或许可以解释这一现象：中国长期以来一直在澳门保护金正男及其家人"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "\"لذا، للعودة إلى ما قلته، أعتقد أن هناك وظائف مختلفة داخل أنظمتهم والتي يرغبون في تحديثها بسرعات مختلفة",
             "de": "„Um also auf das zurückzukommen, was Sie gesagt haben: Ich denke, es gibt verschiedene Funktionen in ihren Systemen, die sie gerne mit unterschiedlicher Geschwindigkeit aktualisiert hätten.",
             "en": "\" So to go back to what you said, I think there's different functions within their systems that they would like to be updated at different speeds",
             "fr": "\" Donc, pour revenir à ce que vous avez dit, je pense qu'il y a différentes fonctions dans leurs systèmes qu'ils aimeraient voir mises à jour à des vitesses différentes.",
+            "hr": "\" Da se vratimo na ono što ste rekli, mislim da postoje različite funkcije unutar njihovih sustava koje bi željeli ažurirati različitim brzinama",
             "it": "\"Quindi, per tornare a quello che hai detto, penso che ci siano diverse funzioni nei loro sistemi che vorrebbero fossero aggiornate a velocità diverse",
-            "ja": "「それで、あなたのおっしゃったことに戻りますが、システム内にはさまざまな機能があり、それぞれ異なる速度で更新したいと考えていると思います。"
+            "ja": "「それで、あなたのおっしゃったことに戻りますが、システム内にはさまざまな機能があり、それぞれ異なる速度で更新したいと考えていると思います。",
+            "ka": "”ასე რომ დავუბრუნდეთ თქვენს ნათქვამს, ვფიქრობ, რომ მათ სისტემებში არის სხვადასხვა ფუნქციები, რომელთა განახლებაც მათ სურთ სხვადასხვა სიჩქარით.",
+            "my": "\"ဒါဆို မင်းပြောခဲ့တာကို ပြန်ကြည့်ရင်၊ သူတို့ရဲ့ စနစ်တွေထဲမှာ မတူညီတဲ့ အမြန်နှုန်းနဲ့ အပ်ဒိတ်လုပ်လိုတဲ့ လုပ်ဆောင်ချက်တွေ ရှိတယ်လို့ ငါထင်ပါတယ်။",
+            "qu": "\" Chaymi nisqaykiman kutinaypaq, yuyaykuni sistemanku ukhupi hukniray ruwaykuna kasqankuta, chaykunatan munankuman hukniray usqhaylla musuqyachisqa kayta.\"",
+            "zh": "“回到你刚才说的问题，我认为他们的系统内有不同的功能，他们希望以不同的速度更新"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "إعلان بعد عامين آخرين من الكلية، تم تجنيد مايك شيرت في فريق بيتسبرغ بايرتس",
             "de": "Anzeige Zwei weitere Jahre College später wird Mike Shirt zu den Pittsburgh Pirates gedraftet",
             "en": "Advertisement Two more years of college later, Mike Shirt is drafted into the Pittsburgh Pirates",
             "fr": "Publicité Deux années d'université plus tard, Mike Shirt est recruté par les Pirates de Pittsburgh",
+            "hr": "Oglas Još dvije godine koledža kasnije, Mike Shirt biva regrutiran u Pittsburgh Pirates",
             "it": "Pubblicità Dopo altri due anni di college, Mike Shirt viene arruolato nei Pittsburgh Pirates",
-            "ja": "広告 大学でさらに2年間過ごした後、マイク・シャツはピッツバーグ・パイレーツにドラフトされた。"
+            "ja": "広告 大学でさらに2年間過ごした後、マイク・シャツはピッツバーグ・パイレーツにドラフトされた。",
+            "ka": "რეკლამა კოლეჯიდან კიდევ ორი ​​წლის შემდეგ მაიკ შირტი პიტსბურგის მეკობრეებში შეიყვანეს",
+            "my": "Advertisement ကောလိပ်တက်ပြီး နှစ်နှစ်အကြာတွင် Mike Shirt ကို Pittsburgh ပင်လယ်ဓားပြများအဖြစ် ရေးဆွဲခဲ့သည်။",
+            "qu": "Publicidad Iskay wata mas universidadmanta, Mike Shirt Pittsburgh Pirates nisqaman akllasqa",
+            "zh": "又读了两年大学后，迈克·瑟夫特被选入匹兹堡海盗队"
         }
     },
     {
         "Corpus": "cc_news",
         "Text": {
+            "ar": "احتضنت سويفت والدتها الباكية بعد أن قالت هيئة المحلفين المكونة من ست نساء ورجلين في الولايات المتحدة",
             "de": "Swift umarmte ihre weinende Mutter, nachdem die sechs-Frau, zwei-Mann-Jury sagte in U",
             "en": "Swift hugged her crying mother after the six-woman, two-man jury said in U",
             "fr": "Swift a serré sa mère en pleurs dans ses bras après que le jury composé de six femmes et de deux hommes ait déclaré à U",
+            "hr": "Swift je zagrlila svoju uplakanu majku nakon što je žiri od šest žena i dva člana rekao u U",
             "it": "Swift ha abbracciato la madre in lacrime dopo che la giuria composta da sei donne e due uomini ha dichiarato a U",
-            "ja": "スウィフトは、米国の陪審員6人、男性2人が、"
+            "ja": "スウィフトは、米国の陪審員6人、男性2人が、",
+            "ka": "სვიფტი ჩაეხუტა ატირებული დედას მას შემდეგ, რაც ექვსკაციანმა, ორკაციანმა ჟიურიმ თქვა აშშ-ში",
+            "my": "Swift ဟာ အမျိုးသမီးခြောက်ယောက်ကို ကြည့်ပြီး ငိုနေတဲ့ မိခင်ကို ပွေ့ဖက်လိုက်တယ်လို့ ဂျူရီလူကြီးနှစ်ယောက်က U မှာ ပြောခဲ့ပါတယ်။",
+            "qu": "Swift waqaq mamanta abrazarqa suqta warmi qipata, iskay runa jurado nisqa U",
+            "zh": "在六名女性和两名男性陪审团在美国表示"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "مرحبًا بكم في Clix O’Clock، وهي ميزة أسبوعية جديدة هنا على We the Nerdy",
             "de": "Willkommen bei Clix O’Clock, einem neuen wöchentlichen Feature hier auf We the Nerdy",
             "en": "Welcome to Clix O’Clock, a new weekly feature here on We the Nerdy",
             "fr": "Bienvenue à Clix O’Clock, une nouvelle rubrique hebdomadaire ici sur We the Nerdy",
+            "hr": "Dobro došli u Clix O’Clock, novu tjednu značajku ovdje na We the Nerdy",
             "it": "Benvenuti a Clix O’Clock, una nuova rubrica settimanale qui su We the Nerdy",
-            "ja": "We the Nerdyの毎週の特集「Clix O’Clock」へようこそ"
+            "ja": "We the Nerdyの毎週の特集「Clix O’Clock」へようこそ",
+            "ka": "კეთილი იყოს თქვენი მობრძანება Clix O'Clock-ში, ახალ ყოველკვირეულ ფუნქციაზე აქ We the Nerdy-ზე",
+            "my": "We the Nerdy တွင် ဤနေရာတွင် အပတ်စဉ် အင်္ဂါရပ်အသစ်ဖြစ်သော Clix O'Clock မှ ကြိုဆိုပါသည်။",
+            "qu": "Allin hamusqayki Clix O’Clock nisqaman, huk musuq sapa semana ruway kaypi We the Nerdy nisqapi",
+            "zh": "欢迎来到 Clix O’Clock，这是 We the Nerdy 的每周新栏目"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "Master Mobile هي شركة عائلية تقع في قلب ستافوردشاير، وقد تم تأسيسنا في هذه المنطقة الآن منذ أقل من 3 سنوات",
             "de": "Master Mobile ist ein familiengeführtes Unternehmen im Herzen von Staffordshire. Wir sind seit knapp 3 Jahren in dieser Gegend ansässig.",
             "en": "Master Mobile is a family run business set in the heart of Staffordshire, we have been established in this area now for just under 3 years",
             "fr": "Master Mobile est une entreprise familiale située au cœur du Staffordshire, nous sommes établis dans cette région depuis un peu moins de 3 ans",
+            "hr": "Master Mobile je obiteljska tvrtka smještena u srcu Staffordshirea, a na ovom smo području prisutni tek nešto manje od 3 godine",
             "it": "Master Mobile è un'azienda a conduzione familiare situata nel cuore dello Staffordshire, siamo presenti in questa zona da poco meno di 3 anni",
-            "ja": "マスターモバイルはスタッフォードシャーの中心部にある家族経営の会社で、この地域に設立されてから3年弱になります。"
+            "ja": "マスターモバイルはスタッフォードシャーの中心部にある家族経営の会社で、この地域に設立されてから3年弱になります。",
+            "ka": "Master Mobile არის საოჯახო ბიზნესი, რომელიც მდებარეობს სტაფორდშირის შუაგულში, ჩვენ დაფუძნებული ვართ ამ მხარეში 3 წელზე ნაკლები ხნის განმავლობაში.",
+            "my": "Master Mobile သည် Staffordshire ၏ဗဟိုတွင်တည်ရှိသောမိသားစုလည်ပတ်စီးပွားရေးလုပ်ငန်းတစ်ခုဖြစ်ပြီးကျွန်ုပ်တို့သည်ဤဧရိယာတွင်ယခုအခါ 3 နှစ်အောက်သာတည်ထောင်ခဲ့သည်",
+            "qu": "Master Mobile huk ayllu purichisqa negocio Staffordshire sunqunpi churasqa, kunan kay kitipi sayarichisqa kayku aswan pisilla 3 watamanta",
+            "zh": "Master Mobile 是一家位于斯塔福德郡中心的家族企业，我们在这个地区成立至今不到 3 年"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "قال ThunderBird منذ أكثر من 7 سنوات: هذا يعني أن فلاندر لا تستطيع قتل نفسها، ويمكن أن تصاب لونا ديال بالجنون على ريميليا، ومع ذلك لن تتقدم في السن/تموت بسبب الشيخوخة",
             "de": "RaptorJesus vor über 7 Jahren ThunderBird sagte: Das bedeutet, dass Flandre sich nicht umbringen kann und dass der Luna Dial bei Remilia durchdrehen kann und sie trotzdem nicht altert/an Altersschwäche stirbt",
             "en": "RaptorJesus over 7 years ago ThunderBird said: That means Flandre can't kill herself, and the Luna Dial can go bonkers on Remilia, and she still won't age/die of old age",
             "fr": "RaptorJesus il y a plus de 7 ans ThunderBird a dit : Cela signifie que Flandre ne peut pas se suicider, et que le Luna Dial peut devenir fou sur Remilia, et elle ne vieillira toujours pas/ne mourra pas de vieillesse",
+            "hr": "RaptorJesus je prije više od 7 godina ThunderBird rekao: To znači da se Flandre ne može ubiti, a Luna Dial može poludjeti na Remiliju, a ona i dalje neće ostariti/umrijeti od starosti",
             "it": "RaptorJesus oltre 7 anni fa ThunderBird ha detto: Ciò significa che Flandre non può uccidersi, e il Luna Dial può impazzire con Remilia, e lei non invecchierà/morirà di vecchiaia",
-            "ja": "RaptorJesus 7年以上前 ThunderBirdは言った: つまり、フランドルは自殺できず、ルナダイアルはレミリアに狂ったように襲い掛かっても、彼女は老衰で死ぬことはない。"
+            "ja": "RaptorJesus 7年以上前 ThunderBirdは言った: つまり、フランドルは自殺できず、ルナダイアルがレミリアに狂ったように襲い掛かっても、彼女は老衰で死ぬことはない。",
+            "ka": "RaptorJesus-მა 7 წელზე მეტი ხნის წინ ThunderBird-მა თქვა: ეს ნიშნავს, რომ ფლანდრი ვერ მოიკლავს თავის თავს და ლუნა აკრიფეს შეუძლია რემილიაზე გაბრაზება და ის მაინც არ დაბერდება/მოკვდება სიბერით.",
+            "my": "RaptorJesus သည် လွန်ခဲ့သော 7 နှစ်ကျော်က ThunderBird ကပြောခဲ့သည်- ဆိုလိုသည်မှာ Flandre သည် သူ့ကိုယ်သူ မသတ်နိုင်တော့ဘဲ Luna Dial သည် Remilia ပေါ်တွင် ရူးသွပ်သွားကာ သူမသည် အသက်ကြီး၍ အသက်မသေသေးပါ။",
+            "qu": "RaptorJesus 7 wata masnin ñawpaqta ThunderBird nirqa: Chayqa niyta munan Flandre mana wañuchikuyta atinchu, chaymanta Luna Dial Remiliapi bonkers riyta atin, hinallataq payqa manaraq machuyanqachu/wañunqa machuyaymanta",
+            "zh": "RaptorJesus 7 年前 ThunderBird 说：这意味着芙兰朵露不能自杀，而月神钟可以对蕾米莉亚发疯，而她仍然不会衰老/老死"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "تصميم سهل الإمساك به يجعل الإطار الرفيع للجهاز اللوحي من السهل حمله بيد واحدة، مما يتيح لك استخدام اليد الأخرى للتنقل عبر التطبيقات أو مصافحة الغرباء",
             "de": "Leicht zu haltendes Design Der dünne Rahmen des Tablets erleichtert das Halten mit einer Hand, sodass die andere Hand frei ist, um durch Apps zu tippen oder Fremden ein High-Five zu geben",
             "en": "Easy-to-Hold Design The tablet’s thin bezel makes it easier to hold it with one hand, freeing up the other to tap through apps or high-five strangers",
             "fr": "Conception facile à tenir La fine bordure de la tablette permet de la tenir plus facilement d'une seule main, libérant ainsi l'autre pour parcourir les applications ou saluer des inconnus",
+            "hr": "Dizajn koji se lako drži Tanki okvir tableta olakšava držanje jednom rukom, oslobađajući drugu da tapka po aplikacijama ili daje pet stranaca",
             "it": "Design facile da tenere La cornice sottile del tablet rende più facile tenerlo con una mano, liberando l'altra per scorrere le app o fare il cinque con gli sconosciuti",
-            "ja": "持ちやすいデザインタブレットの薄いベゼルにより、片手で持ちやすくなり、もう片方の手でアプリをタップしたり、見知らぬ人とハイタッチしたりできます。"
+            "ja": "持ちやすいデザインタブレットの薄いベゼルにより、片手で持ちやすくなり、もう片方の手でアプリをタップしたり、見知らぬ人とハイタッチしたりできます。",
+            "ka": "ადვილად დასაჭერი დიზაინი ტაბლეტის თხელი ჩარჩო აადვილებს მის დაჭერას ერთი ხელით, ათავისუფლებს მეორეს, რომ შეეხოთ აპებს ან ხუთ უცნობ ადამიანს",
+            "my": "ကိုင်ရလွယ်ကူသော ဒီဇိုင်း Tablet ၏ ပါးလွှာသော ဘေးဘောင်များသည် အက်ပ်များ သို့မဟုတ် လူစိမ်းငါးဦးကို နှိပ်ရန် လက်တစ်ဖက်ဖြင့် ကိုင်ထားရန် ပိုမိုလွယ်ကူစေသည်။",
+            "qu": "Diseño fácil hap’inapaq Tabletapa llañu biselninqa aswan facilta huk makiwan hap’iyta ruwan, hukninta kacharichin apps utaq alto-pichqa mana riqsisqa runakunata ñit’inanpaq",
+            "zh": "易于握持的设计平板电脑的边框很薄，可以更轻松地用一只手握持，从而腾出另一只手来浏览应用程序或与陌生人击掌"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "وأشار الزعماء إلى أن \"منطقة باكستان هي الأكثر أهمية من الناحية الاستراتيجية في قارة الهند، ويمكن تلبية غالبية متطلباتنا الاستراتيجية\".",
             "de": "„Das Gebiet Pakistans“, so die Chefs, „ist strategisch das wichtigste auf dem indischen Kontinent und die Mehrheit unserer strategischen Anforderungen könnte erfüllt werden",
             "en": "‘The area of Pakistan’, the chiefs noted, ‘is strategically the most important in the continent of India and the majority of our strategic requirements could be met",
             "fr": "« La région du Pakistan », ont noté les chefs, « est stratégiquement la plus importante du continent indien et la majorité de nos besoins stratégiques pourraient être satisfaits",
+            "hr": "'Područje Pakistana', istaknuli su šefovi, 'strateški je najvažnije na indijskom kontinentu i većina naših strateških zahtjeva može se ispuniti",
             "it": "\"L'area del Pakistan\", hanno osservato i capi, \"è strategicamente la più importante nel continente indiano e la maggior parte delle nostre esigenze strategiche potrebbe essere soddisfatta",
-            "ja": "「パキスタン地域はインド大陸で戦略的に最も重要であり、我々の戦略的要求の大部分は満たされる可能性がある」と首脳らは指摘した。"
+            "ja": "「パキスタン地域はインド大陸で戦略的に最も重要であり、我々の戦略的要求の大部分は満たされる可能性がある」と首脳らは指摘した。",
+            "ka": "„პაკისტანის ტერიტორია“, აღნიშნეს მეთაურებმა, „სტრატეგიულად ყველაზე მნიშვნელოვანია ინდოეთის კონტინენტზე და ჩვენი სტრატეგიული მოთხოვნების უმეტესი ნაწილი შეიძლება დაკმაყოფილდეს.",
+            "my": "“ပါကစ္စတန်နယ်မြေ” အကြီးအကဲများသည် ‘အိန္ဒိယတိုက်ကြီးတွင် မဟာဗျူဟာအရ အရေးအကြီးဆုံးဖြစ်ပြီး ကျွန်ုပ်တို့၏ဗျူဟာမြောက်လိုအပ်ချက်အများစုကို ဖြည့်ဆည်းပေးနိုင်သည်’ ဟု အကြီးအကဲများက မှတ်ချက်ပြုခဲ့သည်။",
+            "qu": "‘Pakistán suyupi’, umalliqkuna qhawarirqanku, ‘estratégicamente aswan importante India continentepi hinallataq aswan askha estratégico requisitonchiskuna hunt’akunman",
+            "zh": "酋长们指出，“巴基斯坦地区在战略上是印度大陆最重要的地区，我们的大部分战略需求都可以得到满足"
         }
     },
     {
         "Corpus": "Wikipedia",
         "Text": {
+            "ar": "لقد تطورت الجوانب الاجتماعية والثقافية للتوحد: يسعى البعض في المجتمع إلى إيجاد علاج، في حين يعتقد البعض الآخر أن التوحد هو ببساطة طريقة أخرى للوجود.",
             "de": "Gesellschaftliche und kulturelle Aspekte des Autismus haben sich entwickelt: Einige in der Gemeinschaft suchen nach einer Heilung, während andere glauben, dass Autismus einfach eine andere Art des Seins ist",
             "en": "Societal and cultural aspects of autism have developed: some in the community seek a cure, while others believe that autism is simply another way of being",
             "fr": "Les aspects sociétaux et culturels de l’autisme se sont développés : certains membres de la communauté cherchent un remède, tandis que d’autres pensent que l’autisme n’est qu’une autre façon d’être.",
+            "hr": "Društveni i kulturni aspekti autizma su se razvili: neki u zajednici traže lijek, dok drugi vjeruju da je autizam jednostavno još jedan način postojanja",
             "it": "Gli aspetti sociali e culturali dell'autismo si sono sviluppati: alcuni nella comunità cercano una cura, mentre altri credono che l'autismo sia semplicemente un altro modo di essere",
-            "ja": "自閉症の社会的、文化的側面は発展してきた。コミュニティの中には治療法を求める者もいるが、自閉症は単なる存在のあり方だと信じる者もいる。"
+            "ja": "自閉症の社会的、文化的側面は発展してきた。コミュニティの中には治療法を求める者もいるが、自閉症は単なる存在の別の形であると信じる者もいる。",
+            "ka": "განვითარდა აუტიზმის სოციალური და კულტურული ასპექტები: საზოგადოებაში ზოგი ეძებს განკურნებას, ზოგი კი თვლის, რომ აუტიზმი უბრალოდ სხვა გზაა.",
+            "my": "Autism ၏ လူမှုအသိုင်းအဝိုင်းနှင့် ယဉ်ကျေးမှုဆိုင်ရာ ရှုထောင့်များ ဖွံ့ဖြိုးလာပါပြီ- အချို့သော အသိုင်းအဝိုင်းမှ အချို့က Autism သည် ရိုးရိုးရှင်းရှင်းဖြစ်ခြင်း၏ အခြားနည်းတစ်နည်းဟု ယုံကြည်ကြသော်လည်း အချို့က ကုသနည်းကို ရှာဖွေနေကြပါသည်။",
+            "qu": "Autismomanta aspectos societales y culturales nisqakunan wiñarqan: wakin llaqtapiqa hampiyta maskhanku, wakintaq autismo nisqa huk ruwaylla kananpaq yuyaykunku",
+            "zh": "自闭症的社会和文化层面已经发展起来：社区中有些人寻求治愈方法，而其他人则认为自闭症只是另一种存在方式"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "يشرف عليها مجلس مكون من خمسة أعضاء، ويديرها فريق تنفيذي، وتضم خمسة موظفين وحوالي 20 متطوعًا ومتدربًا",
             "de": "Es wird von einem fünfköpfigen Vorstand beaufsichtigt, von einem Führungsteam geleitet, hat fünf Mitarbeiter und rund 20 Freiwillige und Praktikanten",
             "en": "It is supervised by a Board of five members, managed by an executive team, has five employees and around 20 volunteers and interns",
-            "fr": "Elle est supervisée par un Conseil d'Administration de cinq membres, gérée par une équipe exécutive, compte cinq salariés et une vingtaine de bénévoles et stagiaires",
+            "fr": "Elle est supervisée par un Conseil d'Administration de cinq membres, gérée par une équipe de direction, compte cinq salariés et une vingtaine de bénévoles et stagiaires",
+            "hr": "Nadzire ga Odbor od pet članova, njime upravlja izvršni tim, ima pet zaposlenih i oko 20 volontera i pripravnika",
             "it": "È supervisionato da un Consiglio di cinque membri, gestito da un team esecutivo, ha cinque dipendenti e circa 20 volontari e stagisti",
-            "ja": "5人のメンバーからなる理事会によって監督され、経営陣によって運営され、5人の従業員と約20人のボランティアとインターンがいます。"
+            "ja": "5人のメンバーからなる理事会によって監督され、経営陣によって運営され、5人の従業員と約20人のボランティアとインターンがいます。",
+            "ka": "მას ზედამხედველობს ხუთწევრიანი საბჭო, რომელსაც მართავს აღმასრულებელი გუნდი, ჰყავს ხუთი თანამშრომელი და დაახლოებით 20 მოხალისე და სტაჟიორი.",
+            "my": "၎င်းအား အမှုဆောင်အဖွဲ့မှ စီမံခန့်ခွဲသော အဖွဲ့ဝင်ငါးဦးရှိသော ဘုတ်အဖွဲ့မှ ကြီးကြပ်ထားပြီး ဝန်ထမ်းငါးဦးနှင့် စေတနာ့ဝန်ထမ်းနှင့် အလုပ်သင် ၂၀ ခန့်ရှိသည်။",
+            "qu": "Pichqa runakunayuq Junta Directivapa qawasqan, equipo ejecutivo nisqawan kamachisqa, pichqa llamkaqkunayuq, yaqa 20 voluntarios hinaspa pasantekunayuq",
+            "zh": "它由五名成员组成的董事会监督，由执行团队管理，拥有五名员工和约 20 名志愿者和实习生"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "من وجهة نظر اللاعب، لا تريد IRPA أن يكون هذا النقاش بمثابة تشتيت للانتباه عن التأكد من قيام اللاعبين بالشيء الصحيح الآن",
             "de": "Aus Spielersicht möchte IRPA nicht, dass diese Debatte davon ablenkt, sicherzustellen, dass die Spieler jetzt das Richtige tun.",
             "en": "From a player’s perspective IRPA does not want that debate to be a distraction from making sure the right thing is done by the players now",
             "fr": "Du point de vue des joueurs, l’IRPA ne veut pas que ce débat détourne l’attention de la nécessité de s’assurer que les joueurs font ce qu’il faut maintenant.",
+            "hr": "Iz perspektive igrača, IRPA ne želi da ta rasprava bude smetnja od osiguravanja da igrači sada rade pravu stvar",
             "it": "Dal punto di vista di un giocatore, l’IRPA non vuole che quel dibattito sia una distrazione dal garantire che i giocatori facciano la cosa giusta ora.",
-            "ja": "選手の観点から、IRPAは、その議論が、選手たちが今正しいことを確実にすることを妨げるものであってほしくない。"
+            "ja": "選手の観点から、IRPAは、その議論が、選手たちが今正しいことを確実にすることを妨げるものであってほしくない。",
+            "ka": "მოთამაშის პერსპექტივიდან IRPA-ს არ სურს, რომ ეს დებატები იყოს ყურადღების გაფანტვა იმაში, რომ დარწმუნდეს, რომ მოთამაშეები ახლა სწორად აკეთებენ საქმეს.",
+            "my": "ကစားသမားတစ်ဦး၏ရှုထောင့်မှနေ၍ IRPA သည် ယခုပွဲ၌ ကစားသမားများ မှန်ကန်သောအရာကို လုပ်ဆောင်ကြောင်း သေချာစေခြင်းမှ အနှောင့်အယှက်မဖြစ်စေလိုပါ။",
+            "qu": "Huk pukllaqpa qhawariyninmanta IRPA mana munanchu chay debate huk distracción kananta seguro ruwasqa allin ruwasqamanta pukllaqkuna kunan",
+            "zh": "从球员的角度来看，IRPA 不希望这场争论分散球员的注意力，确保他们现在能做正确的事情"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "في الختام، أنا متحمس جدًا لتقديم دورة العادة الواحدة لك",
             "de": "Abschließend freue ich mich sehr, Ihnen den ONE Habit Kurs vorstellen zu dürfen",
             "en": "In Closing I’m really excited to introduce to you The ONE Habit Course",
             "fr": "En conclusion, je suis vraiment ravi de vous présenter le cours ONE Habit",
+            "hr": "Na kraju, jako sam uzbuđen što vam mogu predstaviti ONE Habit Course",
             "it": "In chiusura sono davvero entusiasta di presentarti il ​​corso ONE Habit",
-            "ja": "最後に、ONE Habitコースを紹介できることをとても嬉しく思います"
+            "ja": "最後に、ONE Habitコースを紹介できることをとても嬉しく思います",
+            "ka": "დასასრულს, ძალიან მოხარული ვარ, რომ წარმოგიდგინოთ ONE Habit Course",
+            "my": "အပိတ်မှာ ONE Habit Course နဲ့ မိတ်ဆက်ပေးရတာ အရမ်းစိတ်လှုပ်ရှားမိပါတယ်။",
+            "qu": "Wichqaypi ancha kusisqa kachkani riqsichinaypaq The ONE Habit Course",
+            "zh": "最后，我很高兴向你们介绍“一个习惯课程”"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "DisableTab: false # ShowPluginNameOnMessages: إظهار اسم البرنامج المساعد في الرسائل المرسلة إلى اللاعبين # ووحدة التحكم",
             "de": "DisableTab : false # ShowPluginNameOnMessages: Zeigt den Plugin-Namen in Nachrichten an, die an die Spieler # und die Konsole gesendet werden",
             "en": "DisableTab : false # ShowPluginNameOnMessages: Show the plugin name on messages sent to the players # and console",
             "fr": "DisableTab : false # ShowPluginNameOnMessages : Afficher le nom du plugin sur les messages envoyés aux joueurs # et à la console",
+            "hr": "DisableTab : false # ShowPluginNameOnMessages: Prikaži naziv dodatka u porukama poslanim igračima # i konzoli",
             "it": "DisableTab : false # ShowPluginNameOnMessages: Mostra il nome del plugin nei messaggi inviati ai giocatori # e alla console",
-            "ja": "DisableTab : false # ShowPluginNameOnMessages: プレイヤーとコンソールに送信されるメッセージにプラグイン名を表示します"
+            "ja": "DisableTab : false # ShowPluginNameOnMessages: プレイヤーとコンソールに送信されるメッセージにプラグイン名を表示します",
+            "ka": "DisableTab : false # ShowPluginNameOnMessages: მოდულის სახელის ჩვენება მოთამაშეებისთვის გაგზავნილ შეტყობინებებზე # და კონსოლზე",
+            "my": "DisableTab : false # ShowPluginNameOnMessages- ကစားသမား # နှင့် ကွန်ဆိုးလ်သို့ ပေးပို့သော မက်ဆေ့ချ်တွင် ပလပ်အင်အမည်ကို ပြပါ",
+            "qu": "DisableTab : false # ShowPluginNameOnMessages: Pukllaqkunaman # chaymanta consola kachasqa willakuykunapi plugin sutita rikuchiy",
+            "zh": "DisableTab : false # ShowPluginNameOnMessages: 在发送给玩家和控制台的消息上显示插件名称"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "\"وتشكل هذه التغييرات جزءاً من جهد أوسع نطاقاً يبذله البنتاغون لتقليص إنفاقه المتوقع بمقدار 487 مليار دولار على مدى العقد المقبل وفقاً لاتفاقية خفض العجز التي توصل إليها الرئيس أوباما مع الكونجرس في أغسطس/آب الماضي.",
             "de": "„Die Änderungen sind Teil einer umfassenderen Anstrengung des Pentagons, seine geplanten Ausgaben im nächsten Jahrzehnt um 487 Milliarden Dollar zu senken, gemäß einer Vereinbarung zur Defizitreduzierung, die Präsident Obama im August mit dem Kongress getroffen hat.",
             "en": "” The changes are part of a broader effort by the Pentagon to decrease its projected spending by $487 billion over the next decade in accordance with a deficit-reduction deal President Obama reached with Congress in August",
             "fr": "« Ces changements font partie d’un effort plus large du Pentagone visant à réduire ses dépenses prévues de 487 milliards de dollars au cours de la prochaine décennie, conformément à un accord de réduction du déficit conclu par le président Obama avec le Congrès en août.",
+            "hr": "” Promjene su dio šireg napora Pentagona da smanji svoju predviđenu potrošnju za 487 milijardi dolara tijekom sljedećeg desetljeća u skladu s dogovorom o smanjenju deficita koji je predsjednik Obama postigao s Kongresom u kolovozu",
             "it": "”I cambiamenti fanno parte di uno sforzo più ampio del Pentagono per ridurre la spesa prevista di 487 miliardi di dollari nel prossimo decennio, in conformità con un accordo di riduzione del deficit che il presidente Obama ha raggiunto con il Congresso in agosto.",
-            "ja": "この変更は、オバマ大統領が8月に議会と合意した財政赤字削減協定に基づき、国防総省が今後10年間で支出予定額を4870億ドル削減するという広範な取り組みの一環である。"
+            "ja": "「この変更は、オバマ大統領が8月に議会と合意した財政赤字削減協定に従い、国防総省が今後10年間で支出予定額を4870億ドル削減するという広範な取り組みの一環である。",
+            "ka": "ცვლილებები პენტაგონის უფრო ფართო ძალისხმევის ნაწილია, რათა მომავალი ათწლეულის განმავლობაში მისი დაგეგმილი ხარჯები 487 მილიარდი დოლარით შემცირდეს დეფიციტის შემცირების შესახებ შეთანხმების შესაბამისად, რომელიც პრეზიდენტმა ობამამ კონგრესთან აგვისტოში მიაღწია.",
+            "my": "” အပြောင်းအလဲများသည် ပင်တဂွန်၏ ကျယ်ကျယ်ပြန့်ပြန့် ကြိုးပမ်းမှု၏ တစ်စိတ်တစ်ပိုင်းဖြစ်ပြီး လာမည့်ဆယ်စုနှစ်အတွင်း ဘတ်ဂျက်လိုငွေပြမှု လျှော့ချရေး သဘောတူညီချက်အရ သမ္မတအိုဘားမားက လာမည့်ဆယ်စုနှစ်တွင် ကွန်ဂရက်လွှတ်တော်နှင့် ချိတ်ဆက်ထားသော ၎င်း၏အသုံးစရိတ်ကို ဒေါ်လာ ၄၈၇ ဘီလီယံ လျှော့ချရန် ပိုမိုကျယ်ပြန့်သော ကြိုးပမ်းမှု၏ တစ်စိတ်တစ်ပိုင်းဖြစ်သည်။",
+            "qu": "” Kay tikrakuykunaqa Pentágonopa aswan hatun kallpachakuyninpa hukninmi, hamuq chunka watakunapi 487.000 millones dolarkunawan proyectasqa gastonta pisiyachinanpaq, chaytaqa ruwarqa déficit pisiyachiy acuerdoman hinam, Obama umalliqmi agosto killapi Congresowan chayarqa",
+            "zh": "“这些变化是五角大楼为根据奥巴马总统 8 月与国会达成的赤字削减协议，在未来十年内削减 4870 亿美元预计支出而做出的更广泛努力的一部分"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "أمسك رأس البقرة وأجبرها على أكل العشب",
             "de": "Er hielt den Kopf der Kuh fest und zwang sie, Gras zu fressen",
             "en": "he held the cow's head and forced it to eat grass",
             "fr": "il a tenu la tête de la vache et l'a forcée à manger de l'herbe",
+            "hr": "držao je kravu za glavu i tjerao je da jede travu",
             "it": "tenne la testa della mucca e la costrinse a mangiare l'erba",
-            "ja": "彼は牛の頭を掴んで草を食べさせた"
+            "ja": "彼は牛の頭を掴んで草を食べさせた",
+            "ka": "ძროხას თავი ეჭირა და აიძულა ბალახი ეჭამა",
+            "my": "နွားခေါင်းကိုကိုင်ပြီး မြက်စားခိုင်းတယ်။",
+            "qu": "nispas wakapa umanmanta hap’ispa qurata mikhunanpaq hikutasqa",
+            "zh": "他抓住牛的头，强迫它吃草"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
-            "de": "„Sie nutzt ihre Intelligenz, stellt Munition aus der Umgebung her, um die Feinde einen nach dem anderen zu dezimieren, und verwendet die Umgebung gegen sie. So gelingt es ihr, trotz überwältigender Chancen erfolgreich zu sein.",
+            "ar": "\"باستخدام ذكائها، وصنع أنواع الذخيرة من البيئة لتقليص أعداد الأعداء واحدًا تلو الآخر، واستخدام البيئة ضدهم، فهذه هي الطريقة التي تنجح بها ضد الصعاب الساحقة",
+            "de": "„Sie nutzt ihre Intelligenz, stellt Munitionstypen aus der Umgebung her, um den Feind einen nach dem anderen zu dezimieren, und verwendet die Umgebung gegen sie. Auf diese Weise gelingt es ihr, trotz überwältigender Chancen erfolgreich zu sein.",
             "en": "\"Using her smarts, crafting ammo types out of the environment to whittle down the enemy one at a time, using the environment against them, that’s a way she succeeds against overwhelming odds",
             "fr": "« En utilisant son intelligence, en créant des types de munitions à partir de l'environnement pour éliminer les ennemis un par un, en utilisant l'environnement contre eux, c'est une façon pour elle de réussir contre des probabilités écrasantes",
+            "hr": "\"Koristeći svoju pamet, izrađujući vrste streljiva iz okoline kako bi uništila neprijatelja jednog po jednog, koristeći okolinu protiv njih, to je način na koji uspijeva usprkos golemim izgledima",
             "it": "\"Usando la sua intelligenza, creando tipi di munizioni dall'ambiente per indebolire il nemico uno alla volta, usando l'ambiente contro di loro, questo è il modo in cui riesce contro probabilità schiaccianti",
-            "ja": "「彼女は賢さを駆使し、環境から弾薬の種類を作り出して敵を1体ずつ減らし、環境を逆手に取って敵を倒す。それが圧倒的な不利な状況でも勝利する方法だ」"
+            "ja": "「彼女は賢さを駆使し、環境から弾薬の種類を作り出して敵を1体ずつ減らし、環境を逆手に取って敵を倒す。それが圧倒的な不利な状況に打ち勝つ彼女のやり方だ」",
+            "ka": "”მისი ჭკუის გამოყენებით, საბრძოლო მასალის შემუშავება გარემოდან მტრის სათითაოდ შესასუსტებლად, მათ წინააღმდეგ გარემოს გამოყენებით, ეს არის გზა, რომლითაც იგი წარმატებას მიაღწევს დიდი შანსების წინააღმდეგ.",
+            "my": "\"သူမ၏ ဉာဏ်ရည်ဉာဏ်သွေးကို အသုံးပြု၍ ရန်သူကို တစ်ကြိမ်လျှင် တစ်ကြိမ်၊ ပတ်ဝန်းကျင်ကို အသုံးပြု၍ ရန်သူကို ချေမှုန်းရန် ပတ်ဝန်းကျင်မှ ကျည်ဆန်အမျိုးအစားများကို ဖန်တီးကာ၊ ၎င်းသည် များပြားလှသော မသာမယာများကို တွန်းလှန်အောင်မြင်သည့် နည်းလမ်းဖြစ်သည်။",
+            "qu": "\"Smartsninta llamk’achispa, pachamamamanta munición nisqa layakunata ruwaspa, awqata jukmanta jukmanta pisiyachinanpaq, pachamamawan paykunap contranpi llamk’achispa, chaytaq juk ñanta atipan sinchi mana allin ruwaykunawan",
+            "zh": "“利用她的智慧，根据环境制作弹药，一次消灭一个敌人，利用环境对付他们，这就是她在极其不利的情况下取得成功的方法"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "وقال جالواي \"قد نحتاج إلى البدء بمسار قد لا يتضمن مستوى كاملاً من الخدمة، ويجب أن تعكس الرسوم ذلك\".",
             "de": "„Wir müssen möglicherweise mit einem Weg beginnen, der möglicherweise kein vollständiges Serviceniveau bietet, und die Gebühr müsste das widerspiegeln“, sagte Galloway.",
             "en": "\"We may need to start off with a path that may not have a full level of service, and the fee would have to reflect that,\" Galloway said",
             "fr": "« Nous devrons peut-être commencer avec un chemin qui n'offrira peut-être pas un niveau de service complet, et les frais devront en tenir compte », a déclaré M. Galloway.",
+            "hr": "\"Možda ćemo morati započeti s putem koji možda neće imati punu razinu usluge, a naknada bi to morala odražavati\", rekao je Galloway",
             "it": "\"Potremmo dover iniziare con un percorso che potrebbe non avere un livello di servizio completo e la tariffa dovrebbe rifletterlo\", ha affermato Galloway.",
-            "ja": "「完全なレベルのサービスが提供されない道から始める必要があるかもしれないし、料金はそれを反映する必要があるだろう」とギャロウェイ氏は語った。"
+            "ja": "「完全なレベルのサービスが提供されない道から始める必要があるかもしれないし、料金はそれを反映する必要があるだろう」とギャロウェイ氏は語った。",
+            "ka": "„შეიძლება დაგვჭირდეს იმ გზით დაწყება, რომელსაც შეიძლება არ ჰქონდეს მომსახურების სრული დონე და საფასური ამას უნდა ასახავდეს“, - თქვა გალოვეიმ.",
+            "my": "\"ဝန်ဆောင်မှုအပြည့်အ၀မရရှိနိုင်သောလမ်းကြောင်းတစ်ခုဖြင့်ကျွန်ုပ်တို့စတင်ရန်လိုအပ်နိုင်သည်၊ အခကြေးငွေသည်၎င်းကိုထင်ဟပ်စေလိမ့်မည်\" ဟု Galloway မှပြောကြားခဲ့သည်။",
+            "qu": "\"Ichapas huk ñanwan qallarinanchik kanqa, manapaschá hunt'asqa nivel servicioyuqchu kanman, chaymanta qullqiqa chayta qawachinanmi kanman\", nispan Galloway nirqa",
+            "zh": "加洛韦说：“我们可能需要从一条可能没有提供全套服务的路线开始，费用也必须反映这一点。”"
         }
     },
     {
         "Corpus": "Wikipedia",
         "Text": {
+            "ar": "يعكس الكثير من اقتصادها وفلسفتها القانونية تفسيرات مناهضة للاستبداد، ومعادية للدولة، وليبرتارية، وجذرية للسياسات اليسارية والاشتراكية مثل الجماعية، والشيوعية، والفردية، والتبادلية، والنقابية، من بين النظريات الاقتصادية الاشتراكية الليبرتارية الأخرى.",
             "de": "Ein Großteil seiner Wirtschafts- und Rechtsphilosophie spiegelt antiautoritäre, antistaatliche, libertäre und radikale Interpretationen linker und sozialistischer Politik wider, wie Kollektivismus, Kommunismus, Individualismus, Mutualismus und Syndikalismus sowie andere libertäre sozialistische Wirtschaftstheorien.",
             "en": "Much of its economics and legal philosophy reflect anti-authoritarian, anti-statist, libertarian, and radical interpretations of left-wing and socialist politics such as collectivism, communism, individualism, mutualism, and syndicalism, among other libertarian socialist economic theories",
             "fr": "Une grande partie de sa philosophie économique et juridique reflète des interprétations antiautoritaires, anti-étatiques, libertaires et radicales des politiques de gauche et socialistes telles que le collectivisme, le communisme, l'individualisme, le mutualisme et le syndicalisme, entre autres théories économiques socialistes libertaires.",
+            "hr": "Velik dio njegove ekonomske i pravne filozofije odražava antiautoritarna, antietatistička, libertarijanska i radikalna tumačenja ljevičarske i socijalističke politike kao što su kolektivizam, komunizam, individualizam, uzajamnost i sindikalizam, između ostalih libertarijanskih socijalističkih ekonomskih teorija",
             "it": "Gran parte della sua economia e filosofia giuridica riflettono interpretazioni antiautoritarie, antistataliste, libertarie e radicali della politica di sinistra e socialista come il collettivismo, il comunismo, l'individualismo, il mutualismo e il sindacalismo, tra le altre teorie economiche socialiste libertarie.",
-            "ja": "その経済学と法哲学の多くは、反権威主義、反国家主義、自由主義、集団主義、共産主義、個人主義、相互主義、サンディカリズムなどの左翼および社会主義政治の急進的な解釈を反映しており、その他の自由主義社会主義経済理論も反映している。"
+            "ja": "その経済学と法哲学の多くは、反権威主義、反国家主義、自由主義、そして集団主義、共産主義、個人主義、相互主義、サンディカリズムなどの左翼および社会主義政治の急進的な解釈を反映しており、その他の自由主義社会主義経済理論も反映している。",
+            "ka": "მისი ეკონომიკისა და იურიდიული ფილოსოფიის დიდი ნაწილი ასახავს მემარცხენე და სოციალისტური პოლიტიკის ანტიავტორიტარულ, ანტი-სტატისტურ, ლიბერტარიანულ და რადიკალურ ინტერპრეტაციებს, როგორიცაა კოლექტივიზმი, კომუნიზმი, ინდივიდუალიზმი, მუტუალიზმი და სინდიკალიზმი, სხვა ლიბერტარიანულ სოციალისტურ ეკონომიკურ თეორიებს შორის.",
+            "my": "၎င်း၏ စီးပွားရေးနှင့် ဥပဒေရေးရာ ဒဿနိက အများစုသည် အာဏာရှင်ဆန့်ကျင်ရေး၊ စာရင်းအင်းပညာ ဆန့်ကျင်ရေး၊ လစ်ဘရယ်ဝါဒီနှင့် ဆိုရှယ်လစ်နိုင်ငံရေး ကဲ့သို့သော လက်ဝဲနှင့် ဆိုရှယ်လစ်နိုင်ငံရေး၏ အစွန်းရောက် အဓိပ္ပာယ်ဖွင့်ဆိုချက်များကို ရောင်ပြန်ဟပ်ကာ အခြားသော လစ်ဘရယ် ဆိုရှယ်လစ် စီးပွားရေး သီအိုရီများကြားတွင်၊",
+            "qu": "Yaqa llapan qullqi yachayninpas, kamachiy yachayninpas, lluq'i, susyalista pulitiku nisqap anti-autoritario, anti-estatista, libertario, radical nisqa t'ikrakuyninkunatam rikuchin, ahinataq colectivismo, kumunismo, individualismo, mutualismo, sindicalismo nisqa, huk libertario socialista qullqimanta yachaykunata",
+            "zh": "它的大部分经济学和法律哲学反映了反权威主义、反国家主义、自由主义和对左翼和社会主义政治的激进解读，如集体主义、共产主义、个人主义、互助主义和工团主义，以及其他自由主义社会主义经济理论"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "كل تلك الليالي التي قضيتها في تغيير ملابسي في السيارة الصغيرة بينما كنت أعود مسرعًا إلى المنزل من العمل لتدريب فريق الكرة اللينة الخاص بها",
             "de": "All die Nächte, in denen ich mich im Minivan umgezogen habe, während ich von der Arbeit nach Hause raste, um ihr Softballteam zu trainieren",
             "en": "All those nights of changing my clothes in the minivan as I raced home from work to coach her softball team",
             "fr": "Toutes ces nuits où je me changeais dans la mini-fourgonnette alors que je rentrais du travail en courant pour entraîner son équipe de softball",
+            "hr": "Sve one noći presvlačenja u kombiju dok sam jurio kući s posla trenirati njen softball tim",
             "it": "Tutte quelle notti passate a cambiarmi nel minivan mentre correvo a casa dal lavoro per allenare la sua squadra di softball",
-            "ja": "仕事から急いで家に帰り、ミニバンの中で着替えて彼女のソフトボールチームのコーチをしていたあの夜々"
+            "ja": "仕事から急いで家に帰り、ミニバンの中で着替えて彼女のソフトボールチームのコーチをしていたあの夜々",
+            "ka": "მთელი ის ღამეები, როცა ტანსაცმლის გამოცვლა მინივენში გამოვცვალე, როცა სამსახურიდან სახლში ვბრუნდებოდი, რათა მისი სოფბოლის გუნდის მწვრთნელი ვიყავი",
+            "my": "အလုပ်ကနေ အိမ်ပြန်ပြီး သူမရဲ့ ဆော့ဖ်ဘောအသင်းကို နည်းပြဖို့ မီနီဗန်ကားထဲမှာ အဝတ်အစားတွေလဲတဲ့ ညတိုင်း",
+            "qu": "Tukuy chay tutakuna minivanpi p’achayta cambiasqayta, llank’anaymanta wasiyman phawashaqtiy, softbol equiponta entrenanaypaq",
+            "zh": "那些晚上，我下班后开车回家指导她的垒球队，在面包车里换衣服"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "\"من الفوضى إلى الأم الواعية\" هو كتاب جديد كتبه علي كاتز",
             "de": "„Hot Mess to Mindful Mom“ ist ein neues Buch von Ali Katz",
             "en": "Hot Mess to Mindful Mom is a new book written by Ali Katz",
             "fr": "Hot Mess to Mindful Mom est un nouveau livre écrit par Ali Katz",
+            "hr": "Hot Mess to Mindful Mom nova je knjiga koju je napisao Ali Katz",
             "it": "Hot Mess to Mindful Mom è un nuovo libro scritto da Ali Katz",
-            "ja": "Hot Mess to Mindful Momはアリ・カッツが書いた新しい本です"
+            "ja": "Hot Mess to Mindful Momはアリ・カッツが書いた新しい本です",
+            "ka": "Hot Mess to Mindful Mom არის ახალი წიგნი, რომელიც დაწერილია ალი კაცის მიერ",
+            "my": "Hot Mess to Mindful Mom သည် Ali Katz ရေးသားသော စာအုပ်အသစ်ဖြစ်သည်။",
+            "qu": "Hot Mess to Mindful Mom nisqaqa Ali Katzpa qillqasqan musuq liwrum",
+            "zh": "《Hot Mess to Mindful Mom》是 Ali Katz 的新书"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "أتمنى ألا يؤدي حرص شركتك الأم على تبني الطائرات بدون طيار إلى تجنبك تغطية مشاكل الطائرات بدون طيار",
             "de": "Ich hoffe, dass die Begeisterung Ihres Mutterkonzerns für Drohnen Sie nicht dazu verleitet, die Berichterstattung über Drohnenprobleme zu umgehen.",
             "en": "My hope is that your parent company's eagerness to embrace the drone won't lead you to sidestep covering drone problems",
             "fr": "J'espère que l'empressement de votre société mère à adopter le drone ne vous amènera pas à éviter de couvrir les problèmes liés aux drones.",
+            "hr": "Nadam se da vas želja vaše matične tvrtke da prihvati bespilotne letjelice neće navesti da zaobiđete pokrivanje problema s dronovima",
             "it": "La mia speranza è che l'entusiasmo della tua azienda madre nell'adottare i droni non ti porti a trascurare la copertura dei problemi dei droni.",
-            "ja": "親会社がドローンを積極的に受け入れるあまり、ドローンの問題を取り上げることを避けてしまうことがないように願っています。"
+            "ja": "親会社がドローンを積極的に受け入れるあまり、ドローンの問題を取り上げることを避けてしまうことがないように願っています。",
+            "ka": "იმედი მაქვს, რომ თქვენი მშობელი კომპანიის მონდომება დრონის თაობაზე არ მიგიყვანთ გვერდის ავლაზე დრონის პრობლემების გაშუქებამდე.",
+            "my": "ကျွန်ုပ်၏မျှော်လင့်ချက်မှာ သင်၏မိခင်ကုမ္ပဏီမှ ဒရုန်းကို လက်ခံရန် စိတ်အားထက်သန်မှုသည် သင့်အား ဒရုန်းပြဿနာများကို ဖုံးကွယ်ထားသော ဘေးထွက်ဆိုးကျိုးသို့ မပို့ဆောင်နိုင်စေရန် မျှော်လင့်ပါသည်။",
+            "qu": "Suyakuyniyqa, tayta empresaykipa drone nisqawan abrazayta munasqanqa manam drone sasachakuykunata tapanaykipaq huk lawman pusasunkichu",
+            "zh": "我希望你的母公司热切地拥抱无人机不会让你回避无人机问题"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "5، هل أحتاج إلى كل هذه إذا كان لدي الإصدار السابق",
             "de": "5, brauche ich das alles, wenn ich die vorherige Version habe",
             "en": "5, do I need all these if I have the previous version",
             "fr": "5, ai-je besoin de tout cela si j'ai la version précédente",
+            "hr": "5, trebam li sve ovo ako imam prethodnu verziju",
             "it": "5, ho bisogno di tutto questo se ho la versione precedente?",
-            "ja": "5、以前のバージョンを持っている場合、これらすべてが必要ですか？"
+            "ja": "5、以前のバージョンを持っている場合、これらすべてが必要ですか？",
+            "ka": "5, მჭირდება ეს ყველაფერი, თუ მაქვს წინა ვერსია",
+            "my": "5၊ ငါ့တွင်ယခင်ဗားရှင်းရှိလျှင်ဤအရာများအားလုံးကိုလိုအပ်ပါသလား။",
+            "qu": "5, tukuy kaykunatachu necesitasaq sichus ñawpaq versión nisqayuq kani",
+            "zh": "5，如果我有旧版本，我还需要这些吗"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
-            "de": "Wie früh können oder sollten Kinder Ihrer Meinung nach mit der Philosophie beginnen?",
+            "ar": "في أي وقت تعتقد أنه يمكن للأطفال، أو ينبغي لهم، البدء في تعلم الفلسفة؟",
+            "de": "Wie früh können oder sollten Kinder Ihrer Meinung nach anfangen, sich mit Philosophie zu beschäftigen?",
             "en": "How early do you think children can, or should, start learning about philosophy",
             "fr": "À quel âge pensez-vous que les enfants peuvent, ou devraient, commencer à apprendre la philosophie ?",
+            "hr": "Što mislite koliko rano djeca mogu, ili trebaju, početi učiti o filozofiji",
             "it": "Quanto presto pensi che i bambini possano o debbano iniziare a studiare la filosofia?",
-            "ja": "子どもたちはどれくらい早く哲学を学び始めることができると思いますか、あるいは始めるべきだと思いますか"
+            "ja": "子どもたちはどれくらい早く哲学を学び始めることができると思いますか、あるいは始めるべきだと思いますか",
+            "ka": "როგორ ფიქრობთ, რამდენად ადრე შეუძლიათ ან უნდა დაიწყონ ბავშვებს ფილოსოფიის სწავლა",
+            "my": "ကလေးတွေက ဒဿနိကဗေဒအကြောင်း ဘယ်လောက်စောစီးစွာ သင်ယူသင့်တယ် ထင်ပါသလဲ။",
+            "qu": "Hayka tempranotaq yuyanki warmakuna filosofíamanta yachayta qallarinkuman, utaq qallarinanku tiyan",
+            "zh": "您认为孩子应该多大开始学习哲学"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "يرتبط جميع الأشخاص في هذه المطبوعة بدعمهم للثورة",
             "de": "Die Menschen auf diesem Druck sind alle durch ihre Unterstützung für die Revolution verbunden.",
             "en": "The people in this print are all linked by their support for the Revolution",
             "fr": "Les personnages de cette gravure sont tous liés par leur soutien à la Révolution",
+            "hr": "Svi ljudi na ovom printu povezani su svojom podrškom revoluciji",
             "it": "Le persone in questa stampa sono tutte legate dal loro sostegno alla Rivoluzione",
-            "ja": "この版画に描かれた人々は皆、革命を支持することで結びついている。"
+            "ja": "この版画に描かれた人々は皆、革命を支持することで結びついている。",
+            "ka": "ამ ბეჭდვით მყოფ ადამიანებს ყველა აკავშირებს რევოლუციის მხარდაჭერით",
+            "my": "ဤပုံနှိပ်ထုတ်ဝေမှုမှလူများအားလုံးသည်တော်လှန်ရေးအတွက်သူတို့၏ထောက်ခံမှုဖြင့်ချိတ်ဆက်ထားသည်။",
+            "qu": "Kay qillqasqapi runakunaqa llapankum Revolución nisqa yanapakuyninkuwan tinkisqa kachkanku",
+            "zh": "本版画中的人物都因支持革命而联系在一起"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
-            "de": "Er beschrieb sie als jemanden mit „so reinen, so feinen und so zarten Gefühlen, wie sie noch nie in einem menschlichen Herzen gelebt haben“. Sein Hauptfehler bestand darin, um Mitgefühl für ihre Notlage zu bitten und sie als „die schönste Quelle der Erheiterung und Ermutigung für alle, die ihm folgen würden“ darzustellen.",
+            "ar": "ووصفها بأنها \"تتمتع بمشاعر نقية وراقية وحساسة، كما سكنت قلب الإنسان\"، وكان خطأه الأساسي هو طلب التعاطف مع محنتها وتصويرها على أنها \"المصدر الأكثر عدالة للحيوية والتشجيع لكل من يتبعه\".",
+            "de": "Er beschrieb sie als jemanden mit „so reinen, so feinen und zarten Gefühlen, wie sie noch nie in einem menschlichen Herzen gelebt haben“. Sein Hauptfehler bestand darin, um Mitgefühl für ihre Notlage zu bitten und sie als „die schönste Quelle der Erheiterung und Ermutigung für alle, die ihm folgen würden“ darzustellen.",
             "en": "Describing her as having ‘sentiments as pure, as refined, and as delicate, as ever inhabited a human heart’ his principle mistake was to ask for sympathy for her plight and pose her as ‘the fairest source of animation and encouragement to all who would follow’",
             "fr": "La décrivant comme ayant « des sentiments aussi purs, aussi raffinés et aussi délicats que ceux qui aient jamais habité un cœur humain », sa principale erreur a été de demander de la sympathie pour son sort et de la présenter comme « la plus belle source d’animation et d’encouragement pour tous ceux qui suivraient ».",
+            "hr": "Opisujući je kao osobu koja ima 'osjećaje čiste, profinjene i delikatne, kao što su ikada nastanjivali ljudsko srce', njegova glavna pogreška bila je tražiti suosjećanje za njezinu nevolju i predstavljati je kao 'najpravedniji izvor animacije i ohrabrenja za sve koji žele prati'",
             "it": "Descrivendola come dotata di “sentimenti puri, raffinati e delicati come mai hanno abitato un cuore umano”, il suo errore principale è stato quello di chiedere compassione per la sua situazione e di presentarla come “la più bella fonte di animazione e incoraggiamento per tutti coloro che l’avrebbero seguita”.",
-            "ja": "彼は彼女を「人間の心に宿る純粋で、洗練され、繊細な感情」を持つ人物と評したが、彼女の窮状に同情を求め、彼女を「後を継ぐ者すべてにとって最も素晴らしい活力と励ましの源」と位置付けたのは大きな間違いだった。"
+            "ja": "彼は彼女を「人間の心に宿る純粋で、洗練され、繊細な感情」を持つ人物と評したが、彼女の窮状に同情を求め、彼女を「後を継ぐ者すべてにとって最も素晴らしい活力と励ましの源」と位置付けたのは大きな間違いだった。",
+            "ka": "აღწერს მას, როგორც „სუფთა, დახვეწილ და დელიკატურ გრძნობებს, როგორც ოდესმე დასახლებული ადამიანის გულში“, მისი მთავარი შეცდომა იყო თანაგრძნობის თხოვნა მისი მდგომარეობისთვის და წარმოაჩინა ის, როგორც „ანიმაციისა და გამხნევების ყველაზე სამართლიანი წყარო ყველასთვის მიყევით'",
+            "my": "လူ့နှလုံးသားတွင် မှီတင်းနေထိုင်ဖူးသကဲ့သို့ သိမ်သိမ်မွေ့မွေ့ ဖြူစင်သော စိတ်ဓာတ်များ ရှိခြင်းဟု ဖော်ပြခြင်းမှာ ၎င်း၏ အမှားမှာ သူမ၏ ဒုက္ခရောက်မှုအတွက် စာနာစိတ်နှင့် တောင်းခံပြီး 'ကာတွန်းနှင့် အားပေးမှု၏ အမွန်မြတ်ဆုံးသော အရင်းအမြစ်' အဖြစ် သတ်မှတ်ခြင်း ဖြစ်သည်။ လိုက်'",
+            "qu": "Payta ‘ch’uya, ch’uyanchasqa, delicado, runaq sonqonpi tiyaq hina’ sentimientoyoq kasqanmanta rimaspaqa, pantasqanqa karqan sasachakuyninmanta khuyapayakuyta mañakuymi, ‘aswan chanin fuente de animación hinallataq kallpachaq llapa munaqkunapaq’ hina churaspa qatiq'",
+            "zh": "他把她描述为“拥有人类心灵中那种纯洁、精致和细腻的情感”，他的主要错误在于要求人们同情她的困境，并将她描述为“所有追随者最美好的活力和鼓励之源”。"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
+            "ar": "كلما كان هذا هو الحال، كلما احتاجت الدولة إلى عمال أجانب لإنجاز أي شيء.",
             "de": "Je ausgeprägter dies ist, desto mehr ausländische Arbeitskräfte wird ein Land für seine Arbeit brauchen.",
             "en": "The more this is the case the more a country will need foreign workers to get anything done",
             "fr": "Plus cela se produit, plus un pays aura besoin de travailleurs étrangers pour réaliser ses projets.",
+            "hr": "Što je više tako, zemlji će više trebati strani radnici da bi bilo što učinila",
             "it": "Quanto più questo accade, tanto più un paese avrà bisogno di lavoratori stranieri per realizzare qualsiasi cosa.",
-            "ja": "そうなればなるほど、国は何かを成し遂げるために外国人労働者を必要とするようになる。"
+            "ja": "そうなればなるほど、国は何かを成し遂げるために外国人労働者を必要とするようになる。",
+            "ka": "რაც უფრო მეტია ეს საქმე, მით უფრო მეტად დასჭირდება ქვეყანას უცხოელი მუშაკები, რომ რაიმე გააკეთონ",
+            "my": "ဒီလိုအခြေအနေတွေ များလာလေ နိုင်ငံတစ်နိုင်ငံမှာ ဘာမဆိုလုပ်ဖို့အတွက် နိုင်ငံခြားအလုပ်သမားတွေ ပိုများလာမယ်။",
+            "qu": "Aswan kay hina kaptinqa aswanmi huk suyu hawa llaqtamanta llamkaqkunata necesitanqa imatapas ruwananpaq",
+            "zh": "这种情况越严重，一个国家就越需要外国工人来完成工作"
         }
     },
     {
         "Corpus": "OpenWebText",
         "Text": {
-            "de": "Die Szenen mit der Machtverbindung zwischen ihm und Rey gehörten zu den Höhepunkten des Films und sorgten für die dringend benötigte Charakterisierung beider, indem sie es beiden ermöglichten, zu sprechen, zu diskutieren und sogar zu flirten, ohne dass es zu einem Lichtschwertkampf kommen musste.",
+            "ar": "كانت مشاهد ربط القوة بينه وبين ري من بين أبرز أحداث الفيلم، وقد وفرت بعض السمات الشخصية التي يحتاجها كل منهما بشدة، مما يسمح لكليهما بالتحدث والمناقشة وحتى المغازلة، دون الحاجة إلى معركة بالسيوف الضوئية.",
+            "de": "Die Szenen mit der Machtverbindung zwischen ihm und Rey gehörten zu den Höhepunkten des Films und sorgten für die dringend benötigte Charakterisierung beider, indem sie es beiden ermöglichten, zu sprechen, zu debattieren und sogar zu flirten, ohne dass es zu einem Lichtschwertkampf kommen musste.",
             "en": "The Force-connection scenes between him and Rey were among the highlights of the film, and provided some much-needed characterization for both of them, allowing both to speak, debate, even flirt, without any need for a lightsaber battle",
             "fr": "Les scènes de connexion avec la Force entre lui et Rey ont été parmi les moments forts du film et ont fourni une caractérisation bien nécessaire pour les deux, leur permettant à tous deux de parler, de débattre, voire de flirter, sans avoir besoin d'une bataille au sabre laser.",
+            "hr": "Scene povezivanja Silom između njega i Rey bile su među vrhuncima filma i pružile su prijeko potrebnu karakterizaciju za oboje, dopuštajući im da govore, raspravljaju, čak i flertuju, bez ikakve potrebe za borbom svjetlosnim mačem",
             "it": "Le scene di connessione alla Forza tra lui e Rey sono state tra i momenti salienti del film e hanno fornito una caratterizzazione molto necessaria per entrambi, consentendo a entrambi di parlare, discutere e persino flirtare, senza alcun bisogno di una battaglia con la spada laser.",
-            "ja": "彼とレイの間のフォースのつながりのシーンは映画のハイライトの一つであり、ライトセーバーの戦いを必要とせずに、両者が話したり、議論したり、いちゃついたりすることを可能にし、両者にとって非常に必要な性格付けを提供しました。"
+            "ja": "彼とレイの間のフォースのつながりのシーンは映画のハイライトの一つであり、ライトセーバーの戦いを必要とせずに、両者が話したり、議論したり、いちゃついたりすることを可能にし、両者にとって非常に必要な性格付けを提供しました。",
+            "ka": "ძალის შეერთების სცენები მასსა და რეის შორის იყო ფილმის ერთ-ერთი ყველაზე მნიშვნელოვანი და ორივესთვის აუცილებელი დახასიათება, რაც საშუალებას აძლევდა ორივეს ლაპარაკი, კამათი, თუნდაც ფლირტი, შუქნიშანი ბრძოლის გარეშე.",
+            "my": "သူနှင့် Rey အကြား Force-connection scene များသည် ဇာတ်ကား၏ ပေါ်လွင်ချက်များထဲတွင် ပါဝင်ခဲ့ပြီး နှစ်ယောက်စလုံးအတွက် လိုအပ်သော ဇာတ်ကောင်စရိုက်အချို့ကို ပေးစွမ်းနိုင်ကာ နှစ်ယောက်စလုံး စကားပြောရန်၊ အချေအတင်ဖြစ်ရန်၊ ပရောပရည်တိုက်ရန်ပင် မလိုအပ်ဘဲ lightsaber battle တွင်ပင် ပါဝင်ခွင့်ပေးထားသည်။",
+            "qu": "Paywan Reywan Fuerza-t'inkinakuy escenakuna peliculap aswan hatun kayninkuna ukhupi karqan, hinaspa iskayninkupaq wakin ancha necesitasqa caracterización nisqakunata qurqan, iskayninku rimayta, debatiyta, coqueteaytapas saqispa, mana ima necesitaspa huk lightsaber maqanakuyta",
+            "zh": "他和雷伊之间的原力联系场景是影片的亮点之一，为他们两人提供了一些急需的人物刻画，使他们能够交谈、辩论，甚至调情，而不需要光剑战斗"
         }
     },
     {
         "Corpus": "BookCorpus",
         "Text": {
+            "ar": "عندما انحنت لتحريك لسانها عبر الطرف، تأوه",
             "de": "als sie sich vorbeugte, um mit der Zunge über die Spitze zu lecken, stöhnte er",
             "en": "when she leaned over to flick her tongue across the tip , he groaned",
             "fr": "quand elle s'est penchée pour passer sa langue sur le bout, il a gémi",
+            "hr": "kad se nagnula da prevrne jezikom po vrhu, on je zastenjao",
             "it": "quando si sporse per passargli la lingua sulla punta, lui gemette",
-            "ja": "彼女が身を乗り出して先端に舌を這わせると、彼はうめいた。"
+            "ja": "彼女が身を乗り出して先端に舌を這わせると、彼はうめき声をあげた",
+            "ka": "როდესაც იგი დაიხარა, რომ ენა წვერზე გადაეტანა, მან დაიღრიალა",
+            "my": "ထိပ်ဖျားကို လျှာဖြင့် ပွတ်လိုက်သောအခါတွင် သူသည် ညည်းတွားသည်။",
+            "qu": "puntanta qallunta kuyurichinanpaq k’umuykuspa , payqa waqaykusqa",
+            "zh": "当她俯身用舌头舔着龟头时，他呻吟起来"
         }
     },
     {
         "Corpus": "C4",
         "Text": {
+            "ar": "هناك أيضًا فصول تمارين رياضية خاصة للنساء الحوامل",
             "de": "Es gibt auch Übungskurse speziell für schwangere Frauen",
             "en": "There are also exercise classes especially for women who are pregnant",
             "fr": "Il existe également des cours d'exercices spécialement destinés aux femmes enceintes",
+            "hr": "Postoje i satovi tjelovježbe posebno za trudnice",
             "it": "Ci sono anche corsi di ginnastica appositamente per le donne incinte",
-            "ja": "妊娠中の女性のためのエクササイズクラスもあります"
+            "ja": "妊娠中の女性のためのエクササイズクラスもあります",
+            "ka": "ასევე არის სავარჯიშო კლასები განსაკუთრებით ორსული ქალებისთვის",
+            "my": "အထူးသဖြင့် ကိုယ်ဝန်ဆောင်အမျိုးသမီးတွေအတွက် လေ့ကျင့်ခန်းတွေလည်း ရှိပါတယ်။",
+            "qu": "Hinallataqmi kan ejercicio ruway clasekuna astawanqa wiksayoq warmikunapaq",
+            "zh": "还有专门针对孕妇的健身课程"
         }
     },
     {
         "Corpus": "Gutenberg",
         "Text": {
+            "ar": "ثم اقترح بائع الكتب نفسه، الذي كان أيضًا سمينًا وبائسًا، والذي خدعني بمعلومات مفادها أنني على وشك السفر، أن \"الشعراء\" سوف يقدمون قراءة ممتعة للغاية في الطريق.",
             "de": "Dann meinte der Buchhändler selbst, der ebenfalls dick und gemütlich schäbig war und mir die Information entlockt hatte, dass ich im Begriff war zu verreisen, dass die „Dichter“ eine sehr angenehme Lektüre für unterwegs sein würden.",
             "en": "Then the bookseller himself , who also was fat and comfortably shabby , and who had beguiled from me the information that I was about to travel , suggested that the `` Poets '' would make very pleasant reading en route",
             "fr": "Alors le libraire lui-même, qui était lui aussi gros et confortablement misérable, et qui m'avait fait croire que j'allais voyager, me suggéra que les « Poètes » feraient une lecture très agréable en route.",
+            "hr": "Tada je sam knjižar, koji je također bio debeo i udobno otrcan, i koji je od mene izmamio informaciju da se spremam putovati, predložio da bi ``Pjesnici` bili vrlo ugodno štivo na putu",
             "it": "Poi lo stesso libraio, che era anche lui grasso e piacevolmente trasandato, e che mi aveva estorto l'informazione che stavo per viaggiare, suggerì che i ``Poeti'' sarebbero stati una lettura molto piacevole durante il tragitto.",
-            "ja": "すると、同じく太っていてみすぼらしい服を着ていた本屋の男が、私がこれから旅行に出るという情報を私に伝え、その途中で「詩人たち」を読むのはとても楽しいだろうと提案した。"
+            "ja": "すると、同じく太っていてみすぼらしい服を着ていた本屋の男が、私がこれから旅行するという情報を私に伝え、その途中で「詩人たち」を読むのはとても楽しいだろうと提案した。",
+            "ka": "მაშინ თავად წიგნის გამყიდველმა, რომელიც ასევე იყო მსუქანი და კომფორტულად გაფუჭებული და რომელმაც მოატყუა ინფორმაცია იმის შესახებ, რომ გამგზავრებას ვაპირებდი, შესთავაზა, რომ \"პოეტები\" ძალიან სასიამოვნოდ წაიკითხავენ გზაზე.",
+            "my": "ထိုအခါ ပိန်ပိန်ပိန်ပိန်ပါးပါး စာအုပ်ရောင်းသူ ကိုယ်တိုင် ခရီးသွားတော့မည့် သတင်းအချက် အလက်ကို လှည့်စားခဲ့သူ `ကဗျာဆရာများ´ သည် လမ်းခရီးတွင် စာဖတ်ခြင်းကို အလွန်သာယာစေမည်ဟု အကြံပြုခဲ့သည်။",
+            "qu": "Hinaptinmi kikin libro vendeqpas , payqa wira hinaspa sumaqllaña llañullaña karqa , hinaspapas purinaypaqña kasqay willakuykunatam ñuqamanta engañarqa , yuyaychawarqa `` Harawiqkuna '' ñanpi ancha sumaq ñawinchayta ruwanankupaq",
+            "zh": "然后书商本人，他也是一个胖子，衣着寒酸，从我这里骗来我即将出行的消息，建议我旅途中读一读《诗人》，会非常愉快。"
         }
     }
 ]
