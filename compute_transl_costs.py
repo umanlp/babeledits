@@ -91,7 +91,7 @@ for syn_id, example in data.items():
 # %%
 
 cost_per_char = 20/1e6
-num_langs = 60
+num_langs = 10
 cost_all_prompts = sum([len(prompt) for prompt in all_prompts]) * cost_per_char * num_langs
 cost_all_prompts_marked = sum([len(prompt) for prompt in all_prompts_marked]) * cost_per_char * num_langs
 cost_entities = sum([len(entity) for entity in entities]) * cost_per_char * num_langs
