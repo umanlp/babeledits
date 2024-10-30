@@ -39,11 +39,16 @@ parser.add_argument(
     action="store_true",
     help="Flag to delete translations with the same prompt",
 )
+parser.add_argument(
+    "--alias_path",
+    type=str,
+    default="datasets/v8/prompts_with_alias.csv",
+    help="Path to the alias file",
+)
 
 args = parser.parse_args()
 
-alias_path = "datasets/v7/prompts_with_alias.csv"
-alias_df = pd.read_csv(alias_path)
+alias_df = pd.read_csv(args.alias_path)
 
 
 def load_translations(translation_path):
@@ -191,9 +196,9 @@ for syn_idx, syn_id in enumerate(data):
             },
         )
 
-        data[syn_id]["relations"][relation]["ground_truth_aliases"] = {
+        data[syn_id]["relations"][relation]["ground_truths_aliases"] = {
             lang: alias
-            for lang, alias in data[syn_id]["relations"][relation]["ground_truth_aliases"].items()
+            for lang, alias in data[syn_id]["relations"][relation]["ground_truths_aliases"].items()
             if alias
         }
 
