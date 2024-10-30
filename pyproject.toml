@@ -1,0 +1,46 @@
+[project]
+name = "babeledits"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.5.1",
+    "babelnet>=1.2.0",
+    "transformers>=4.46.1",
+    "sentence-transformers>=3.2.1",
+    "omegaconf>=2.3.0",
+    "hydra-core>=1.3.2",
+    "sienna>=0.2.6",
+    "wikipedia-api>=0.7.1",
+    "pandas>=2.2.3",
+    "numpy>=2.0.2",
+    "tqdm>=4.66.6",
+    "google-cloud-translate>=3.17.0",
+    "google-cloud-storage>=2.18.2",
+    "lang2vec>=1.1.2",
+    "langchain>=0.0.27",
+    "langchain-openai==0.1.7",
+    "hydra-submitit-launcher>=1.2.0",
+    "higher>=0.2.1",
+    "timm==0.9.7",
+    "opencv-python>=4.10.0.84",
+    "iopath>=0.1.10",
+    "peft>=0.13.2",
+    "accelerate>=1.0.1",
+    "matplotlib>=3.9.2",
+    "einops>=0.8.0",
+    "datasets>=3.0.2",
+    "nltk>=3.9.1",
+    "scikit-learn>=1.5.2",
+    "fairscale>=0.4.13",
+    "evaluate>=0.4.3",
+    "langchain-core==0.1.52",
+    "pydantic==1.10.9",
+    "tabulate>=0.9.0",
+    "langcodes>=3.4.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
