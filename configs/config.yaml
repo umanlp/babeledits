@@ -11,9 +11,9 @@ metrics:
 locality_metrics:
   - token_em
   - nkl
-dataset: "datasets/v8/translated/dataset.json"
+dataset: "datasets/v8/translated/test.json"
 edit_lang: "en"
-tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
+tgt_langs: ['ar', 'de', 'fr', 'hr', 'it', 'ja', 'ka', 'my', 'qu', 'zh']
 multi_answer_eval: true
 max_edits: null
 device: 0
@@ -21,7 +21,7 @@ log_subdir: "new_debug"
 prompt_type: "prompts_mt_marked"
 subject_type: "subjects"
 target_type: "targets"
-eval_prompt_type: ["prompts_mt", "prompts_mt_marked"]
+eval_prompt_type: ["prompts_mt", "prompts_mt_marked", "prompts_gloss"]
 subject_in_prompt: null
 generality: true
 locality: true
