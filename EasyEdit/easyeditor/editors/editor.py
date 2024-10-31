@@ -259,7 +259,7 @@ class BaseEditor:
 
                 if ppl_cfg:
                     ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"]))}
                     metrics['post'].update({"ppl":ppl_per_lang})
                 
                 chunk_metrics.append(metrics)
@@ -272,7 +272,7 @@ class BaseEditor:
                 chunk_metrics[i]["pre"] = compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)
 
                 if ppl_cfg:
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"]))}
                     chunk_metrics[i]['pre'].update({"ppl":ppl_per_lang})
                 
                 if 'locality' in chunk_metrics[i]['post'].keys():
@@ -336,7 +336,7 @@ class BaseEditor:
                 all_metrics.append(metrics)
             if ppl_cfg:
                 ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
                 print(f"Perplexities before editing: {ppl_per_lang}")
                 for evaluation in all_metrics:
                     evaluation["pre"].update({"ppl": ppl_per_lang})
@@ -391,7 +391,7 @@ class BaseEditor:
                             suffix = "output" if loc_metric == "token_em" else "logprobs"
                             for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], all_metrics[idx]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
                                 if loc_metric == "token_em":
-                                    locality_result.append(np.mean(np.equal(loc_pre, loc_post)))
+                                    locality_result.append(float(np.mean(np.equal(loc_pre, loc_post))))
                                 elif loc_metric == "nkl":
                                     locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
                             all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(f'{locality_key}_{suffix}')
@@ -415,7 +415,7 @@ class BaseEditor:
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if ppl_cfg:
                     ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
+                    ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
                     all_metrics[i]['post'].update({"ppl":ppl_per_lang})
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):

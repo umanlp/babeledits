@@ -59,7 +59,7 @@ def compute_edit_quality(
     # First, unpack rewrite evaluation record.
 
     rewrite_prompts = record["prompt"] 
-    if "aliases" in record.keys():
+    if "aliases" in record.keys() and len(record["aliases"]) > 0:
         rewrite_prompts = [record["prompt"]]*(1+len(record["aliases"]))
         target_new = [record["target_new"], *record["aliases"]]
     else:

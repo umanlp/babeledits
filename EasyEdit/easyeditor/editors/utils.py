@@ -43,11 +43,11 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
             else:
                 continue
             for metric_type in rewrite_metrics:
-                mean_metrics[eval][key].update({metric_type : np.mean([np.max(score[eval][key][metric_type]) for score in all_metrics])})
+                mean_metrics[eval][key].update({metric_type : float(np.mean([np.max(score[eval][key][metric_type]) for score in all_metrics]))})
         if "ppl" in all_metrics[0][eval].keys():
             mean_metrics[eval]["ppl"] = dict()
             for lang in all_metrics[0][eval]["ppl"]:
-                mean_metrics[eval]["ppl"][lang] = np.mean([score[eval]["ppl"][lang] for score in all_metrics])
+                mean_metrics[eval]["ppl"][lang] = float(np.mean([score[eval]["ppl"][lang] for score in all_metrics]))
         for key in ["rephrase_acc", "locality", "portability"]:
                 mean_metrics[eval][key] = dict()
                 if key in all_metrics[0][eval].keys() and all_metrics[0][eval][key] != {}:
@@ -55,7 +55,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                         mean_metrics[eval][key][prompt_type] = dict()
                         metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
                         for metric_type in metrics_to_gather:
-                            mean_metrics[eval][key][prompt_type].update({metric_type: np.mean([np.max(score[eval][key][prompt_type][metric_type]) for score in all_metrics if prompt_type in score[eval][key]])})
+                            mean_metrics[eval][key][prompt_type].update({metric_type: float(np.mean([np.max(score[eval][key][prompt_type][metric_type]) for score in all_metrics if prompt_type in score[eval][key]]))})
 
                     # for lkey in get_all_acc_keys(all_metrics):
                     #     metrics = [metric[eval][metric_type][key][lkey] for metric in all_metrics if lkey in metric[eval][metric_type][key].keys()]
@@ -188,6 +188,7 @@ def _prepare_requests(prompts: Union[str, List[str]],
                             if tgt_lang in aliases['subj_aliases'][i]:
                                 request['portability'][portability_key]['ground_truth'] = [request['portability'][portability_key]['ground_truth'], *aliases['subj_aliases'][i][tgt_lang]]
                         
-                        request['portability'][portability_key]['prompt'] = [request['portability'][portability_key]['prompt']]*len(request['portability'][portability_key]['ground_truth'])
+                        if isinstance(request['portability'][portability_key]['ground_truth'], list):
+                            request['portability'][portability_key]['prompt'] = [request['portability'][portability_key]['prompt']]*len(request['portability'][portability_key]['ground_truth'])
                         
     return requests

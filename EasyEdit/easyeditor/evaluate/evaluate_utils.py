@@ -140,13 +140,13 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             if isinstance(answers[0], list):
                 res = []
                 for ans,label in zip(answers,labels):
-                    temp_acc = np.mean(np.equal(ans, label))
+                    temp_acc = float(np.mean(np.equal(ans, label)))
                     if np.isnan(temp_acc):
                         continue
                     res.append(temp_acc)
                 return res
             else:
-                return [np.mean(np.equal(answers, labels))]
+                return [float(np.mean(np.equal(answers, labels)))]
             
     elif eval_metric == "first_token_em":
         if isinstance(prompts, str):
@@ -188,14 +188,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             assert(prompts == [prompts[0]] * len(prompts))
             res = []
             for ans,label in zip(answers,labels):
-                temp_acc = np.mean(np.equal(ans, label[0]))
+                temp_acc = float(np.mean(np.equal(ans, label[0])))
                 if np.isnan(temp_acc):
                     continue
                 res.append(temp_acc)
             return res
         else:
             assert len(prompts) == 1
-            return [np.mean(np.equal(answers, labels[0]))]
+            return [float(np.mean(np.equal(answers, labels[0])))]
     # elif eval_metric == "efficacy_magn":
         # if isinstance(prompts, str):
             # prompts,targets = [prompts,], [targets,]
@@ -256,7 +256,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
 
             for target_new in targets:
                 # Check for each answer in the generated output
-                if target_new.lower() in generated_output.lower():
+                if target_new in generated_output:
                     results.append(1.0)
                 else:
                     results.append(0.0)
@@ -277,7 +277,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                 generated_output = full_output[len(prompt):].strip()
 
                 # Check for each answer in the generated output
-                if target_new.lower() in generated_output.lower():
+                if target_new in generated_output:
                     results.append(1.0)
                 else:
                     results.append(0.0)
