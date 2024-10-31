@@ -79,7 +79,9 @@ def main(cfg: DictConfig) -> None:
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)
     if cfg.tgt_langs:
-        tgt_langs = sorted(cfg.tgt_langs)
+        tgt_langs = sorted(
+            [x for x in cfg.tgt_langs if x != cfg.edit_lang]
+        )  # TODO fix with multisource, since edit_lang will be a list
         all_langs = sorted(list(set(tgt_langs + [cfg.edit_lang])))
     else:
         tgt_langs = None
@@ -169,7 +171,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in gen_prompt_types
-            for tgt_lang in tgt_langs
+            for tgt_lang in all_langs
         ]
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -199,7 +201,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in loc_prompt_types
-            for tgt_lang in tgt_langs
+            for tgt_lang in all_langs
         ]
         locality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -235,7 +237,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in port_prompt_types
-            for tgt_lang in tgt_langs
+            for tgt_lang in all_langs
         ]
 
         for tgt_prompt_type, tgt_lang in xlt_confs:
@@ -261,7 +263,7 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in subj_prompt_types
-            for tgt_lang in tgt_langs
+            for tgt_lang in all_langs
         ]
         target_key = cfg.target_type
 
