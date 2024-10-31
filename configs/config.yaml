@@ -13,7 +13,7 @@ locality_metrics:
   - nkl
 dataset: "datasets/v8/translated/test.json"
 edit_lang: "en"
-tgt_langs: ['ar', 'de', 'fr', 'hr', 'it', 'ja', 'ka', 'my', 'qu', 'zh']
+tgt_langs: ['ar', 'de', 'en', 'fr', 'hr', 'it', 'ja', 'ka', 'my', 'qu', 'zh']
 multi_answer_eval: true
 max_edits: null
 device: 0
