@@ -172,9 +172,7 @@ def compute_locality_quality(
         if type(loc_tokens) is not list:
             loc_tokens = [loc_tokens,]
 
-        ret = {
-            f"{locality_key}_output": loc_tokens
-        }
+        ret = {"output": loc_tokens}
     if eval_metric == "nkl":
         if isinstance(prompt, str):
             prompts, targets = [prompt,], [locality_ground_truth,]
@@ -190,9 +188,8 @@ def compute_locality_quality(
             logits = model(**prompt_tok).logits
         last_non_masked = prompt_tok["attention_mask"].sum(1) - 1      
         to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
-        log_probs  =  (torch.gather(logits, 1, to_gather).squeeze(1)).log_softmax(dim=-1)
-        ret = {
-            f"{locality_key}_logprobs": log_probs}
+        log_probs  =  (torch.gather(logits, 1, to_gather).squeeze(1)).log_softmax(dim=-1).cpu()
+        ret = {"logprobs": log_probs}
 
     return ret
 
