@@ -28,4 +28,7 @@ locality: true
 portability: true
 eval_ppl: true
 data_ppl : "data_ppl/ME-PPL_50_translated.json"
-batch_size_ppl: 64
+batch_size_ppl: 32
+pre_file: null
+pre_edit: null
+pre_eval_only: false
