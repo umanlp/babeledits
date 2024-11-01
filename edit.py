@@ -1,7 +1,9 @@
+import gzip
 import json
 import os
 import sys
 
+import torch
 import yaml
 
 from easy_edit_adaptations.logging import redirect_edit_logs
@@ -11,16 +13,16 @@ from pathlib import Path
 
 import hydra
 import numpy as np
+from hydra.utils import to_absolute_path
 from omegaconf import DictConfig, OmegaConf
 from sentence_transformers import SentenceTransformer
+from transformers import GenerationConfig
 
 from easy_edit_adaptations.hparam_dispatch import get_hparm_class
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
-from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from EasyEdit.easyeditor.editors.utils import summary_metrics
+from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from utils import extract, extract_aliases
-from hydra.utils import to_absolute_path
-from transformers import GenerationConfig
 
 
 def prompt_to_target(prompt_type, metric_type):
@@ -139,12 +141,12 @@ def main(cfg: DictConfig) -> None:
         xlt_confs = [
             (tgt_prompt_type, tgt_lang)
             for tgt_prompt_type in cfg.eval_prompt_type
-            for tgt_lang in tgt_langs
+            for tgt_lang in all_langs
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             port_key = (
-                f"xlt_{cfg.prompt_type}-{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+                f"xlt-{tgt_prompt_type}-{tgt_lang}"
             )
             target_key = prompt_to_target(tgt_prompt_type, "reliability")
             print(
@@ -175,7 +177,7 @@ def main(cfg: DictConfig) -> None:
         ]
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            gen_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            gen_key = f"{tgt_prompt_type}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "generality")
             print(
                 f"Evaluating generality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
@@ -205,7 +207,7 @@ def main(cfg: DictConfig) -> None:
         ]
         locality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            loc_key = f"{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            loc_key = f"{tgt_prompt_type}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "locality")
             print(
                 f"Evaluating locality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
@@ -241,7 +243,7 @@ def main(cfg: DictConfig) -> None:
         ]
 
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            port_key = f"multi-hop_{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            port_key = f"multi-hop_{tgt_prompt_type}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "portability")
             print(
                 f"Evaluating multi-hop portability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
@@ -268,7 +270,7 @@ def main(cfg: DictConfig) -> None:
         target_key = cfg.target_type
 
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            port_key = f"subj-alias_{tgt_prompt_type}_{cfg.edit_lang}-{tgt_lang}"
+            port_key = f"subj-alias_{tgt_prompt_type}-{tgt_lang}"
             print(
                 f"Evaluating subj-alias portability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
             )
@@ -313,6 +315,25 @@ def main(cfg: DictConfig) -> None:
     else:
         aliases = None
 
+    pre_file = to_absolute_path(os.path.join(log_dir, cfg.pre_file)) if cfg.pre_file is not None else None
+    if cfg.pre_edit is not None:
+        print(f"Loading pre-edit metrics from {cfg.pre_edit}")
+        pre_file_path = Path(to_absolute_path(cfg.pre_edit))
+        pre_file_lang = [x for x in tgt_langs if x in pre_file_path.parts][0]
+        with gzip.open(pre_file_path, "rt") as f:
+            pre_edit = json.load(f)
+        if pre_file_lang != cfg.edit_lang:
+            print(f"Pre-edit file is in {pre_file_lang}, but edit language is {cfg.edit_lang}. Adjustment will be made.")
+        for evaluation in pre_edit:
+            for loc_key in evaluation['pre']['locality']:
+                print(loc_key)
+                # creating tensors for logprobs
+                evaluation['pre']['locality'][loc_key]['nkl']['logprobs'] = torch.tensor(evaluation['pre']['locality'][loc_key]['nkl']['logprobs'])
+            if pre_file_lang != cfg.edit_lang: # if pre_file is in a different language, we need to change the key
+                evaluation["pre"]["rewrite_acc"] = evaluation["pre"]["portability"][f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"]
+    else:
+        pre_edit = None
+
     if method == "FT":
         metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
@@ -330,6 +351,9 @@ def main(cfg: DictConfig) -> None:
             ppl_cfg=ppl_cfg,
             aliases=aliases,
             edit_lang=cfg.edit_lang,
+            pre_file=pre_file, # TODO add to batch_edit
+            pre_edit=pre_edit,
+            pre_eval_only=cfg.pre_eval_only
         )
     else:
         metrics, _, _ = editor.edit(
@@ -351,6 +375,8 @@ def main(cfg: DictConfig) -> None:
             edit_lang=cfg.edit_lang,
         )
 
+    if cfg.pre_eval_only:
+        print(">>> PRE-EVALUTION FINISHED <<<")
     with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
     summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics)
