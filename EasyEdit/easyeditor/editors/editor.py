@@ -23,6 +23,9 @@ from ..util.alg_dict import *
 from ..evaluate.evaluate_utils import test_generation_quality
 from ..evaluate.evaluate import compute_locality_quality
 from ..evaluate.evaluate_utils import compute_ppl
+from pathlib import Path
+import copy
+import gzip
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -279,13 +282,13 @@ class BaseEditor:
                     for locality_key in request['locality'].keys():
                         for loc_metric in locality_metrics:
                             locality_result = []
-                            suffix = "output" if loc_metric == "token_em" else "logprobs"
-                            for loc_pre, loc_post in zip(chunk_metrics[i]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], chunk_metrics[i]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
+                            output_type = "output" if loc_metric == "token_em" else "logprobs"
+                            for loc_pre, loc_post in zip(chunk_metrics[i]['pre']['locality'][locality_key][loc_metric][output_type], chunk_metrics[i]['post']['locality'][locality_key][loc_metric][output_type]):
                                 if loc_metric == "token_em":
                                     locality_result.append(np.mean(np.equal(loc_pre, loc_post)))
                                 elif loc_metric == "nkl":
                                     locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
-                            chunk_metrics[i]['post']['locality'][locality_key][loc_metric].pop(f'{locality_key}_{suffix}')
+                            chunk_metrics[i]['post']['locality'][locality_key][loc_metric].pop(output_type)
                             chunk_metrics[i]['post']['locality'][locality_key][loc_metric] = locality_result
 
                     chunk_metrics[i]['pre'].pop('locality')
@@ -341,7 +344,17 @@ class BaseEditor:
                 for evaluation in all_metrics:
                     evaluation["pre"].update({"ppl": ppl_per_lang})
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
-                json.dump(all_metrics, open(kwargs['pre_file'], 'w'), indent=4)
+                print(f"Saving pre-edit metrics to {kwargs['pre_file']}")
+                Path(kwargs['pre_file']).parent.mkdir(parents=True, exist_ok=True)
+                copy_metrics = copy.deepcopy(all_metrics)
+                for evaluation in copy_metrics:
+                    for loc_key in evaluation['pre']['locality']:
+                        # serializing tensors
+                        evaluation['pre']['locality'][loc_key]['nkl']['logprobs'] = evaluation['pre']['locality'][loc_key]['nkl']['logprobs'].tolist()
+                with gzip.open(kwargs['pre_file'], 'wt') as f:
+                    json.dump(copy_metrics, f)
+                if 'pre_eval_only' in kwargs.keys() and kwargs['pre_eval_only']:
+                    return all_metrics, None, None
 
         def edit_func(request):
             if self.alg_name == 'IKE':
@@ -388,13 +401,13 @@ class BaseEditor:
                     for locality_key in request['locality'].keys():
                         for loc_metric in locality_metrics:
                             locality_result = []
-                            suffix = "output" if loc_metric == "token_em" else "logprobs"
-                            for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}'], all_metrics[idx]['post']['locality'][locality_key][loc_metric][f'{locality_key}_{suffix}']):
+                            output_type = "output" if loc_metric == "token_em" else "logprobs"
+                            for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][output_type], all_metrics[idx]['post']['locality'][locality_key][loc_metric][output_type]):
                                 if loc_metric == "token_em":
                                     locality_result.append(float(np.mean(np.equal(loc_pre, loc_post))))
                                 elif loc_metric == "nkl":
                                     locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
-                            all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(f'{locality_key}_{suffix}')
+                            all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(output_type)
                             all_metrics[idx]['post']['locality'][locality_key][loc_metric] = locality_result
 
                     all_metrics[idx]['pre'].pop('locality')
