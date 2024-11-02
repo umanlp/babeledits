@@ -322,11 +322,11 @@ def main(cfg: DictConfig) -> None:
         pre_file_lang = [x for x in all_langs if x in pre_file_path.parts][0]
         with gzip.open(pre_file_path, "rt") as f:
             pre_edit = json.load(f)
+        pre_edit = pre_edit if cfg.max_edits is None else pre_edit[:cfg.max_edits]
         if pre_file_lang != cfg.edit_lang:
             print(f"Pre-edit file is in {pre_file_lang}, but edit language is {cfg.edit_lang}. Adjustment will be made.")
         for evaluation in pre_edit:
             for loc_key in evaluation['pre']['locality']:
-                print(loc_key)
                 # creating tensors for logprobs
                 evaluation['pre']['locality'][loc_key]['nkl']['logprobs'] = torch.tensor(evaluation['pre']['locality'][loc_key]['nkl']['logprobs'])
             if pre_file_lang != cfg.edit_lang: # if pre_file is in a different language, we need to change the key
