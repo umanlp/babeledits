@@ -354,7 +354,7 @@ class BaseEditor:
                 with gzip.open(kwargs['pre_file'], 'wt') as f:
                     json.dump(copy_metrics, f)
                 if 'pre_eval_only' in kwargs.keys() and kwargs['pre_eval_only']:
-                    return all_metrics, None, None
+                    return copy_metrics, None, None
 
         def edit_func(request):
             if self.alg_name == 'IKE':
