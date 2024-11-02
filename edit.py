@@ -319,7 +319,7 @@ def main(cfg: DictConfig) -> None:
     if cfg.pre_edit is not None:
         print(f"Loading pre-edit metrics from {cfg.pre_edit}")
         pre_file_path = Path(to_absolute_path(cfg.pre_edit))
-        pre_file_lang = [x for x in tgt_langs if x in pre_file_path.parts][0]
+        pre_file_lang = [x for x in all_langs if x in pre_file_path.parts][0]
         with gzip.open(pre_file_path, "rt") as f:
             pre_edit = json.load(f)
         if pre_file_lang != cfg.edit_lang:
