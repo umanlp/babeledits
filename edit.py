@@ -373,6 +373,9 @@ def main(cfg: DictConfig) -> None:
             ppl_cfg=ppl_cfg,
             aliases=aliases,
             edit_lang=cfg.edit_lang,
+            pre_file=pre_file, # TODO add to batch_edit
+            pre_edit=pre_edit,
+            pre_eval_only=cfg.pre_eval_only
         )
 
     if cfg.pre_eval_only:
