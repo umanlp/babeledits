@@ -231,7 +231,7 @@ class BaseEditor:
         all_metrics = []
         
         if ppl_cfg:
-            ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+            ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
             print(f"Perplexities before editing: {ppl_per_lang}")
 
         for record_chunks in _chunks(requests, self.hparams.batch_size):
@@ -261,7 +261,7 @@ class BaseEditor:
                 }
 
                 if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
                     ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"]))}
                     metrics['post'].update({"ppl":ppl_per_lang})
                 
@@ -338,7 +338,7 @@ class BaseEditor:
                     metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
             if ppl_cfg:
-                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
                 ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
                 print(f"Perplexities before editing: {ppl_per_lang}")
                 for evaluation in all_metrics:
@@ -427,7 +427,7 @@ class BaseEditor:
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
                     ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
                     all_metrics[i]['post'].update({"ppl":ppl_per_lang})
         else:
@@ -435,7 +435,7 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.tok, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=False)['perplexities']
+                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
                     ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
                     all_metrics[i]['post'].update({"ppl":ppl_per_lang})
                 if self.alg_name == 'KN' or self.alg_name == 'GRACE' or self.alg_name == 'WISE':

@@ -1,4 +1,5 @@
 import torch
+import math
 import numpy as np
 import scipy
 import nltk
@@ -10,6 +11,7 @@ from sklearn.metrics import f1_score
 import openai
 from evaluate import logging
 from torch.nn import CrossEntropyLoss
+from transformers import AutoTokenizer
 
 def test_batch_prediction_acc(model, tok, hparams, prompts, target, device, locality=False):
     prompt_tok = tok(
@@ -745,7 +747,7 @@ def test_safety_gen(
 def compute_ppl(
     predictions,
     model,
-    tokenizer,
+    model_name,
     batch_size: int = 16,
     add_start_token: bool = True,
     device=None,
@@ -760,10 +762,7 @@ def compute_ppl(
         device = "cuda" if torch.cuda.is_available() else "cpu"
     """
 
-    # model = AutoModelForCausalLM.from_pretrained(model_id)
-    # model = model.to(device)
-
-    # tokenizer = AutoTokenizer.from_pretrained(model_id)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # if batch_size > 1 (which generally leads to padding being required), and
     # if there is not an already assigned pad_token, assign an existing
@@ -835,9 +834,9 @@ def compute_ppl(
         with torch.no_grad():
             out_logits = model(encoded_batch, attention_mask=attn_mask).logits
 
-        shift_logits = out_logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        shift_attention_mask_batch = attn_mask[..., 1:].contiguous()
+        shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
+        shift_labels = labels[..., 1:].contiguous()  # because we can predict only from the second token onwards
+        shift_attention_mask_batch = attn_mask[..., 1:].contiguous()  # same reason as above
 
         perplexity_batch = torch.exp(
             (
