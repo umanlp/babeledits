@@ -5,11 +5,8 @@ defaults:
   - _self_
 
 metrics: 
-  - token_em
-  - first_token_em
-  - string_em
+  - token_em_lm_eval
 locality_metrics:
-  - token_em
   - nkl
 dataset: "datasets/v8/translated/test.json"
 edit_lang: "en"
@@ -19,16 +16,17 @@ max_edits: null
 device: 0
 log_subdir: "new_debug"
 prompt_type: "prompts_mt_marked"
-subject_type: "subjects"
-target_type: "targets"
-eval_prompt_type: ["prompts_mt", "prompts_mt_marked", "prompts_gloss"]
+subject_type: "subjects_mt_marked"
+target_type: "targets_mt_marked"
+eval_prompt_type: ["prompts_mt_marked"]
 subject_in_prompt: null
 generality: true
 locality: true
 portability: true
-eval_ppl: true
-data_ppl : "data_ppl/ME-PPL_50_translated.json"
-batch_size_ppl: 32
+eval_lm: true
+data_lm : "data_ppl/ME-PPL_50_translated.json"
+batch_size_lm: 32
+lm_metric: "ppl"
 pre_file: null
 pre_edit: null
 pre_eval_only: false

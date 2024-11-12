@@ -297,18 +297,19 @@ def main(cfg: DictConfig) -> None:
         gen_cfg = GenerationConfig(**gen_cfg_dict)
         print(f"Using generation: {vars(gen_cfg)}")
 
-    if cfg.eval_ppl:
-        with open(to_absolute_path(cfg.data_ppl), "r", encoding="utf-8") as file:
-            data_ppl = json.load(file)
-        prompts_ppl = [x["Text"][lang] for x in data_ppl for lang in all_langs]
-        ppl_cfg = {
-            "prompts": prompts_ppl,
-            "batch_size": cfg.batch_size_ppl,
+    if cfg.eval_lm:
+        with open(to_absolute_path(cfg.data_lm), "r", encoding="utf-8") as file:
+            data_lm = json.load(file)
+        prompts_lm = [x["Text"][lang] for x in data_lm for lang in all_langs]
+        lm_cfg = {
+            "prompts": prompts_lm,
+            "batch_size": cfg.batch_size_lm,
             "langs": all_langs,
-            "num_sent_per_lang": len(data_ppl),
+            "num_sent_per_lang": len(data_lm),
+            "metric": cfg.lm_metric,
         }
     else:
-        ppl_cfg = None
+        lm_cfg = None
 
     if cfg.multi_answer_eval:
         aliases = extract_aliases(data, cfg.edit_lang, tgt_langs)
@@ -348,7 +349,7 @@ def main(cfg: DictConfig) -> None:
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
             locality_metrics=cfg.locality_metrics,
-            ppl_cfg=ppl_cfg,
+            lm_cfg=lm_cfg,
             aliases=aliases,
             edit_lang=cfg.edit_lang,
             pre_file=pre_file, # TODO add to batch_edit
@@ -370,10 +371,10 @@ def main(cfg: DictConfig) -> None:
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
             locality_metrics=cfg.locality_metrics,
-            ppl_cfg=ppl_cfg,
+            lm_cfg=lm_cfg,
             aliases=aliases,
             edit_lang=cfg.edit_lang,
-            pre_file=pre_file, # TODO add to batch_edit
+            pre_file=pre_file,
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only
         )
@@ -382,7 +383,9 @@ def main(cfg: DictConfig) -> None:
         print(">>> PRE-EVALUTION FINISHED <<<")
     with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
         json.dump(metrics, f, indent=4)
-    summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics)
+    if cfg.eval_lm:
+        lm_metric = cfg.lm_metric if cfg.eval_lm else None
+    summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric)
     with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
         json.dump(summary, f, indent=4)
 
