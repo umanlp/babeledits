@@ -22,7 +22,7 @@ from ..util.hparams import HyperParams
 from ..util.alg_dict import *
 from ..evaluate.evaluate_utils import test_generation_quality
 from ..evaluate.evaluate import compute_locality_quality
-from ..evaluate.evaluate_utils import compute_ppl
+from ..evaluate.evaluate_utils import compute_ppl, compute_bpb
 from pathlib import Path
 import copy
 import gzip
@@ -156,7 +156,7 @@ class BaseEditor:
              eval_metrics=["token_em"],
              generation_conf=None,
              locality_metrics=["token_em"],
-             ppl_cfg=None,
+             lm_cfg=None,
              **kwargs
              ):
         """
@@ -188,7 +188,7 @@ class BaseEditor:
             requests = _prepare_requests(prompts, target_new, ground_truth, rephrase_prompts, locality_inputs, portability_inputs, **kwargs)
 
         return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, 
-                                return_edited_weights=return_edited_weights, eval_metrics=eval_metrics, generation_conf=generation_conf, locality_metrics=locality_metrics, ppl_cfg=ppl_cfg, **kwargs)
+                                return_edited_weights=return_edited_weights, eval_metrics=eval_metrics, generation_conf=generation_conf, locality_metrics=locality_metrics, lm_cfg=lm_cfg, **kwargs)
 
     def batch_edit(self,
                    prompts: List[str],
@@ -230,7 +230,7 @@ class BaseEditor:
         assert hasattr(self.hparams, 'batch_size'), f'Method {self.alg_name} found, pls specify the batch_size....'
         all_metrics = []
         
-        if ppl_cfg:
+        if ppl_cfg: # TODO adapt to lm_cfg with bpb
             ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
             print(f"Perplexities before editing: {ppl_per_lang}")
 
@@ -311,7 +311,7 @@ class BaseEditor:
              eval_metrics=["token_em"],
              generation_conf=None,
              locality_metrics=["token_em"],
-             ppl_cfg = None,
+             lm_cfg = None,
              **kwargs
              ):
         """
@@ -337,12 +337,13 @@ class BaseEditor:
                 else:
                     metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
-            if ppl_cfg:
-                ppl_output = compute_ppl(ppl_cfg['prompts'], self.model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
-                ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
-                print(f"Perplexities before editing: {ppl_per_lang}")
+
+            if lm_cfg:
+                lm_score = self.evaluate_language_modeling(lm_cfg)
                 for evaluation in all_metrics:
-                    evaluation["pre"].update({"ppl": ppl_per_lang})
+                    evaluation["pre"].update({lm_cfg['metric']: lm_score})
+                print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
                 print(f"Saving pre-edit metrics to {kwargs['pre_file']}")
                 Path(kwargs['pre_file']).parent.mkdir(parents=True, exist_ok=True)
@@ -426,18 +427,18 @@ class BaseEditor:
                         weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
-                    ppl_per_lang = {lang:float(np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(ppl_cfg["langs"])}
-                    all_metrics[i]['post'].update({"ppl":ppl_per_lang})
+                if lm_cfg:
+                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
+                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                if ppl_cfg:
-                    ppl_output = compute_ppl(ppl_cfg['prompts'], edited_model, self.model_name, batch_size=ppl_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
-                    ppl_per_lang = {lang:np.mean([ppl_output[idx + j*len(ppl_cfg["langs"])] for j in range(ppl_cfg["num_sent_per_lang"])]) for idx, lang in enumerate(ppl_cfg["langs"])}
-                    all_metrics[i]['post'].update({"ppl":ppl_per_lang})
+                if lm_cfg:
+                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
+                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 if self.alg_name == 'KN' or self.alg_name == 'GRACE' or self.alg_name == 'WISE':
                     with torch.no_grad():
                         weights_copy()
@@ -461,7 +462,8 @@ class BaseEditor:
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
         if len(all_metrics) != 0:
-            print(summary_metrics(all_metrics, eval_metrics, locality_metrics))
+            lm_metric = lm_cfg['metric'] if lm_cfg else None
+            print(summary_metrics(all_metrics, eval_metrics, locality_metrics, lm_metric=lm_metric))
 
         if return_edited_weights:
             return all_metrics, edited_model, weights_copy, weights_per_edit
@@ -681,4 +683,12 @@ class BaseEditor:
 
         return all_results, edited_model, weights_copy
 
-
+    def evaluate_language_modeling(self, lm_cfg):
+        if lm_cfg['metric'] == 'ppl':
+            ppl_output = compute_ppl(lm_cfg['prompts'], self.model, self.model_name, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
+            ppl_per_lang = {lang: float(np.mean([ppl_output[idx + j * len(lm_cfg["langs"])] for j in range(lm_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(lm_cfg["langs"])}
+            return ppl_per_lang
+        if lm_cfg['metric'] == 'bpb':
+            lang_mask = {lang: [idx + j * len(lm_cfg["langs"]) for j in range(lm_cfg["num_sent_per_lang"])] for idx, lang in enumerate(lm_cfg["langs"])}
+            bpb_per_lang = compute_bpb(lm_cfg['prompts'], self.model, self.model_name, lang_mask, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)
+            return bpb_per_lang

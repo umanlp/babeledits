@@ -23,7 +23,7 @@ def get_all_acc_keys(dict_list):
 
     return all_keys
     
-def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics=None):
+def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics=None, lm_metric=None):
     rewrite_metrics = rewrite_metrics or eval_metrics
     if isinstance(all_metrics, dict):
         all_metrics = [all_metrics, ]
@@ -55,11 +55,11 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                         )
                     }
                 )
-        if "ppl" in all_metrics[0][eval].keys():
-            mean_metrics[eval]["ppl"] = dict()
-            for lang in all_metrics[0][eval]["ppl"]:
-                mean_metrics[eval]["ppl"][lang] = float(
-                    np.mean([score[eval]["ppl"][lang] for score in all_metrics])
+        if lm_metric is not None:
+            mean_metrics[eval][lm_metric] = dict()
+            for lang in all_metrics[0][eval][lm_metric]:
+                mean_metrics[eval][lm_metric][lang] = float(
+                    np.mean([score[eval][lm_metric][lang] for score in all_metrics])
                 )
     
         def get_all_prompts(all_metrics, key):
@@ -74,7 +74,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                         item
                         for sublist in l
                         for item in sublist
-                        if item not in ["rewrite_acc", "rewrite_ppl", "ppl"]
+                        if item not in ["rewrite_acc", "rewrite_ppl", lm_metric]
                     ]
                 )
             )

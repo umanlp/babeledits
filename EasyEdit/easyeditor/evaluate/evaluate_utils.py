@@ -150,6 +150,51 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             else:
                 return [float(np.mean(np.equal(answers, labels)))]
             
+    elif eval_metric == "token_em_lm_eval":
+        if isinstance(prompts, str):
+            prompts,targets = [prompts,], [targets,]
+        prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
+        prompt_target_tok = tok(
+            prompt_target,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        prompt_tok = tok(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        )
+        num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
+        num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
+        prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        with torch.no_grad():
+            outputs = model(**prompt_target_tok)
+            if type(outputs) is torch.Tensor:
+                logits = outputs
+            else:
+                logits = outputs.logits
+            answers = torch.argmax(logits, dim=-1).squeeze().detach().cpu().numpy().tolist()
+            labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
+            answers = slice_list(answers,prompt_len,left=True)
+            labels = slice_list(labels,prompt_len,left=False)
+            if locality:
+                return answers if type(answers[0]) is list else [answers,]
+            if isinstance(answers[0], list):
+                res = []
+                for ans,label in zip(answers,labels):
+                    temp_acc = float(np.all(np.equal(ans, label)))
+                    if np.isnan(temp_acc):
+                        continue
+                    res.append(temp_acc)
+                return res
+            else:
+                return [float(np.all(np.equal(answers, labels)))]
+            
     elif eval_metric == "first_token_em":
         if isinstance(prompts, str):
             prompts,targets = [prompts,], [targets,]
@@ -849,3 +894,121 @@ def compute_ppl(
         ppls += perplexity_batch.tolist()
 
     return {"perplexities": ppls, "mean_perplexity": np.mean(ppls)}
+
+
+def compute_bpb(
+    predictions,
+    model,
+    model_name,
+    lang_mask,
+    batch_size: int = 16,
+    add_start_token: bool = True,
+    device=None,
+    max_length=None,
+):
+    """device has been set
+    if device is not None:
+        assert device in ["gpu", "cpu", "cuda"], "device should be either gpu or cpu."
+        if device == "gpu":
+            device = "cuda"
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    """
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    # if batch_size > 1 (which generally leads to padding being required), and
+    # if there is not an already assigned pad_token, assign an existing
+    # special token to also be the padding token
+    if tokenizer.pad_token is None and batch_size > 1:  # Dont go
+        existing_special_tokens = list(tokenizer.special_tokens_map_extended.values())
+        # check that the model already has at least one special token defined
+        assert (
+            len(existing_special_tokens) > 0
+        ), "If batch_size > 1, model must have at least one special token to use for padding. Please use a different model or set batch_size=1."
+        # assign one of the special tokens to also be the pad token
+        tokenizer.add_special_tokens({"pad_token": existing_special_tokens[0]})
+
+    if add_start_token and max_length:  # Dont go
+        # leave room for <BOS> token to be added:
+        assert (
+            tokenizer.bos_token is not None
+        ), "Input model must already have a BOS token if using add_start_token=True. Please use a different model, or set add_start_token=False"
+        max_tokenized_len = max_length - 1
+    else:
+        max_tokenized_len = max_length
+
+    encodings = tokenizer(
+        predictions,
+        add_special_tokens=False,
+        padding=True,
+        truncation=True if max_tokenized_len else False,
+        max_length=max_tokenized_len,
+        return_tensors="pt",
+        return_attention_mask=True,
+    ).to(device)
+
+    encoded_texts = encodings["input_ids"]
+    attn_masks = encodings["attention_mask"]
+
+    byte_lenghts = torch.tensor([len(s.encode("utf-8")) for s in predictions], device=device)
+
+    # check that each input is long enough:
+    if add_start_token:
+        assert torch.all(
+            torch.ge(attn_masks.sum(1), 1)
+        ), "Each input text must be at least one token long."
+    else:
+        assert torch.all(
+            torch.ge(attn_masks.sum(1), 2)
+        ), "When add_start_token=False, each input text must be at least two tokens long. Run with add_start_token=True if inputting strings of only one token, and remove all empty input strings."
+
+    losses = []
+    loss_fct = CrossEntropyLoss(reduction="none")
+
+    for start_index in logging.tqdm(range(0, len(encoded_texts), batch_size)):
+        end_index = min(start_index + batch_size, len(encoded_texts))
+        encoded_batch = encoded_texts[start_index:end_index]
+        attn_mask = attn_masks[start_index:end_index]
+
+        if add_start_token:
+            bos_tokens_tensor = torch.tensor(
+                [[tokenizer.bos_token_id]] * encoded_batch.size(dim=0)
+            ).to(device)
+            encoded_batch = torch.cat([bos_tokens_tensor, encoded_batch], dim=1)
+            attn_mask = torch.cat(
+                [
+                    torch.ones(bos_tokens_tensor.size(), dtype=torch.int64).to(device),
+                    attn_mask,
+                ],
+                dim=1,
+            )
+
+        labels = encoded_batch
+
+        with torch.no_grad():
+            out_logits = model(encoded_batch, attention_mask=attn_mask).logits
+
+        shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
+        shift_labels = labels[..., 1:].contiguous()  # because we can predict only from the second token onwards
+        shift_attention_mask_batch = attn_mask[..., 1:].contiguous()  # same reason as above
+
+        loss_sum = (
+            loss_fct(shift_logits.transpose(1, 2), shift_labels)
+                * shift_attention_mask_batch
+            ).sum(1) 
+        losses += loss_sum.tolist()
+    
+    losses = torch.tensor(losses)
+    lang_to_bpb = {}
+    for lang in lang_mask:
+        losses_lang = losses[lang_mask[lang]].sum()
+        bpb_lang = (1 / (byte_lenghts[lang_mask[lang]].sum() *  math.log(2))) * losses_lang 
+        # Alternative formulation
+        # ppl = torch.exp(1/(attn_masks[lang_mask[lang]].sum()) * losses[lang_mask[lang]].sum())
+        # token_to_byte_ratio = (attn_masks[lang_mask[lang]].sum() / byte_lenghts[lang_mask[lang]].sum())
+        # bpb_lang2 = token_to_byte_ratio* torch.log(ppl) / math.log(2)
+        lang_to_bpb[lang] = float(bpb_lang.item())
+        
+
+    return lang_to_bpb
