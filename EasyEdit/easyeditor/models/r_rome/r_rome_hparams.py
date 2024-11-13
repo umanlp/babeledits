@@ -39,6 +39,7 @@ class R_ROMEHyperParams(HyperParams):
     max_length: int = 40
     model_parallel: bool = False
     fp16: bool = False
+    bf16: bool = False
 
     # compute key vector from prompt only
     enable_prompt_keys: bool = False
