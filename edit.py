@@ -97,8 +97,12 @@ def main(cfg: DictConfig) -> None:
     editor = BaseEditor.from_hparams(hparams)
 
     if cfg.log_subdir:
+        if method == "FT":
+            method_dir_name = "FT-M" if cfg.method.objective_optimization == "target_new" else "FT-L"
+        else:
+            method_dir_name = method
         log_dir = to_absolute_path(
-            f"logs/{cfg.log_subdir}/{model_name}/{method}/{cfg.edit_lang}/{cfg.prompt_type}"
+            f"logs/{cfg.log_subdir}/{model_name}/{method_dir_name}/{cfg.edit_lang}/{cfg.prompt_type}"
         )
         redirect_edit_logs(log_dir)
     else:
