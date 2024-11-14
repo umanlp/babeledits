@@ -132,7 +132,7 @@ def main(cfg: DictConfig) -> None:
             assert (
                 s in p or s_en in p or s_gls in p
             ), f"Neither subject {s} nor subject {s_en} are present in prompt {p} and subject_in_prompt is set to loose"
-        for idx in enumerate(subjects):
+        for idx in range(len(subjects)):
             if subjects[idx] not in prompts[idx]:
                 if subjects_en[idx] in prompts[idx]:
                     subjects[idx] = subjects_en[idx]
