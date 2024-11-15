@@ -125,16 +125,21 @@ urp edit.py log_subdir=v8_2 model=llama-3-1 method=ft edit_lang=ka prompt_type=p
 tmux new-session -d -s edit \; split-window -h \; split-window -v \; send-keys -t edit:0.0 "time urp edit.py log_subdir=v8_2 model=llama-3-1 method=ft edit_lang=ka prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt device=3" C-m \; send-keys -t edit:0.1 "time urp edit.py log_subdir=v8_2 model=llama-3-1 method=ft edit_lang=ka prompt_type=prompts_mt_marked subject_type=subjects_mt_marked target_type=targets_mt_marked device=4" C-m \; send-keys -t edit:0.2 "time urp edit.py log_subdir=v8_2 model=llama-3-1 method=ft edit_lang=ka prompt_type=prompts_gloss subject_type=subjects target_type=targets device=5" C-m \; attach-session -t edit
 
 
-################# BIG v8_rev2 RUN #################
+################# BIG v8_rev3 RUN #################
 
 #Create pre-edit-files
-urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev2 model=llama-3-1,aya pre_edit=ppl_test_set.json.gz pre_eval_only=true
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,p
+rompts_mt_marked]"
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=aya pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]" batch_size_lm=16
 
-#FT-M llama-3-1
-urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev2 model=llama-3-1 method=ft edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev2/meta-llama_Meta-Llama-3.1-8B-Instruct/FT/en/prompts_mt_marked/ppl_test_set.json.gz
-#FT-L llama-3-1
-urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev2 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev2/meta-llama_Meta-Llama-3.1-8B-Instruct/FT/en/prompts_mt_marked/ppl_test_set.json.gz
-#R-ROME llama-3-1
-urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev2 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev2/meta-llama_Meta-Llama-3.1-8B-Instruct/FT/en/prompts_mt_marked/ppl_test_set.json.gz
-#R-ROME EN-X prompts_mt
-urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev2 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev2/meta-llama_Meta-Llama-3.1-8B-Instruct/FT/en/prompts_mt_marked/ppl_test_set.json.gz
+#FT-M llama-3-1 prompts-mt-marked 🚗
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=ft edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+#FT-L llama-3-1 prompts-mt-marked 🚗
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+#R-ROME llama-3-1 prompts-mt-marked 🚗
+urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev3 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+#R-ROME EN-X prompts_mt 🚗
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz 
+
+
+urp edit.py -log_subdir=debug model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz 
