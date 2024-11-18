@@ -456,8 +456,11 @@ class BaseEditor:
                                 weights_per_edit = {k: [] for k in weights_copy.keys()}
                             for k, v in weights_copy.items():
                                     weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
-                            nethook.get_parameter(self.model, k)[...] = v.to(f"cuda:{self.hparams.device}")
-
+                    with torch.no_grad():
+                        for k, v in weights_copy.items():
+                            nethook.get_parameter(self.model, k)[...] = v.to(
+                                f"cuda:{self.hparams.device}"
+                            )
 
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
