@@ -2,8 +2,7 @@ defaults:
   - submitit_slurm
 
 _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
-partition: gpu_4_a100
+partition: ${oc.env:DEFPART}
 mem_gb : 200
 gres: gpu:1
-additional_parameters: {"time": "24:00:00", "mail-user": "tommaso.green@uni-mannheim.de", 
-"mail-type": "ALL"}
+additional_parameters: {"time": "20:00:00", "mail-user": "${oc.env:USER_MAIL}", "mail-type": "ALL"}

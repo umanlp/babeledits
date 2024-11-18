@@ -138,8 +138,8 @@ urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=f
 urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
 #R-ROME llama-3-1 prompts-mt-marked 🚗
 urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev3 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
-#R-ROME EN-X prompts_mt 🚗
-urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz 
 
-
-urp edit.py -log_subdir=debug model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz 
+#FT-M llama-3-1 prompts-mt 🚗
+urp edit.py -m hydra/launcher=helix log_subdir=v8_rev3 model=llama-3-1 method=ft edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt
+#FT-L llama-3-1 prompts-mt 🚗
+urp edit.py -m hydra/launcher=helix log_subdir=v8_rev3 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt
