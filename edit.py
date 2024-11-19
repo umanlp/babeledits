@@ -387,16 +387,6 @@ def main(cfg: DictConfig) -> None:
             pre_eval_only=cfg.pre_eval_only
         )
 
-    if cfg.pre_eval_only:
-        print(">>> PRE-EVALUTION FINISHED <<<")
-    with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
-        json.dump(metrics, f, indent=4)
-    if cfg.eval_lm:
-        lm_metric = cfg.lm_metric if cfg.eval_lm else None
-    summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric)
-    with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
-        json.dump(summary, f, indent=4)
-
     # Save the command used to launch the script
     command = "python " + " ".join(sys.argv)
     with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
@@ -409,6 +399,19 @@ def main(cfg: DictConfig) -> None:
             default_flow_style=False,
             default_style="",
         )
+    
+    if cfg.pre_eval_only:
+        print(">>> PRE-EVALUTION FINISHED <<<")
+    else:
+        with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
+            json.dump(metrics, f, indent=4)
+        if cfg.eval_lm:
+            lm_metric = cfg.lm_metric 
+        else:
+            lm_metric = None
+        summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric)
+        with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
+            json.dump(summary, f, indent=4)
 
     print(">>> FINISHED <<<")
     print(f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}")
