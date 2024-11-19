@@ -172,29 +172,77 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
         num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
         prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
-        with torch.no_grad():
-            outputs = model(**prompt_target_tok)
-            if type(outputs) is torch.Tensor:
-                logits = outputs
-            else:
-                logits = outputs.logits
-            answers = torch.argmax(logits, dim=-1).squeeze().detach().cpu().numpy().tolist()
-            labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
-            answers = slice_list(answers,prompt_len,left=True)
-            labels = slice_list(labels,prompt_len,left=False)
-            if locality:
-                return answers if type(answers[0]) is list else [answers,]
-            if isinstance(answers[0], list):
-                res = []
-                for ans,label in zip(answers,labels):
-                    temp_acc = float(np.all(np.equal(ans, label)))
-                    if np.isnan(temp_acc):
-                        continue
-                    res.append(temp_acc)
-                return res
-            else:
-                return [float(np.all(np.equal(answers, labels)))]
+        if model.prev_logits is not None:
+            outputs = model.prev_logits
+        else:
+            with torch.no_grad():
+                outputs = model(**prompt_target_tok)
+                model.prev_logits = outputs
+        if type(outputs) is torch.Tensor:
+            logits = outputs
+        else:
+            logits = outputs.logits
+        answers = torch.argmax(logits, dim=-1).squeeze().detach().cpu().numpy().tolist()
+        labels = prompt_target_tok['input_ids'].squeeze().detach().cpu().numpy().tolist()
+        answers = slice_list(answers,prompt_len,left=True)
+        labels = slice_list(labels,prompt_len,left=False)
+        if locality:
+            return answers if type(answers[0]) is list else [answers,]
+        if isinstance(answers[0], list):
+            res = []
+            for ans,label in zip(answers,labels):
+                temp_acc = float(np.all(np.equal(ans, label)))
+                if np.isnan(temp_acc):
+                    continue
+                res.append(temp_acc)
+            return res
+        else:
+            return [float(np.all(np.equal(answers, labels)))]
             
+    elif eval_metric == "rewrite_score":
+        if isinstance(prompts, str):
+            prompts,targets = [prompts,], [targets,]
+        prompt_target = [prompt + ' ' + target for prompt, target in zip(prompts,targets)]
+        max_prompt_len = max([len(tok.encode(_)) for _ in prompt_target]) + 1
+        prompt_target_tok = tok(
+            prompt_target,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        ).to(f"cuda:{device}")
+        prompt_tok = tok(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=max(hparams.max_length, max_prompt_len),
+            return_tensors="pt",
+        )
+        num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
+        num_pad_toks = [int((i == tok.pad_token_id).sum()) for i in prompt_target_tok['input_ids'].cpu()]
+        prompt_len = [x+y for x,y in zip(num_pad_toks,num_prompt_toks)]
+        if model.prev_logits is not None:
+            outputs = model.prev_logits
+        else:
+            with torch.no_grad():
+                outputs = model(**prompt_target_tok)
+                model.prev_logits = outputs 
+        if type(outputs) is torch.Tensor:
+            logits = outputs
+        else:
+            logits = outputs.logits
+            
+        shifted_logits = logits[:, :-1, :]
+        shifted_labels = prompt_target_tok["input_ids"][:, 1:]
+        target_mask = []
+        for l in prompt_len:
+            target_mask.append([0]*(l-1) + [1]*(shifted_labels.shape[-1]-l+1))
+        target_mask = torch.tensor(target_mask).to(logits.device)
+        log_probs = gather_log_probs(shifted_logits, shifted_labels) * target_mask
+        probs = log_probs.sum(1).exp().float().detach().cpu().numpy().tolist()
+
+        return probs
+    
     elif eval_metric == "first_token_em":
         if isinstance(prompts, str):
             prompts,targets = [prompts,], [targets,]
@@ -221,8 +269,16 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             input_tok = {"input_ids": prompt_tok["input_ids"][None, 0], "attention_mask": prompt_tok["attention_mask"][None, 0]}
         else:
             input_tok = prompt_tok
-        with torch.no_grad():
-            logits = model(**input_tok).logits
+        if model.prev_logits is not None:
+            outputs = model.prev_logits
+        else:
+            with torch.no_grad():
+                outputs = model(**prompt_target_tok)
+                model.prev_logits = outputs
+        if type(outputs) is torch.Tensor:
+            logits = outputs
+        else:
+            logits = outputs.logits
         last_non_masked = input_tok["attention_mask"].sum(1) - 1
         to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
         gathered = torch.gather(logits, 1, to_gather).squeeze(1)

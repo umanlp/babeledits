@@ -67,10 +67,12 @@ def compute_edit_quality(
     rephrase_prompts = record["rephrase_prompt"] if 'rephrase_prompt' in record.keys() else None
 
     ret = {"rewrite_acc" : {}}
+    model.prev_logits = None
     for eval_metric in eval_metrics:
         reliability_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
                                               rewrite_prompts, target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)['rewrite_acc']
         ret["rewrite_acc"].update({eval_metric : reliability_acc})
+    model.prev_logits = None
 
     ret['locality'] = {}
     ret['portability'] = {}
@@ -78,28 +80,34 @@ def compute_edit_quality(
     if rephrase_prompts is not None:
         for generality_key in rephrase_prompts.keys():
             ret['rephrase_acc'].update({generality_key: {}})
+            model.prev_logits = None
             for eval_metric in eval_metrics:
                 rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
                                                         rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
                                                         device=device, test_rephrase=True, eval_metric=eval_metric, generation_conf=generation_conf)['rephrase_acc']
                 ret['rephrase_acc'][generality_key].update({eval_metric : rephrase_acc})
+            model.prev_logits = None
 
     if 'locality' in record.keys() and any(record['locality']):
         for locality_key in record['locality'].keys():
             ret['locality'].update({locality_key: {}})
             for loc_metric in locality_metrics:
+                model.prev_logits = None
                 loc_output = compute_locality_quality(model, model_name, hparams, tok, locality_key,
                                              record['locality'][locality_key]['prompt'],
                                              record['locality'][locality_key]['ground_truth'], device=device, eval_metric=loc_metric)
                 ret['locality'][locality_key].update({loc_metric : loc_output})
+            model.prev_logits = None
     if 'portability' in record.keys() and any(record['portability']):
         for portability_key in record['portability'].keys():
             ret['portability'].update({portability_key: {}})
+            model.prev_logits = None
             for eval_metric in eval_metrics:
                 port_output = compute_portability_quality(model, model_name, hparams, tok, portability_key,
                                                 record['portability'][portability_key]['prompt'],
                                                 record['portability'][portability_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)[f"{portability_key}_acc"]
                 ret['portability'][portability_key].update({eval_metric : port_output})
+            model.prev_logits = None
     if test_generation:
         if hparams.alg_name == 'GRACE':
             ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=rewrite_prompts if isinstance(rewrite_prompts,list) else [rewrite_prompts,], max_out_len=100, vanilla_generation=True)

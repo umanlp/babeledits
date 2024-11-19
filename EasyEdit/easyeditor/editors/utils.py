@@ -34,6 +34,24 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
     with open(output_file, 'w') as f:
         json.dump(all_metrics, f, ensure_ascii=False, indent=4)
 
+    def get_all_prompts(all_metrics, key):
+        l = [t[eval][key].keys() for t in all_metrics]
+        return sorted(list(set([item for sublist in l for item in sublist])))
+    
+    def get_all_other_keys(all_metrics, eval):
+        l = [t[eval].keys() for t in all_metrics]
+        output = list(
+            set(
+                [
+                    item
+                    for sublist in l
+                    for item in sublist
+                    if item not in ["rewrite_acc", "rewrite_ppl", lm_metric]
+                ]
+            )
+        )
+        return sorted(output)
+
     mean_metrics = dict()
     for eval in ["pre", "post"]:
         mean_metrics[eval] = dict()
@@ -43,6 +61,8 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
             else:
                 continue
             for metric_type in rewrite_metrics:
+                if eval == "pre" and metric_type == "rewrite_score":
+                    continue
                 mean_metrics[eval][key].update(
                     {
                         metric_type: float(
@@ -61,24 +81,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                 mean_metrics[eval][lm_metric][lang] = float(
                     np.mean([score[eval][lm_metric][lang] for score in all_metrics])
                 )
-    
-        def get_all_prompts(all_metrics, key):
-            l = [t[eval][key].keys() for t in all_metrics]
-            return sorted(list(set([item for sublist in l for item in sublist])))
-    
-        def get_all_other_keys(all_metrics, eval):
-            l = [t[eval].keys() for t in all_metrics]
-            output = list(
-                set(
-                    [
-                        item
-                        for sublist in l
-                        for item in sublist
-                        if item not in ["rewrite_acc", "rewrite_ppl", lm_metric]
-                    ]
-                )
-            )
-            return sorted(output)
+
     
         for key in get_all_other_keys(all_metrics, eval):
             mean_metrics[eval][key] = dict()
@@ -86,6 +89,8 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                 mean_metrics[eval][key][prompt_type] = dict()
                 metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
                 for metric_type in metrics_to_gather:
+                    if eval == "pre" and metric_type == "rewrite_score":
+                        continue
                     mean_metrics[eval][key][prompt_type].update(
                         {
                             metric_type: float(

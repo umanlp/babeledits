@@ -141,6 +141,7 @@ class BaseEditor:
         if not hparams.model_parallel and hasattr(hparams, 'device'):
             self.model.to(f'cuda:{hparams.device}')
 
+        model.prev_logits = None
         self.hparams = hparams
 
     def edit(self,
@@ -412,6 +413,22 @@ class BaseEditor:
                             all_metrics[idx]['post']['locality'][locality_key][loc_metric] = locality_result
 
                     all_metrics[idx]['pre'].pop('locality')
+
+                if "rewrite_score" in all_metrics[idx]['pre']['rewrite_acc']:
+                    
+                    # Reliability
+                    p_pre = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
+                    p_post = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
+                    all_metrics[idx]['post']['rewrite_acc']['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post,p_pre)] 
+                    all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
+
+                    # Portability and Generality
+                    for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx]['post'].keys()]:
+                        for prompt_type in all_metrics[idx]['pre'][aspect]:
+                            p_pre = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
+                            p_post = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
+                            all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post,p_pre)]
+                            all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
 
             if verbose:
                 LOG.info(f"{idx} editing: {request['prompt']} -> {request['target_new']}  \n\n {all_metrics[idx]}")
