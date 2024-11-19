@@ -6,6 +6,7 @@ defaults:
 
 metrics: 
   - token_em_lm_eval
+  - rewrite_score
 locality_metrics:
   - nkl
 dataset: "datasets/v8/translated/test.json"
