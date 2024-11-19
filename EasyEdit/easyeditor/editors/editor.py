@@ -417,17 +417,20 @@ class BaseEditor:
                 if "rewrite_score" in all_metrics[idx]['pre']['rewrite_acc']:
                     
                     # Reliability
-                    p_pre = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
-                    p_post = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
-                    all_metrics[idx]['post']['rewrite_acc']['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post,p_pre)] 
+                    p_pre_list = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
+                    p_post_list = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
+                    all_metrics[idx]["post"]["rewrite_acc"]["rewrite_score"] = [
+                        (p_post - p_pre) / (1 - p_pre)
+                        for p_post, p_pre in zip(p_post_list, p_pre_list)
+                    ] 
                     all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
 
                     # Portability and Generality
                     for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx]['post'].keys()]:
                         for prompt_type in all_metrics[idx]['pre'][aspect]:
-                            p_pre = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
-                            p_post = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
-                            all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post,p_pre)]
+                            p_pre_list = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
+                            p_post_list = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
+                            all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post_list,p_pre_list)]
                             all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
 
             if verbose:
