@@ -2,7 +2,7 @@ import gzip
 import json
 import os
 import sys
-
+import copy
 import torch
 import yaml
 
@@ -339,7 +339,7 @@ def main(cfg: DictConfig) -> None:
                 # creating tensors for logprobs
                 evaluation['pre']['locality'][loc_key]['nkl']['logprobs'] = torch.tensor(evaluation['pre']['locality'][loc_key]['nkl']['logprobs'])
             if pre_file_lang != cfg.edit_lang: # if pre_file is in a different language, we need to change the key
-                evaluation["pre"]["rewrite_acc"] = evaluation["pre"]["portability"][f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"]
+                evaluation["pre"]["rewrite_acc"] = copy.deepcopy(evaluation["pre"]["portability"][f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"])
     else:
         pre_edit = None
 
