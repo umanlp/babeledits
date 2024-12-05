@@ -334,9 +334,7 @@ class BaseEditor:
             for i, request in enumerate(tqdm(requests)):
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
-                    metrics = {"pre": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, [''], request, self.hparams.device, pre_edit=True)}
-                else:
-                    metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
+                metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
 
             if lm_cfg:
@@ -384,54 +382,48 @@ class BaseEditor:
                 icl_examples = None
             return edited_model, weights_copy, icl_examples
         def edit_evaluation(all_metrics, request, edited_model, idx, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs):
-            if self.alg_name == 'IKE':
-                all_metrics[idx].update({
-                    'case_id': idx,
-                    "requested_rewrite": request,
-                    "post": compute_icl_edit_quality(self.model, self.model_name, self.hparams, self.tok, icl_examples, request, self.hparams.device),
-                })
-            else:
-                all_metrics[idx].update({ 
-                    'case_id': idx,
-                    "requested_rewrite": request,
-                    "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics),
-                })
-                if "metric_kwargs" in kwargs:
-                    all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
+            all_metrics[idx].update({ 
+                'case_id': idx,
+                "requested_rewrite": request,
+                "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics, icl_examples=icl_examples, icl_template="{icl_examples}{prompt} {target}" if self.alg_name == "IKE" else None),
+            })
+            #TODO continue
+            if "metric_kwargs" in kwargs:
+                all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
 
-                if 'locality' in all_metrics[idx]['post'].keys():
-                    for locality_key in request['locality'].keys():
-                        for loc_metric in locality_metrics:
-                            locality_result = []
-                            output_type = "output" if loc_metric == "token_em" else "logprobs"
-                            for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][output_type], all_metrics[idx]['post']['locality'][locality_key][loc_metric][output_type]):
-                                if loc_metric == "token_em":
-                                    locality_result.append(float(np.mean(np.equal(loc_pre, loc_post))))
-                                elif loc_metric == "nkl":
-                                    locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
-                            all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(output_type)
-                            all_metrics[idx]['post']['locality'][locality_key][loc_metric] = locality_result
+            if 'locality' in all_metrics[idx]['post'].keys():
+                for locality_key in request['locality'].keys():
+                    for loc_metric in locality_metrics:
+                        locality_result = []
+                        output_type = "output" if loc_metric == "token_em" else "logprobs"
+                        for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][output_type], all_metrics[idx]['post']['locality'][locality_key][loc_metric][output_type]):
+                            if loc_metric == "token_em":
+                                locality_result.append(float(np.mean(np.equal(loc_pre, loc_post))))
+                            elif loc_metric == "nkl":
+                                locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
+                        all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(output_type)
+                        all_metrics[idx]['post']['locality'][locality_key][loc_metric] = locality_result
 
-                    all_metrics[idx]['pre'].pop('locality')
+                all_metrics[idx]['pre'].pop('locality')
 
-                if "rewrite_score" in all_metrics[idx]['pre']['rewrite_acc']:
-                    
-                    # Reliability
-                    p_pre_list = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
-                    p_post_list = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
-                    all_metrics[idx]["post"]["rewrite_acc"]["rewrite_score"] = [
-                        (p_post - p_pre) / (1 - p_pre)
-                        for p_post, p_pre in zip(p_post_list, p_pre_list)
-                    ] 
-                    all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
+            if "rewrite_score" in all_metrics[idx]['pre']['rewrite_acc']:
+                
+                # Reliability
+                p_pre_list = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
+                p_post_list = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
+                all_metrics[idx]["post"]["rewrite_acc"]["rewrite_score"] = [
+                    (p_post - p_pre) / (1 - p_pre)
+                    for p_post, p_pre in zip(p_post_list, p_pre_list)
+                ] 
+                all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
 
-                    # Portability and Generality
-                    for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx]['post'].keys()]:
-                        for prompt_type in all_metrics[idx]['pre'][aspect]:
-                            p_pre_list = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
-                            p_post_list = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
-                            all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post_list,p_pre_list)]
-                            all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
+                # Portability and Generality
+                for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx]['post'].keys()]:
+                    for prompt_type in all_metrics[idx]['pre'][aspect]:
+                        p_pre_list = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
+                        p_post_list = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
+                        all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post_list,p_pre_list)]
+                        all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
 
             if verbose:
                 LOG.info(f"{idx} editing: {request['prompt']} -> {request['target_new']}  \n\n {all_metrics[idx]}")

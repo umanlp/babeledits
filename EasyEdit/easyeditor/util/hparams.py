@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass
 from dataclasses import asdict
 from omegaconf import DictConfig, OmegaConf
@@ -31,8 +32,18 @@ class HyperParams:
         return dict
             
     @classmethod
-    def from_dict_config(cls, config: DictConfig):
+    def from_dict_config(cls, config: DictConfig, strict=True):
+        if not strict:
+            new_config = {}
+            for key, value in config.items():
+                if key not in cls.__annotations__:
+                    logging.warning(f"Could not find key: {key} in class {cls.__class__} will ignore it.")
+                    continue
+                new_config[key] = value
+            config = DictConfig(new_config)
+
         config_dict = OmegaConf.to_container(config, resolve=True)
+    
         return cls(**config_dict)
 
 
