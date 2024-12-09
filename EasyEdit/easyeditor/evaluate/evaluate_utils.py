@@ -18,7 +18,7 @@ def test_batch_prediction_acc(model, tok, hparams, prompts, target, device, loca
         prompts,
         padding=True,
         truncation=True,
-        max_length=hparams.max_length,
+        max_length=getattr(hparams, "max_length", None),
         return_tensors="pt",
     ).to(f"cuda:{device}")
 
@@ -51,7 +51,7 @@ def test_seq2seq_batch_prediction_acc(model, tok, hparams, prompts, targets, dev
         prompts,
         padding=True,
         truncation=True,
-        max_length=hparams.max_length,
+        max_length=getattr(hparams, "max_length", None),
         return_tensors="pt",
     ).to(f"cuda:{device}")
 
@@ -59,7 +59,7 @@ def test_seq2seq_batch_prediction_acc(model, tok, hparams, prompts, targets, dev
         targets,
         padding=True,
         truncation=True,
-        max_length=hparams.max_length,
+        max_length=getattr(hparams, "max_length", None),
         return_tensors="pt",
     ).to(f"cuda:{device}")
 
@@ -81,6 +81,7 @@ def test_seq2seq_batch_prediction_acc(model, tok, hparams, prompts, targets, dev
         return torch.mean((trg_tok['input_ids'][:,:-1] == ans[:,:-1]).float(), dim=-1).detach().cpu().numpy().tolist()
 
 def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=False, vanilla_generation=False, eval_metric="token_em", generation_conf=None):
+    # Note: this does not support encoder-decoder models (like t5)
     assert not model.training
     if vanilla_generation:
         if isinstance(prompts, str):
@@ -114,14 +115,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             prompt_target,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         prompt_tok = tok(
             prompts,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         )
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
@@ -159,14 +160,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             prompt_target,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         prompt_tok = tok(
             prompts,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         )
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
@@ -208,14 +209,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             prompt_target,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         prompt_tok = tok(
             prompts,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         )
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
@@ -252,13 +253,13 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             prompts, # A single repeated prompt
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         prompt_target_tok = tok(
             prompt_target,
             padding=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
@@ -308,14 +309,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             # prompt_target,
             # padding=True,
             # truncation=True,
-            # max_length=max(hparams.max_length, max_prompt_len),
+            # max_length=max(getattr(hparams, max_length, max_prompt_length), max_prompt_len),
             # return_tensors="pt",
         # ).to(f"cuda:{device}")
         # prompt_tok = tok(
             # prompts,
             # padding=True,
             # truncation=True,
-            # max_length=max(hparams.max_length, max_prompt_len),
+            # max_length=max(getattr(hparams, max_length, max_prompt_length), max_prompt_len),
             # return_tensors="pt",
         # )
         # num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]
@@ -348,7 +349,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                 prompts[0] ,
                 padding=True,
                 truncation=True,
-                max_length=max(hparams.max_length, max_prompt_len),
+                max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
                 return_special_tokens_mask=True,
                 return_tensors="pt",
             ).to(f"cuda:{device}")
@@ -371,7 +372,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                     return_tensors="pt",
                     return_special_tokens_mask=True,
                     truncation=True,
-                    max_length=max(hparams.max_length, max_prompt_len)
+                    max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len)
                 ).to(device)
 
                 generation_conf.max_new_tokens = prompt_tok.input_ids.shape[1] - prompt_tok["special_tokens_mask"].sum().item()
@@ -721,14 +722,14 @@ def F1(model, tok, hparams, prompts, targets, device, locality=False, vanilla_ge
         prompt_target,
         padding=True,
         truncation=True,
-        max_length=max(hparams.max_length, max_prompt_len),
+        max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
         return_tensors="pt",
     ).to(f"cuda:{device}")
     prompt_tok = tok(
         prompts,
         padding=True,
         truncation=True,
-        max_length=max(hparams.max_length, max_prompt_len),
+        max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
         return_tensors="pt",
     )
     num_prompt_toks = [int((i != tok.pad_token_id).sum()) for i in prompt_tok['input_ids']]

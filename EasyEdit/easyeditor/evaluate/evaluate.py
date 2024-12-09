@@ -7,7 +7,7 @@ from ..models.melo.melo import LORA
 
 import typing
 from itertools import chain
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
@@ -41,6 +41,8 @@ def compute_edit_quality(
     test_generation = False,
     generation_conf = None,
     locality_metrics = ['token_em'],
+    icl_examples = None,
+    icl_template = None,
 ) -> typing.Dict:
     """
     Given a rewritten model, computes generalization and specificity metrics for
@@ -54,6 +56,14 @@ def compute_edit_quality(
     :param vec: ???
     :return: Dictionary containing rewriting metrics
     """
+    icl_examples = icl_examples or []
+    icl_template = icl_template or "{prompt}"
+
+    def apply_template(prompts, targets):
+        if isinstance(prompts, list):
+            return [icl_template.format(icl_examples=''.join(icl_examples), prompt=p, target=t) for p, t in zip(prompts, targets)]
+        return icl_template.format(icl_examples=''.join(icl_examples), prompt=prompts, target=targets)
+
     if isinstance(model,LORA):
         model=model.model
     # First, unpack rewrite evaluation record.
@@ -70,7 +80,7 @@ def compute_edit_quality(
     model.prev_logits = None
     for eval_metric in eval_metrics:
         reliability_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                              rewrite_prompts, target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)['rewrite_acc']
+                                              apply_template(rewrite_prompts, target_new), target_new, device=device, eval_metric=eval_metric, generation_conf=generation_conf)['rewrite_acc']
         ret["rewrite_acc"].update({eval_metric : reliability_acc})
     model.prev_logits = None
 
@@ -83,7 +93,7 @@ def compute_edit_quality(
             model.prev_logits = None
             for eval_metric in eval_metrics:
                 rephrase_acc = compute_rewrite_or_rephrase_quality(model, model_name, hparams, tok,
-                                                        rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth'], 
+                                                        apply_template(rephrase_prompts[generality_key]['prompt'], rephrase_prompts[generality_key]['ground_truth']), rephrase_prompts[generality_key]['ground_truth'], 
                                                         device=device, test_rephrase=True, eval_metric=eval_metric, generation_conf=generation_conf)['rephrase_acc']
                 ret['rephrase_acc'][generality_key].update({eval_metric : rephrase_acc})
             model.prev_logits = None
@@ -94,7 +104,7 @@ def compute_edit_quality(
             for loc_metric in locality_metrics:
                 model.prev_logits = None
                 loc_output = compute_locality_quality(model, model_name, hparams, tok, locality_key,
-                                             record['locality'][locality_key]['prompt'],
+                                             apply_template(record['locality'][locality_key]['prompt'], record['locality'][locality_key]['ground_truth']),
                                              record['locality'][locality_key]['ground_truth'], device=device, eval_metric=loc_metric)
                 ret['locality'][locality_key].update({loc_metric : loc_output})
             model.prev_logits = None
@@ -104,15 +114,17 @@ def compute_edit_quality(
             model.prev_logits = None
             for eval_metric in eval_metrics:
                 port_output = compute_portability_quality(model, model_name, hparams, tok, portability_key,
-                                                record['portability'][portability_key]['prompt'],
+                                                apply_template(record['portability'][portability_key]['prompt'], record['portability'][portability_key]['ground_truth']),
                                                 record['portability'][portability_key]['ground_truth'], device=device, eval_metric=eval_metric, generation_conf=generation_conf)[f"{portability_key}_acc"]
                 ret['portability'][portability_key].update({eval_metric : port_output})
             model.prev_logits = None
     if test_generation:
         if hparams.alg_name == 'GRACE':
-            ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=rewrite_prompts if isinstance(rewrite_prompts,list) else [rewrite_prompts,], max_out_len=100, vanilla_generation=True)
+            generation_prompts = rewrite_prompts if isinstance(rewrite_prompts,list) else [rewrite_prompts,]
+            generation_prompts = apply_template(generation_prompts, target_new)
+            ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=generation_prompts, max_out_len=100, vanilla_generation=True)
         else:
-            ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=rewrite_prompts if isinstance(rewrite_prompts,list) else [rewrite_prompts,], max_out_len=100, vanilla_generation=False)
+            ret['fluency'] = test_generation_quality(model=model,tok=tok,prefixes=generation_prompts, max_out_len=100, vanilla_generation=False)
     return ret
 
 def compute_rewrite_or_rephrase_quality(
@@ -120,8 +132,8 @@ def compute_rewrite_or_rephrase_quality(
     model_name,
     hparams: HyperParams,
     tok: AutoTokenizer,
-    prompt: str,
-    target_new: str,
+    prompt: Union[str, List[str]],
+    target_new: Union[str, List[str]],
     device,
     test_rephrase: bool = False,
     eval_metric: str = 'token_em',
@@ -189,7 +201,7 @@ def compute_locality_quality(
             prompts,
             padding=True,
             truncation=True,
-            max_length=max(hparams.max_length, max_prompt_len),
+            max_length=max(getattr(hparams, "max_length", max_prompt_len), max_prompt_len),
             return_tensors="pt",
         ).to(f"cuda:{device}")
         with torch.no_grad():
