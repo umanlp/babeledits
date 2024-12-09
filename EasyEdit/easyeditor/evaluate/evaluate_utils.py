@@ -864,6 +864,7 @@ def compute_ppl(
     """
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.padding_side = "right"
 
     # if batch_size > 1 (which generally leads to padding being required), and
     # if there is not an already assigned pad_token, assign an existing
@@ -915,6 +916,7 @@ def compute_ppl(
     for start_index in logging.tqdm(range(0, len(encoded_texts), batch_size)):
         end_index = min(start_index + batch_size, len(encoded_texts))
         encoded_batch = encoded_texts[start_index:end_index]
+        print(f"BATCH SIZE {end_index-start_index}")
         attn_mask = attn_masks[start_index:end_index]
 
         if add_start_token:
@@ -933,7 +935,7 @@ def compute_ppl(
         labels = encoded_batch
 
         with torch.no_grad():
-            out_logits = model(encoded_batch, attention_mask=attn_mask).logits
+            out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
 
         shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
         shift_labels = labels[..., 1:].contiguous()  # because we can predict only from the second token onwards
