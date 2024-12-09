@@ -1,20 +1,35 @@
 defaults:
   - model: llama-3-1
   - method: ft
+  - decoding_strategy: greedy
   - _self_
 
-dataset: "datasets/v6/translated/translated_with_entities/val.json"
+metrics: 
+  - token_em_lm_eval
+  - rewrite_score
+locality_metrics:
+  - nkl
+dataset: "datasets/v8/translated/val_100.json"
 edit_lang: "en"
-tgt_langs: ["ar", "de", "es", "fr", "hr", "it", "ja", "nl", "sw", "zh"]
+tgt_langs: ['ar', 'de', 'en', 'fr', 'hr', 'it', 'ja', 'ka', 'my', 'qu', 'zh']
+multi_answer_eval: true
 max_edits: null
 device: 0
-log_subdir: "hp_tuning"
-prompt_type: "prompts"
-subject_type: "subjects"
-target_type: "targets"
-eval_prompt_type: ["prompts_gloss"]
+log_subdir: "new_debug"
+prompt_type: "prompts_mt_marked"
+subject_type: "subjects_mt_marked"
+target_type: "targets_mt_marked"
+eval_prompt_type: ["prompts_mt_marked"]
 subject_in_prompt: null
 generality: false
 locality: false
+portability: false
+eval_lm: false
+data_lm : "data_ppl/ME-PPL_50_translated.json"
+batch_size_lm: 32
+lm_metric: "ppl"
+pre_file: null
+pre_edit: null
+pre_eval_only: false
 wandb:
   project_name: "babeledits-hp_tuning"
