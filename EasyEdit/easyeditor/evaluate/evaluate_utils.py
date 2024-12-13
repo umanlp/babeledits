@@ -5,6 +5,7 @@ import scipy
 import nltk
 import typing
 from ..util.generate import generate_fast
+from ..models.babelreft.babelreft_main import BabelReftModel
 import torch.nn.functional as F
 from ..trainer import *
 from sklearn.metrics import f1_score
@@ -82,7 +83,7 @@ def test_seq2seq_batch_prediction_acc(model, tok, hparams, prompts, targets, dev
 
 def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=False, vanilla_generation=False, eval_metric="token_em", generation_conf=None):
     # Note: this does not support encoder-decoder models (like t5)
-    assert not model.training
+    assert not model.training or not model.model.training # second one only valid if model is BabelReFT
     if vanilla_generation:
         if isinstance(prompts, str):
             prompts, targets = [prompts, ], [targets, ]
@@ -177,7 +178,10 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             outputs = model.prev_logits
         else:
             with torch.no_grad():
-                outputs = model(**prompt_target_tok)
+                if isinstance(model, BabelReftModel):
+                    outputs = model(prompt_target_tok)
+                else:
+                    outputs = model(**prompt_target_tok)
                 model.prev_logits = outputs
         if type(outputs) is torch.Tensor:
             logits = outputs
@@ -936,7 +940,13 @@ def compute_ppl(
         labels = encoded_batch
 
         with torch.no_grad():
-            out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
+            if isinstance(model, BabelReftModel):
+                out_logits = model(
+                    base={"input_ids": encoded_batch, "attention_mask": attn_mask},
+                ).bfloat16()
+            else:
+                out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
+
 
         shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
         shift_labels = labels[..., 1:].contiguous()  # because we can predict only from the second token onwards

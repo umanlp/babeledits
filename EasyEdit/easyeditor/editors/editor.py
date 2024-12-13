@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 import random
 from ..models.melo.melo import LORA
+from ..models.babelreft.babelreft_main import get_babelreft_model, get_reft_config
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 from transformers import LlamaTokenizer
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -145,7 +146,15 @@ class BaseEditor:
         if not hparams.model_parallel and hasattr(hparams, 'device'):
             self.model.to(f'cuda:{hparams.device}')
 
-        model.prev_logits = None
+        if hparams.alg_name == "BabelReFT":
+            reft_config = get_reft_config(hparams, self.model.config.hidden_size)
+            babelreft_model = get_babelreft_model(self.model, reft_config, self.tok)
+            babelreft_model.eval()
+            babelreft_model.set_device(f"cuda:{hparams.device}")
+            babelreft_model.print_trainable_parameters()
+            self.model = babelreft_model
+            
+        self.model.prev_logits = None
         self.hparams = hparams
 
     def edit(self,
@@ -162,6 +171,7 @@ class BaseEditor:
              generation_conf=None,
              locality_metrics=["token_em"],
              lm_cfg=None,
+             babelreft_vocab=None,
              **kwargs
              ):
         """
@@ -191,6 +201,10 @@ class BaseEditor:
             requests = kwargs["requests"]
         else:
             requests = _prepare_requests(prompts, target_new, ground_truth, rephrase_prompts, locality_inputs, portability_inputs, **kwargs)
+        
+        if babelreft_vocab is not None:
+            for idx, request in enumerate(requests):
+                request["babelreft_vocab"] = babelreft_vocab[idx]
 
         return self.edit_requests(requests, sequential_edit, verbose, test_generation=test_generation, 
                                 return_edited_weights=return_edited_weights, eval_metrics=eval_metrics, generation_conf=generation_conf, locality_metrics=locality_metrics, lm_cfg=lm_cfg, **kwargs)
@@ -338,6 +352,8 @@ class BaseEditor:
             for i, request in enumerate(tqdm(requests)):
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
+                if self.alg_name == "BabelReFT":
+                    self.model.add_words_to_vocab(request["babelreft_vocab"])
                 metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
 
@@ -360,6 +376,9 @@ class BaseEditor:
                 if 'pre_eval_only' in kwargs.keys() and kwargs['pre_eval_only']:
                     return copy_metrics, None, None
 
+            if self.alg_name == "BabelReFT":
+                self.model.reset_vocab()
+
         def edit_func(request):
             if self.alg_name == 'IKE':
                 edited_model, weights_copy, icl_examples = self.model, {}, self.apply_algo(
@@ -373,6 +392,8 @@ class BaseEditor:
                     train_ds=kwargs['train_ds'] if self.alg_name == 'IKE' else None
                 )
             else:
+                if self.alg_name == "BabelReFT":
+                    self.model.add_words_to_vocab(request["babelreft_vocab"])
                 edited_model, weights_copy = self.apply_algo(
                     self.model,
                     self.tok,
@@ -450,6 +471,7 @@ class BaseEditor:
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
+                edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 if lm_cfg:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
@@ -472,11 +494,13 @@ class BaseEditor:
                                 weights_per_edit = {k: [] for k in weights_copy.keys()}
                             for k, v in weights_copy.items():
                                     weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
-                    with torch.no_grad():
+                    with torch.no_grad(): #restoring model
                         for k, v in weights_copy.items():
                             nethook.get_parameter(self.model, k)[...] = v.to(
                                 f"cuda:{self.hparams.device}"
                             )
+                if self.alg_name == "BabelReFT":
+                    self.model.reset_vocab()
 
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
