@@ -2,7 +2,7 @@ import unicodedata
 from typing import List, Optional
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, HybridCache
 
 from .logit_lens import LogitLens
 
@@ -115,6 +115,14 @@ def generate_fast(
     # stored in `past_key_values`. At each step, we are generating the
     # next token for the index at `cur_context.stop + 1`.
     past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())
+    if "gemma" in model.name_or_path.lower():
+        past_key_values = HybridCache(
+            config=model.config,
+            batch_size=input_ids.shape[0],
+            max_cache_len=input_ids.shape[0]+max_out_len,
+            device=model.device,
+            dtype=model.dtype,
+        )
 
     with torch.no_grad():
         while input_ids.size(1) < max_out_len:  # while not exceeding max output length
@@ -162,7 +170,6 @@ def generate_fast(
                 if new_idx < max_out_len:
                     input_ids[i][new_idx] = new_toks[i]
                     attention_mask[i][new_idx] = 1
-
             cur_context = slice(cur_context.stop, cur_context.stop + 1)
     txt = [tok.decode(x, skip_special_tokens=True) for x in input_ids.detach().cpu().numpy().tolist()]
     txt = [
