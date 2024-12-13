@@ -27,7 +27,6 @@ dependencies = [
     "opencv-python>=4.10.0.84",
     "iopath>=0.1.10",
     "peft>=0.13.2",
-    "accelerate>=1.0.1",
     "matplotlib>=3.9.2",
     "einops>=0.8.0",
     "datasets>=3.0.2",
@@ -43,5 +42,8 @@ dependencies = [
     "ipywidgets>=8.1.5",
     "plotly>=5.24.1",
     "jupyter>=1.1.1",
-    "pyreft>=0.0.2",
+    "pyreft",
 ]
+
+[tool.uv.sources]
+pyreft = { git = "https://github.com/tommaso-green/pyreft.git" }

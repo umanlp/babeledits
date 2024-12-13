@@ -23,7 +23,7 @@ from easy_edit_adaptations.hparam_dispatch import get_hparm_class
 from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.editors.utils import summary_metrics
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
-from utils import extract, extract_aliases
+from utils import extract, extract_aliases, get_babelreft_vocab
 import random
 import string
 
@@ -377,6 +377,13 @@ def main(cfg: DictConfig) -> None:
     else:
         pre_edit = None
 
+    if method == "BabelReFT":
+        babelreft_vocab = get_babelreft_vocab(
+            data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs
+        )
+    else:
+        babelreft_vocab = None
+
     if method == "FT":
         metrics, _, _ = editor.edit(
             prompts=prompts[:max_edits],
@@ -397,6 +404,7 @@ def main(cfg: DictConfig) -> None:
             pre_file=pre_file,  # TODO add to batch_edit
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
+            babelreft_vocab = babelreft_vocab
         )
     else:
         metrics, _, _ = editor.edit(
@@ -419,6 +427,7 @@ def main(cfg: DictConfig) -> None:
             pre_file=pre_file,
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
+            babelreft_vocab=babelreft_vocab,
         )
 
     # Save the command used to launch the script

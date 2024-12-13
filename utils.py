@@ -1,4 +1,5 @@
 import json
+import itertools
 import re
 from collections import OrderedDict
 import urllib
@@ -526,7 +527,7 @@ def extract_aliases(data, src_lang, tgt_lang):
         {lang: alias_lang for lang, alias_lang in x.items() if lang in all_langs} if x else {}
         for x in extract(data, "ground_truths_port_aliases", strict=False)
     ]
-    subj_aliases = gen_aliases
+    subj_aliases = gen_aliases # these are not aliases of the subject, but rather target aliases for prompts with aliased subjects
 
     return {
         "rel_aliases": rel_aliases,
@@ -535,3 +536,22 @@ def extract_aliases(data, src_lang, tgt_lang):
         "multi-hop_aliases": multi_hop_aliases,
         "subj_aliases": subj_aliases,
     }
+
+def get_babelreft_vocab(data, subject_type, src_lang, tgt_lang):
+    all_langs = sorted(list(set([src_lang] + tgt_lang)))
+
+    subjects = [[d["subjects"][lang] for lang in all_langs] for d in data.values()]
+    subjects += [[d[subject_type][lang] for lang in all_langs] for d in data.values()]
+    subjects_aliases = [
+        [
+            d["subjects_aliases"][lang] if lang in d["subjects_aliases"] else []
+            for lang in all_langs
+        ]
+        for d in data.values()
+    ]
+    subjects_aliases = list(
+        map(lambda s: list(itertools.chain.from_iterable(s)), subjects_aliases)
+    )
+
+    subject_vocab = [list(set(a + b)) for a, b in zip(subjects, subjects_aliases)]
+    return subject_vocab

@@ -312,7 +312,6 @@ name = "babeledits"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "accelerate" },
     { name = "babelnet" },
     { name = "datasets" },
     { name = "einops" },
@@ -355,7 +354,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", specifier = ">=1.0.1" },
     { name = "babelnet", specifier = ">=1.2.0" },
     { name = "datasets", specifier = ">=3.0.2" },
     { name = "einops", specifier = ">=0.8.0" },
@@ -384,7 +382,7 @@ requires-dist = [
     { name = "peft", specifier = ">=0.13.2" },
     { name = "plotly", specifier = ">=5.24.1" },
     { name = "pydantic", specifier = "==1.10.9" },
-    { name = "pyreft", specifier = ">=0.0.2" },
+    { name = "pyreft", git = "https://github.com/tommaso-green/pyreft.git" },
     { name = "scikit-learn", specifier = ">=1.5.2" },
     { name = "sentence-transformers", specifier = ">=3.2.1" },
     { name = "sienna", specifier = ">=0.2.6" },
@@ -925,16 +923,6 @@ wheels = [
 ]
 
 [[package]]
-name = "flash-attn"
-version = "2.7.0.post2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "einops" },
-    { name = "torch" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/40/2c/90bf7f2b4800708e3a8a62694c935283b492384a0a791cfefbedd9138e1b/flash_attn-2.7.0.post2.tar.gz", hash = "sha256:62244de20dabad9a42d0636f6b2ea4c051d33df179a0b3bea4352502ebca1466", size = 2657246 }
-
-[[package]]
 name = "fonttools"
 version = "4.55.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1100,6 +1088,24 @@ wheels = [
 ]
 
 [[package]]
+name = "gcsfs"
+version = "2024.9.0.post1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "decorator" },
+    { name = "fsspec" },
+    { name = "google-auth" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-cloud-storage" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d9/9d/64fa09b9c392ee79ffaa4b26d0481d2d775ffe03969b38a4ade77bd72d15/gcsfs-2024.9.0.post1.tar.gz", hash = "sha256:7ca70ee9d7c7dbce1a3e36b4883e14102c2d7b4284f49e242843a437bc684684", size = 79460 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/1d/37ab60da39d3b782b0cf7770ba8c9071be8bb2aee8bc01b6d350c28b51b3/gcsfs-2024.9.0.post1-py2.py3-none-any.whl", hash = "sha256:f3ab9d3bedc45da8cf40baed7c3a1e1694e8f599160d9138d78f0ef25e4a3ca1", size = 34977 },
+]
+
+[[package]]
 name = "gevent"
 version = "24.11.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1208,6 +1214,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6a/71/4c5387d8a3e46e3526a8190ae396659484377a73b33030614dd3b28e7ded/google_auth-2.36.0.tar.gz", hash = "sha256:545e9618f2df0bcbb7dcbc45a546485b1212624716975a1ea5ae8149ce769ab1", size = 268336 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2d/9a/3d5087d27865c2f0431b942b5c4500b7d1b744dd3262fdc973a4c39d099e/google_auth-2.36.0-py2.py3-none-any.whl", hash = "sha256:51a15d47028b66fd36e5c64a82d2d57480075bccc7da37cde257fc94177a61fb", size = 209519 },
+]
+
+[[package]]
+name = "google-auth-oauthlib"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-auth" },
+    { name = "requests-oauthlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cc/0f/1772edb8d75ecf6280f1c7f51cbcebe274e8b17878b382f63738fd96cee5/google_auth_oauthlib-1.2.1.tar.gz", hash = "sha256:afd0cad092a2eaa53cd8e8298557d6de1034c6cb4a740500b5357b648af97263", size = 24970 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/8e/22a28dfbd218033e4eeaf3a0533b2b54852b6530da0c0fe934f0cc494b29/google_auth_oauthlib-1.2.1-py2.py3-none-any.whl", hash = "sha256:2d58a27262d55aa1b87678c3ba7142a080098cbc2024f903c62355deb235d91f", size = 24930 },
 ]
 
 [[package]]
@@ -3005,6 +3024,15 @@ wheels = [
 ]
 
 [[package]]
+name = "oauthlib"
+version = "3.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/fa/fbf4001037904031639e6bfbfc02badfc7e12f137a8afa254df6c4c8a670/oauthlib-3.2.2.tar.gz", hash = "sha256:9859c40929662bec5d64f34d01c99e093149682a3f38915dc0655d5a633dd918", size = 177352 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/80/cab10959dc1faead58dc8384a781dfbf93cb4d33d50988f7a69f1b7c9bbe/oauthlib-3.2.2-py3-none-any.whl", hash = "sha256:8139f29aac13e25d502680e9e19963e83f16838d48a0d71c287fe40e7067fbca", size = 151688 },
+]
+
+[[package]]
 name = "omegaconf"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3703,14 +3731,14 @@ wheels = [
 
 [[package]]
 name = "pyreft"
-version = "0.0.2"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.8"
+source = { git = "https://github.com/tommaso-green/pyreft.git#558aad39c9957e7c979f48344233f6da476b8c7c" }
 dependencies = [
     { name = "accelerate" },
     { name = "datasets" },
     { name = "evaluate" },
-    { name = "flash-attn" },
     { name = "fsspec" },
+    { name = "gcsfs" },
     { name = "huggingface-hub" },
     { name = "ipywidgets" },
     { name = "jupyter" },
@@ -3725,10 +3753,6 @@ dependencies = [
     { name = "torch" },
     { name = "transformers" },
     { name = "wandb" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/60/cabca04e41dc6c390f0287e7c224fa1c7fe32577d479fde8c3b6bf19226e/pyreft-0.0.2.tar.gz", hash = "sha256:58ba7b14700da360224a10e40ba39076c980a71b5ee341daf21fc1a4cfb66a65", size = 20681 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/a5/8d901cb6366d433c23b6e99a0e4ee781a5f306aad0eed264936ce8fa380b/pyreft-0.0.2-py3-none-any.whl", hash = "sha256:85bdec9fa2c0f71d006bd78db0f9210e75a9a25b377d5bfdc43ecb053436ad63", size = 18083 },
 ]
 
 [[package]]
@@ -4076,6 +4100,19 @@ wheels = [
 ]
 
 [[package]]
+name = "requests-oauthlib"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179 },
+]
+
+[[package]]
 name = "requests-toolbelt"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4373,16 +4410,16 @@ wheels = [
 
 [[package]]
 name = "seaborn"
-version = "0.13.2"
+version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/59/a451d7420a77ab0b98f7affa3a1d78a313d2f7281a57afb1a34bae8ab412/seaborn-0.13.2.tar.gz", hash = "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7", size = 1457696 }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/77/5cde8bc47df770486acf64f550839b4136d1696e5e4d57ce33fa1823972b/seaborn-0.12.2.tar.gz", hash = "sha256:374645f36509d0dcab895cba5b47daf0586f77bfe3b36c97c607db7da5be0139", size = 1439798 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl", hash = "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987", size = 294914 },
+    { url = "https://files.pythonhosted.org/packages/8f/2e/17bbb83fbf102687bb2aa3d808add39da820a7698159302a1a69bb82e01c/seaborn-0.12.2-py3-none-any.whl", hash = "sha256:ebf15355a4dba46037dfd65b7350f014ceb1f13c05e814eda2c9f5fd731afc08", size = 293284 },
 ]
 
 [[package]]

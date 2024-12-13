@@ -1,0 +1,12 @@
+alg_name: "BabelReFT"
+device: 0
+
+layers: [15]
+num_steps: 100
+# batch_size: 1
+# max_length: 40
+lr: 5e-4
+low_rank_dim: 4
+component: "block_output"
+model_parallel: false
+bf16: true
