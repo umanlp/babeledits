@@ -355,6 +355,8 @@ class BaseEditor:
                 if self.alg_name == "BabelReFT":
                     self.model.add_words_to_vocab(request["babelreft_vocab"])
                 metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
+                if self.alg_name == "BabelReFT":
+                    self.model.reset_vocab()
                 all_metrics.append(metrics)
 
             if lm_cfg:
@@ -376,8 +378,6 @@ class BaseEditor:
                 if 'pre_eval_only' in kwargs.keys() and kwargs['pre_eval_only']:
                     return copy_metrics, None, None
 
-            if self.alg_name == "BabelReFT":
-                self.model.reset_vocab()
 
         def edit_func(request):
             if self.alg_name == 'IKE':
