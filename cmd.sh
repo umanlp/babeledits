@@ -128,8 +128,7 @@ tmux new-session -d -s edit \; split-window -h \; split-window -v \; send-keys -
 ################# BIG v8_rev3 RUN #################
 
 #Create pre-edit-files
-urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,p
-rompts_mt_marked]"
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]"
 urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev3 model=aya pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]" batch_size_lm=16
 
 #FT-M llama-3-1 prompts-mt-marked 🚗
@@ -143,3 +142,95 @@ urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev3 model=llama-3-1 me
 urp edit.py -m hydra/launcher=helix log_subdir=v8_rev3 model=llama-3-1 method=ft edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt
 #FT-L llama-3-1 prompts-mt 🚗
 urp edit.py -m hydra/launcher=helix log_subdir=v8_rev3 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en,ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt
+
+
+urp edit.py dataset=datasets/v8_debug/test_50_random_seed42.json log_subdir=v8_debug_50_random_seed42 model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz device=0
+urp edit.py dataset=datasets/v8_debug/test_50_last.json log_subdir=v8_debug_50_last model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev3/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz device=1
+
+# Study on token_em
+urp edit.py -m hydra/launcher=jureca log_subdir=debug_100 model=llama-3-1 method=ft edit_lang=en max_edits=100
+urp edit.py -m hydra/launcher=jureca log_subdir=debug_100 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en max_edits=100
+
+# v8_rev4
+
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev4 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,p
+rompts_mt_marked]"
+
+
+################# BIG v8_rev5 RUN #################
+# v8_rev5
+
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]"
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=aya pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]" batch_size_lm=16
+
+# Only EN, all methods for llama-3-1 with prompts_mt_marked
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-jureca FT-L
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-jureca R-ROME
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+
+# All but EN, all methods for llama-3-1 with prompts_mt_marked
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev5 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev5 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev5/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+
+################# BIG v8_rev6 RUN #################
+# v8_rev6
+
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]"
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=aya pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]" batch_size_lm=16
+
+# Only EN, all methods for llama-3-1 with prompts_mt_marked
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-jureca FT-L
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=en pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-jureca R-ROME
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+
+# All but EN, all methods for llama-3-1 with prompts_mt_marked
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-bwunicluster FT-L
+urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev6 model=llama-3-1 method=ft method.norm_constraint=5e-4 method.objective_optimization=prompt_last edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+# 🚗-helix R-ROME
+urp edit.py -m hydra/launcher=helix log_subdir=v8_rev6 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz
+
+# All but EN, FT-M for llama-3-1 with prompts_mt
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt 
+
+# All but EN, FT-M for llama-3-1 with prompts_mt
+# 🚗-jureca FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev6 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev6/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt 
+
+################# BIG v8_rev7 RUN #################
+# v8_rev7
+
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]"
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=aya pre_file=ppl_test_set.json.gz pre_eval_only=true eval_prompt_type="[prompts_mt,prompts_mt_marked]" batch_size_lm=16
+
+# Only EN, all methods for llama-3-1 with prompts_mt_marked
+#  FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 method=ft edit_lang=en pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.objective_optimization=target_new method.layers=[31] method.lr=0.0005
+#  FT-L
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 method=ft  edit_lang=en pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.objective_optimization=prompt_last method.layers=[31] method.lr=0.0005 method.norm_constraint=0.002
+#  R-ROME
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=en pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.kl_factor=0.0625 method.layers=[15]
+
+# All but EN, all methods for llama-3-1 with prompts_mt_marked
+#  FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.objective_optimization=target_new method.layers=[31] method.lr=0.0005 
+#  FT-L
+urp edit.py -m hydra/launcher=bwunicluster log_subdir=v8_rev7 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.objective_optimization=prompt_last method.layers=[31] method.lr=0.0005 method.norm_constraint=0.002
+#  R-ROME
+urp edit.py -m hydra/launcher=helix log_subdir=v8_rev7 model=llama-3-1 method=r-rome subject_in_prompt=loose edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz method.kl_factor=0.0625 method.layers=[15]
+
+
+# All but EN, FT-M for llama-3-1 with prompts_mt (*** EN with prompt_mt = EN with prompt_mt_marked ***)
+#  FT-M
+urp edit.py -m hydra/launcher=jureca log_subdir=v8_rev7 model=llama-3-1 method=ft edit_lang=ar,de,fr,hr,it,ja,ka,my,qu,zh pre_edit=logs/v8_rev7/meta-llama_Meta-Llama-3.1-8B-Instruct/FT-M/en/prompts_mt_marked/ppl_test_set.json.gz prompt_type=prompts_mt subject_type=subjects_mt target_type=targets_mt method.layers=[31] method.lr=0.0005
