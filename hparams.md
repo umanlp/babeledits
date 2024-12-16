@@ -5,12 +5,13 @@ These hyperparameters were found using a wandb sweep gridsearch using the v8/tra
 ## FT-L
 
 ### Llama
-Best-found: method.layers=[31] method.lr=0.0005 method.norm_constraint=0.002
-Score: 0.2518
-Run name: deft-sweep-46
+Best-found: method.layers=[21] method.lr=0.0005 method.norm_constraint=0.002
+Score: 0.1554
+Run name: fallen-sweep-16
 Comment: By far the best, layer 31 seems to outperform all other layers. Top 3 results are in the layer range 29-31.
+Updated: Layer 31 causes model collapse, switched to layer 21.
 
-### Aya
+### Aya # TODO CHECK
 Best-found: method.layers=[21] method.lr=0.0005 method.norm_constraint=0.002
 Score: 0.1518
 Run name: earthy-sweep-46
@@ -20,12 +21,13 @@ Comment: Much worse scorses than Llama. Layer 21 seems to be the best layer for 
 ## FT-M
 
 ### Llama
-Best-found: method.layers=[31] method.lr=0.0005
-Score: 0.47
-Run name: fancy-sweep-16
+Best-found: method.layers=[15] method.lr=0.0005
+Score: 0.4618
+Run name: astral-sweep-10
 Comment: Best layers seem mid-to-late. Much higher scores than other layers. Again, top layers seem to be the best.
+Update: Layer 31 causes model collapse, switched to layer 15.
 
-### Aya
+### Aya # TODO CHECK
 Best-found: method.layers=[31] method.lr=0.0005
 Score: 0.4018
 Run name: cerulean-sweep-26
@@ -47,7 +49,7 @@ Score: 0.267
 Run name: classic-sweep-4
 Comment: Early layers are the best, around 5-7.
 
-## Summary Table
+## Summary Table # TODO UPDATE
 
 | Method | Model | Best-found Hyperparameters | Score  | Run name         | Comment                                                                 |
 |--------|-------|----------------------------|--------|------------------|-------------------------------------------------------------------------|
