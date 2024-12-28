@@ -148,7 +148,7 @@ class BaseEditor:
 
         if hparams.alg_name == "BabelReFT":
             reft_config = get_reft_config(hparams, self.model.config.hidden_size)
-            babelreft_model = get_babelreft_model(self.model, reft_config, self.tok)
+            babelreft_model = get_babelreft_model(self.model, reft_config, hparams.pos_type, self.tok)
             babelreft_model.eval()
             babelreft_model.set_device(f"cuda:{hparams.device}")
             babelreft_model.print_trainable_parameters()
@@ -352,8 +352,6 @@ class BaseEditor:
             for i, request in enumerate(tqdm(requests)):
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
-                if self.alg_name == "BabelReFT":
-                    self.model.add_words_to_vocab(request["babelreft_vocab"])
                 metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
                 all_metrics.append(metrics)
 
@@ -375,9 +373,6 @@ class BaseEditor:
                     json.dump(copy_metrics, f)
                 if 'pre_eval_only' in kwargs.keys() and kwargs['pre_eval_only']:
                     return copy_metrics, None, None
-
-            if self.alg_name == "BabelReFT":
-                self.model.reset_vocab()
 
         def edit_func(request):
             if self.alg_name == 'IKE':

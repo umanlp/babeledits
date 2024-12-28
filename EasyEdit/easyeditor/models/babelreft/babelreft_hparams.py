@@ -21,6 +21,7 @@ class BabelReFTHyperParams(HyperParams):
     # Method
     layers: List[int]
     num_steps: int
+    pos_type: str
     # batch_size: 1
     # max_length: 40
     lr: float

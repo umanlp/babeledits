@@ -105,13 +105,35 @@ class TrainingLossThresholdCallback(TrainerCallback):
         return control
 
 
+def check_same_intervention_size(pos_type, unit_locations):
+    """
+    Check that, for each example in the batch, the number of interventions (positions on which to intervene) is the same.
+    """
+    if pos_type != "all_tokens":
+        return True
+    else:
+        try: 
+            x = torch.tensor(unit_locations["sources->base"][1])
+            return True
+        except ValueError: 
+            return False
+
+
 class BabelReftModel(ReftModel):
     def __init__(
-        self, reft_config, model, tokenizer, words_to_add=None, *args, **kwargs
+        self,
+        reft_config,
+        model,
+        pos_type,
+        tokenizer,
+        words_to_add=None,
+        *args,
+        **kwargs,
     ):
         super(BabelReftModel, self).__init__(reft_config, model)
         self.vocab = []
         self.tokenizer = tokenizer
+        self.pos_type = pos_type
         if words_to_add is not None:
             self.add_words_to_vocab(words_to_add)
 
@@ -145,16 +167,47 @@ class BabelReftModel(ReftModel):
             unit_locations, intervention_mask = self.get_unit_locations(
                 base["input_ids"]
             )
-            og_output, intv_output = super().forward(
-                base=base,
-                output_original_output=True,
-                unit_locations=unit_locations,
-            )
-            output_logits = torch.where(
-                intervention_mask[:, None, None].bool(),
-                intv_output.logits.bfloat16(),
-                og_output.logits.bfloat16(),
-            )
+            # at least one example does not have an intervention
+            og_output = self.model(**base) if not intervention_mask.all() else None
+            if not intervention_mask.any():
+                # Vanilla forward pass, no interventions
+                return og_output.logits.bfloat16()
+            elif check_same_intervention_size(self.pos_type, unit_locations):
+                # all examples have the same number of interventions, so we can do a single forward pass
+                _, intv_output = super().forward(
+                    base=base,
+                    output_original_output=False,
+                    unit_locations=unit_locations,
+                )
+                # if only some examples have interventions, we need to replace the logits with the intervention logits
+                output_logits = (
+                    intv_output.logits.bfloat16()
+                    if og_output is None
+                    else torch.where(
+                        intervention_mask[:, None, None].bool(),
+                        intv_output.logits.bfloat16(),
+                        og_output.logits.bfloat16(),
+                    )
+                )
+            else:
+                # examples have different number of interventions, so we need to do a forward pass for each example
+                all_logits = []
+                batch_size = base["input_ids"].shape[0]
+                for i in range(
+                    batch_size
+                ):  # need to do this cause pyvene does not support different number of intv across examples
+                    if intervention_mask[i] == 1:
+                        sel_base = {k: v[i].unsqueeze(0) for k, v in base.items()}
+                        sel_unit_locations = {'sources->base': (None, [unit_locations['sources->base'][1][i]])}
+                        _, intv_output = super().forward(
+                            base=sel_base,
+                            output_original_output=False,
+                            unit_locations=sel_unit_locations,
+                        )
+                        all_logits.append(intv_output.logits.bfloat16())
+                    else:
+                        all_logits.append(og_output.logits[i].bfloat16())
+                output_logits = torch.cat(all_logits, dim=0)
             return output_logits
 
     def add_words_to_vocab(self, word_list):
@@ -179,37 +232,77 @@ class BabelReftModel(ReftModel):
         self.vocab.clear()
 
     def get_unit_locations(self, tok_sequences):
-        result = []
-        for seq in tok_sequences:
-            # print(seq, tokenizer.decode(seq))
-            d = []
-            word_found = False
-            for idx, word_tokens in enumerate(self.vocab):
-                word_len = len(word_tokens)
-                if word_found:
-                    break
-                for i in range(len(seq) - word_len + 1):
-                    if seq[i : i + word_len].tolist() == word_tokens:
-                        d.append({"word_idx": idx, "last_token_pos": i + word_len - 1})
-                        word_found = True
+        if self.pos_type == "last_token":
+            result = []
+            for seq in tok_sequences:
+                # print(seq, tokenizer.decode(seq))
+                d = []
+                word_found = False
+                for idx, word_tokens in enumerate(self.vocab):
+                    word_len = len(word_tokens)
+                    if word_found:
                         break
-                        # pyreft does not support different number of intv across examples
-            result.append(d or None)
-        intervention_locs = [
-            [loc_info["last_token_pos"] for loc_info in r] if r is not None else [0]
-            for r in result
-        ]
-        intervention_mask = torch.tensor(
-            [1 if r is not None else 0 for r in result], device=tok_sequences.device
-        )
-        return {
-            "sources->base": (None, [[x for x in intervention_locs]])
-        }, intervention_mask
+                    for i in range(len(seq) - word_len + 1):
+                        if seq[i : i + word_len].tolist() == word_tokens:
+                            d.append(
+                                {"word_idx": idx, "last_token_pos": i + word_len - 1}
+                            )
+                            word_found = True
+                            break
+                            # pyreft does not support different number of intv across examples
+                result.append(d or None)
+            intervention_locs = [
+                [loc_info["last_token_pos"] for loc_info in r] if r is not None else [0]
+                for r in result
+            ]
+            intervention_mask = torch.tensor(
+                [1 if r is not None else 0 for r in result], device=tok_sequences.device
+            )
+            return {
+                "sources->base": (None, [[x for x in intervention_locs]])
+            }, intervention_mask
+        elif self.pos_type == "all_tokens":
+            result = []
+            for seq in tok_sequences:
+                # print(seq, tokenizer.decode(seq))
+                d = []
+                word_found = False
+                for idx, word_tokens in enumerate(self.vocab):
+                    word_len = len(word_tokens)
+                    if word_found:
+                        break
+                    for i in range(len(seq) - word_len + 1):
+                        if seq[i : i + word_len].tolist() == word_tokens:
+                            d.append(
+                                {
+                                    "word_idx": idx,
+                                    "all_token_pos": [
+                                        idx for idx in range(i, i + word_len)
+                                    ],
+                                }
+                            )
+                            word_found = True
+                            break
+                            # pyreft does not support different number of intv across examples
+                result.append(d or None)
+            intervention_locs = [
+                [loc_info["all_token_pos"] for loc_info in r] if r is not None else [0]
+                for r in result
+            ]
+            intervention_mask = torch.tensor(
+                [1 if r is not None else 0 for r in result], device=tok_sequences.device
+            )
+            return {
+                "sources->base": (None, [x for x in intervention_locs])
+            }, intervention_mask
+        else:
+            raise ValueError(f"Invalid pos_type: {self.pos_type}")
 
 
 def get_babelreft_model(
     model,
     reft_config,
+    pos_type,
     tokenizer,
     words_to_add=None,
     set_device=True,
@@ -218,7 +311,7 @@ def get_babelreft_model(
     """
     Create an instance of BabelReFT model.
     """
-    reft_model = BabelReftModel(reft_config, model, tokenizer, words_to_add)
+    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add)
     if set_device:
         reft_model.set_device(model.device)
     if disable_model_grads:
@@ -229,7 +322,7 @@ def get_babelreft_model(
 def get_reft_config(hparams, hidden_size):
     reft_cfg = pyreft.ReftConfig(
         representations={
-            "layer": hparams.layers[0], # only single layer intervention supported
+            "layer": hparams.layers[0],  # only single layer intervention supported
             "component": hparams.component,
             "low_rank_dimension": hparams.low_rank_dim,
             "intervention": pyreft.LoreftIntervention(
