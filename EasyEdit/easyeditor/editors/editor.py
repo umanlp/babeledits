@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 import random
 from ..models.melo.melo import LORA
-from ..models.babelreft.babelreft_main import get_babelreft_model, get_reft_config
+from ..models.babelreft.babelreft_main import get_babelreft_model, get_reft_config, BabelReftModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 from transformers import LlamaTokenizer
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -353,14 +353,13 @@ class BaseEditor:
                 if self.alg_name == 'IKE':
                     assert 'train_ds' in kwargs.keys(), print('IKE need train_ds(For getting In-Context prompt)')
                 metrics= {"pre": compute_edit_quality(self.model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics)}
-                if self.alg_name == "BabelReFT":
-                    self.model.reset_vocab()
                 all_metrics.append(metrics)
 
             if lm_cfg:
                 lm_score = self.evaluate_language_modeling(lm_cfg)
                 for evaluation in all_metrics:
                     evaluation["pre"].update({lm_cfg['metric']: lm_score})
+                lm_cfg['pre_scores'] = lm_score
                 print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
 
             if 'pre_file' in kwargs and kwargs['pre_file'] is not None:
@@ -725,6 +724,14 @@ class BaseEditor:
         return all_results, edited_model, weights_copy
 
     def evaluate_language_modeling(self, lm_cfg):
+        if isinstance(self.model, BabelReftModel) and 'pre_scores' in lm_cfg.keys():
+            _, intv_mask = self.model.get_unit_locations(
+                self.model.tokenizer(
+                    lm_cfg["prompts"], padding=True, return_tensors="pt"
+                )["input_ids"])
+            if not intv_mask.any():
+                print(">>> No BabelReFT vocab tokens in the LM prompts, returning the previous scores...")
+                return lm_cfg["pre_scores"]
         if lm_cfg['metric'] == 'ppl':
             ppl_output = compute_ppl(lm_cfg['prompts'], self.model, self.model_name, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
             ppl_per_lang = {lang: float(np.mean([ppl_output[idx + j * len(lm_cfg["langs"])] for j in range(lm_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(lm_cfg["langs"])}
