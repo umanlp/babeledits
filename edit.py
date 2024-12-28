@@ -394,6 +394,9 @@ def main(cfg: DictConfig) -> None:
             babelreft_vocab = babelreft_vocab
         )
 
+    peak_mem = torch.cuda.max_memory_allocated()
+    peak_mem_gb = peak_mem / (1024**3)
+    print(f"\033[93mPeak GPU memory usage: {peak_mem_gb:.2f} GB\033[0m")
     # Save the command used to launch the script
     command = "python " + " ".join(sys.argv)
     with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
