@@ -98,7 +98,9 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.log_subdir:
         if method == "FT":
-            method_dir_name = "FT-M" if cfg.method.objective_optimization == "target_new" else "FT-L"
+            method_dir_name = (
+                "FT-M" if cfg.method.objective_optimization == "target_new" else "FT-L"
+            )
         else:
             method_dir_name = method
         log_dir = to_absolute_path(
@@ -153,9 +155,7 @@ def main(cfg: DictConfig) -> None:
         ]
         portability_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
-            port_key = (
-                f"xlt-{tgt_prompt_type}-{tgt_lang}"
-            )
+            port_key = f"xlt-{tgt_prompt_type}-{tgt_lang}"
             target_key = prompt_to_target(tgt_prompt_type, "reliability")
             print(
                 f"Evaluating reliability in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
@@ -324,27 +324,45 @@ def main(cfg: DictConfig) -> None:
     else:
         aliases = None
 
-    pre_file = to_absolute_path(os.path.join(log_dir, cfg.pre_file)) if cfg.pre_file is not None else None
+    pre_file = (
+        to_absolute_path(os.path.join(log_dir, cfg.pre_file))
+        if cfg.pre_file is not None
+        else None
+    )
     if cfg.pre_edit is not None:
         print(f"Loading pre-edit metrics from {cfg.pre_edit}")
         pre_file_path = Path(to_absolute_path(cfg.pre_edit))
         pre_file_lang = [x for x in all_langs if x in pre_file_path.parts][0]
         with gzip.open(pre_file_path, "rt") as f:
             pre_edit = json.load(f)
-        pre_edit = pre_edit if cfg.max_edits is None else pre_edit[:cfg.max_edits]
+        pre_edit = pre_edit if cfg.max_edits is None else pre_edit[: cfg.max_edits]
         if pre_file_lang != cfg.edit_lang:
-            print(f"Pre-edit file is in {pre_file_lang}, but edit language is {cfg.edit_lang}. Adjustment will be made.")
+            print(
+                f"Pre-edit file is in {pre_file_lang}, but edit language is {cfg.edit_lang}. Adjustment will be made."
+            )
         for evaluation in pre_edit:
-            for loc_key in evaluation['pre']['locality']:
+            for loc_key in evaluation["pre"]["locality"]:
                 # creating tensors for logprobs
-                evaluation['pre']['locality'][loc_key]['nkl']['logprobs'] = torch.tensor(evaluation['pre']['locality'][loc_key]['nkl']['logprobs'])
-            if pre_file_lang != cfg.edit_lang: # if pre_file is in a different language, we need to change the key
-                evaluation["pre"]["rewrite_acc"] = copy.deepcopy(evaluation["pre"]["portability"][f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"])
+                evaluation["pre"]["locality"][loc_key]["nkl"]["logprobs"] = (
+                    torch.tensor(
+                        evaluation["pre"]["locality"][loc_key]["nkl"]["logprobs"]
+                    )
+                )
+            if (
+                pre_file_lang != cfg.edit_lang
+            ):  # if pre_file is in a different language, we need to change the key
+                evaluation["pre"]["rewrite_acc"] = copy.deepcopy(
+                    evaluation["pre"]["portability"][
+                        f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"
+                    ]
+                )
     else:
         pre_edit = None
 
     if method == "BabelReFT":
-        babelreft_vocab = get_babelreft_vocab(data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs)
+        babelreft_vocab = get_babelreft_vocab(
+            data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs
+        )
     else:
         babelreft_vocab = None
 
@@ -365,10 +383,10 @@ def main(cfg: DictConfig) -> None:
             lm_cfg=lm_cfg,
             aliases=aliases,
             edit_lang=cfg.edit_lang,
-            pre_file=pre_file, # TODO add to batch_edit
+            pre_file=pre_file,  # TODO add to batch_edit
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
-            babelreft_vocab = babelreft_vocab
+            babelreft_vocab=babelreft_vocab,
         )
     else:
         metrics, _, _ = editor.edit(
@@ -391,12 +409,12 @@ def main(cfg: DictConfig) -> None:
             pre_file=pre_file,
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
-            babelreft_vocab = babelreft_vocab
+            babelreft_vocab=babelreft_vocab,
         )
 
-    peak_mem = torch.cuda.max_memory_allocated()
-    peak_mem_gb = peak_mem / (1024**3)
-    print(f"\033[93mPeak GPU memory usage: {peak_mem_gb:.2f} GB\033[0m")
+    print(
+        f"\033[93mPeak GPU memory allocated: {torch.cuda.max_memory_allocated() / (1024**3):.2f} GB, Peak GPU memory reserved: {torch.cuda.max_memory_reserved() / (1024**3):.2f} GB\033[0m"
+    )
     # Save the command used to launch the script
     command = "python " + " ".join(sys.argv)
     with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
@@ -409,17 +427,19 @@ def main(cfg: DictConfig) -> None:
             default_flow_style=False,
             default_style="",
         )
-    
+
     if cfg.pre_eval_only:
         print(">>> PRE-EVALUTION FINISHED <<<")
     else:
         with open(to_absolute_path(os.path.join(log_dir, "results.json")), "w") as f:
             json.dump(metrics, f, indent=4)
         if cfg.eval_lm:
-            lm_metric = cfg.lm_metric 
+            lm_metric = cfg.lm_metric
         else:
             lm_metric = None
-        summary = summary_metrics(metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric)
+        summary = summary_metrics(
+            metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric
+        )
         with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
             json.dump(summary, f, indent=4)
 
