@@ -17,6 +17,12 @@ Score: 0.1518
 Run name: earthy-sweep-46
 Comment: Much worse scorses than Llama. Layer 21 seems to be the best layer for Aya. No pattern for where is the best layer range.
 
+### Gemma2 
+Best-found: method.layers=[23] method.lr=0.0001 method.norm_constraint=0.002
+Score: 0.1209
+Run name: major-sweep-49
+Comment: Middle region 19-30 seems to be the best. (gemma has 42 layers)
+
 
 ## FT-M
 
@@ -33,6 +39,13 @@ Score: 0.4018
 Run name: cerulean-sweep-26
 Comment: Best layers seem mid-to-late. Same combination as Llama, but with lower scores.
 
+### Gemma2 
+Best-found: method.layers=[27] method.lr=0.0005
+Score: 0.4463
+Run name: lyric-sweep-22
+Comment: Middle region 23-30 seems to be the best. (gemma has 42 layers)
+
+
 ## R-ROME
 
 ### Llama
@@ -48,6 +61,12 @@ Best-found: method.kl_factor=0.0625 method.layers=[7]
 Score: 0.267
 Run name: classic-sweep-4
 Comment: Early layers are the best, around 5-7.
+
+### Gemma2 
+Best-found: method.kl_factor=0.9 method.layers=[25]
+Score: 0.2236
+Run name: stellar-sweep-23
+Comment: Rather weak scores, but the best layers seem to be in the middle region 20-27. (gemma has 42 layers)
 
 ## Summary Table # TODO UPDATE
 
