@@ -2,6 +2,7 @@ alg_name: "BabelReFT"
 device: 0
 
 layers: [15]
+pos_type: "last_token"
 num_steps: 100
 # batch_size: 1
 # max_length: 40
