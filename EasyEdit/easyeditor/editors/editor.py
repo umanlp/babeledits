@@ -406,67 +406,81 @@ class BaseEditor:
                 icl_examples = None
             return edited_model, weights_copy, icl_examples
         def edit_evaluation(all_metrics, request, edited_model, idx, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs):
+            eval_phase = kwargs["eval_phase"] if "eval_phase" in kwargs else 'post'
+            remove_pre_scores = kwargs["remove_pre_scores"] if "remove_pre_scores" in kwargs else True
             all_metrics[idx].update({ 
                 'case_id': idx,
                 "requested_rewrite": request,
-                "post": compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics, icl_examples=icl_examples, icl_template="{icl_examples}{prompt} {target}" if self.alg_name == "IKE" else None),
+                eval_phase: compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics, icl_examples=icl_examples, icl_template="{icl_examples}{prompt} {target}" if self.alg_name == "IKE" else None),
             })
             #TODO continue
             if "metric_kwargs" in kwargs:
                 all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
 
-            if 'locality' in all_metrics[idx]['post'].keys():
+            if 'locality' in all_metrics[idx][eval_phase].keys():
                 for locality_key in request['locality'].keys():
                     for loc_metric in locality_metrics:
                         locality_result = []
                         output_type = "output" if loc_metric == "token_em" else "logprobs"
-                        for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][output_type], all_metrics[idx]['post']['locality'][locality_key][loc_metric][output_type]):
+                        for loc_pre, loc_post in zip(all_metrics[idx]['pre']['locality'][locality_key][loc_metric][output_type], all_metrics[idx][eval_phase]['locality'][locality_key][loc_metric][output_type]):
                             if loc_metric == "token_em":
                                 locality_result.append(float(np.mean(np.equal(loc_pre, loc_post))))
                             elif loc_metric == "nkl":
                                 locality_result.append(F.kl_div(input=loc_post, target=loc_pre, reduction='sum', log_target=True).item())
-                        all_metrics[idx]['post']['locality'][locality_key][loc_metric].pop(output_type)
-                        all_metrics[idx]['post']['locality'][locality_key][loc_metric] = locality_result
-
-                all_metrics[idx]['pre'].pop('locality')
+                        if remove_pre_scores:
+                            all_metrics[idx][eval_phase]['locality'][locality_key][loc_metric].pop(output_type)
+                        all_metrics[idx][eval_phase]['locality'][locality_key][loc_metric] = locality_result
+                if remove_pre_scores:
+                    all_metrics[idx]['pre'].pop('locality')
 
             if "rewrite_score" in all_metrics[idx]['pre']['rewrite_acc']:
                 
                 # Reliability
                 p_pre_list = all_metrics[idx]['pre']['rewrite_acc']['rewrite_score']
-                p_post_list = all_metrics[idx]['post']['rewrite_acc']['rewrite_score']
-                all_metrics[idx]["post"]["rewrite_acc"]["rewrite_score"] = [
+                p_post_list = all_metrics[idx][eval_phase]['rewrite_acc']['rewrite_score']
+                all_metrics[idx][eval_phase]["rewrite_acc"]["rewrite_score"] = [
                     (p_post - p_pre) / (1 - p_pre)
                     for p_post, p_pre in zip(p_post_list, p_pre_list)
                 ] 
-                all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
+                if remove_pre_scores:
+                    all_metrics[idx]['pre']['rewrite_acc'].pop('rewrite_score')
 
                 # Portability and Generality
-                for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx]['post'].keys()]:
+                for aspect in [x for x in ["rephrase_acc", "portability" ] if x in all_metrics[idx][eval_phase].keys()]:
                     for prompt_type in all_metrics[idx]['pre'][aspect]:
                         p_pre_list = all_metrics[idx]['pre'][aspect][prompt_type]['rewrite_score']
-                        p_post_list = all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score']
-                        all_metrics[idx]['post'][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post_list,p_pre_list)]
-                        all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
+                        p_post_list = all_metrics[idx][eval_phase][aspect][prompt_type]['rewrite_score']
+                        all_metrics[idx][eval_phase][aspect][prompt_type]['rewrite_score'] = [(p_post - p_pre)/(1 - p_pre) for p_post,p_pre in zip(p_post_list,p_pre_list)]
+                        if remove_pre_scores:
+                            all_metrics[idx]['pre'][aspect][prompt_type].pop('rewrite_score')
 
             if verbose:
                 LOG.info(f"{idx} editing: {request['prompt']} -> {request['target_new']}  \n\n {all_metrics[idx]}")
 
 
         if sequential_edit:
+            kwargs['eval_phase'] = 'intermediate'
+            kwargs['remove_pre_scores'] = False
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
+                edited_model.eval()
+                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                if lm_cfg:
+                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
+                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 if return_edited_weights:
                     if i == 0:
                         weights_per_edit = {k: [] for k in weights_copy.keys()}
                     for k, v in weights_copy.items():
                         weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+
+            kwargs['eval_phase'] = 'post'
+            kwargs["remove_pre_scores"] = True
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                if lm_cfg:
-                    lm_score = self.evaluate_language_modeling(lm_cfg)
-                    all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
-                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+                if lm_cfg: # adding lm score of last edit
+                    all_metrics[i]["post"].update({lm_cfg['metric']:all_metrics[-1]["intermediate"][lm_cfg['metric']]})
         else:
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
@@ -492,7 +506,7 @@ class BaseEditor:
                             if i == 0:
                                 weights_per_edit = {k: [] for k in weights_copy.keys()}
                             for k, v in weights_copy.items():
-                                    weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
                     with torch.no_grad(): #restoring model
                         for k, v in weights_copy.items():
                             nethook.get_parameter(self.model, k)[...] = v.to(
@@ -505,12 +519,12 @@ class BaseEditor:
             edited_model = edited_model.model
         if len(all_metrics) != 0:
             lm_metric = lm_cfg['metric'] if lm_cfg else None
-            print(summary_metrics(all_metrics, eval_metrics, locality_metrics, lm_metric=lm_metric))
+            eval_phases = ['pre', 'intermediate', 'post'] if sequential_edit else ['pre', 'post']
+            print(summary_metrics(all_metrics, eval_metrics, locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases))
 
-        if return_edited_weights:
-            return all_metrics, edited_model, weights_copy, weights_per_edit
-        else:
-            return all_metrics, edited_model, weights_copy
+        if not return_edited_weights:
+            weights_per_edit = None
+        return all_metrics, edited_model, weights_copy, weights_per_edit
 
     def normal_edit(
         self,

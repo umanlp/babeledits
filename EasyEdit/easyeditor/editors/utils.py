@@ -23,7 +23,7 @@ def get_all_acc_keys(dict_list):
 
     return all_keys
     
-def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics=None, lm_metric=None):
+def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics=None, lm_metric=None, eval_phases=["pre", "post"]):
     rewrite_metrics = rewrite_metrics or eval_metrics
     if isinstance(all_metrics, dict):
         all_metrics = [all_metrics, ]
@@ -53,7 +53,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
         return sorted(output)
 
     mean_metrics = dict()
-    for eval in ["pre", "post"]:
+    for eval in eval_phases:
         mean_metrics[eval] = dict()
         for key in ["rewrite_acc", "rewrite_ppl"]:
             if key in all_metrics[0][eval].keys():
