@@ -31,3 +31,5 @@ lm_metric: "ppl"
 pre_file: null
 pre_edit: null
 pre_eval_only: false
+sequential: false
+return_edited_weights: false

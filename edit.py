@@ -23,6 +23,7 @@ from EasyEdit.easyeditor import BaseEditor, CounterFactDataset
 from EasyEdit.easyeditor.editors.utils import summary_metrics
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from utils import extract, extract_aliases, get_babelreft_vocab
+import pickle
 
 
 def prompt_to_target(prompt_type, metric_type):
@@ -367,7 +368,7 @@ def main(cfg: DictConfig) -> None:
         babelreft_vocab = None
 
     if method == "FT":
-        metrics, _, _ = editor.edit(
+        metrics, _, _, edited_weights = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -375,7 +376,7 @@ def main(cfg: DictConfig) -> None:
             locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
-            sequential_edit=False,
+            sequential_edit=cfg.sequential,
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
@@ -387,9 +388,10 @@ def main(cfg: DictConfig) -> None:
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
+            return_edited_weights=cfg.return_edited_weights
         )
     else:
-        metrics, _, _ = editor.edit(
+        metrics, _, _, edited_weights = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -398,7 +400,7 @@ def main(cfg: DictConfig) -> None:
             locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
-            sequential_edit=False,
+            sequential_edit=cfg.sequential,
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
@@ -410,11 +412,18 @@ def main(cfg: DictConfig) -> None:
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
+            return_edited_weights=cfg.return_edited_weights
         )
 
     print(
         f"\033[93mPeak GPU memory allocated: {torch.cuda.max_memory_allocated() / (1024**3):.2f} GB, Peak GPU memory reserved: {torch.cuda.max_memory_reserved() / (1024**3):.2f} GB\033[0m"
     )
+
+    if edited_weights is not None:
+        print("Saving edited weights to disk")
+        with gzip.open(os.path.join(log_dir, "edited_weights.pkl.gz"), "wb") as f:
+            pickle.dump(edited_weights, f)
+
     # Save the command used to launch the script
     command = "python " + " ".join(sys.argv)
     with open(to_absolute_path(os.path.join(log_dir, "command.txt")), "w") as f:
