@@ -46,9 +46,11 @@ def apply_babelreft_to_model(
     train_dataset = datasets.Dataset.from_dict(
         {
             "input_ids": full_input_ids,
-            "intervention_locations": model.get_unit_locations(full_input_ids)[0][
-                "sources->base"
-            ][1],
+            "intervention_locations": torch.tensor(
+                model.get_unit_locations(full_input_ids)[0]["sources->base"][1]
+            )
+            .permute(1, 0, 2)
+            .tolist(),
             "labels": target_ids,
         }
     )
@@ -256,7 +258,12 @@ class BabelReftModel(ReftModel):
                 for r in result
             ]
             intervention_mask = torch.tensor(
-                [1 if r is not None else 0 for r in result], device=tok_sequences.device
+                [
+                    1 if r is not None else 0
+                    for r in result
+                    for _ in range(len(self.interventions))
+                ],
+                device=tok_sequences.device,
             )
             return {
                 "sources->base": (None, [[x for x in intervention_locs]])
@@ -287,7 +294,7 @@ class BabelReftModel(ReftModel):
                 result.append(d or None)
             intervention_locs = [
                 [loc_info["all_token_pos"] for loc_info in r] if r is not None else [0]
-                for r in result
+                for r in result for _ in range(len(self.interventions))
             ]
             intervention_mask = torch.tensor(
                 [1 if r is not None else 0 for r in result], device=tok_sequences.device
@@ -321,15 +328,19 @@ def get_babelreft_model(
 
 def get_reft_config(hparams, hidden_size):
     reft_cfg = pyreft.ReftConfig(
-        representations={
-            "layer": hparams.layers[0],  # only single layer intervention supported
-            "component": hparams.component,
-            "low_rank_dimension": hparams.low_rank_dim,
-            "intervention": pyreft.LoreftIntervention(
-                embed_dim=hidden_size,
-                low_rank_dimension=hparams.low_rank_dim,
-            ),
-        }
+        representations=[
+            {
+                "layer": layer,  # only single layer intervention supported
+                "component": "block_output",
+                "unit": "pos",
+                "low_rank_dimension": hparams.low_rank_dim,
+                "intervention": pyreft.LoreftIntervention(
+                    embed_dim=hidden_size,
+                    low_rank_dimension=hparams.low_rank_dim,
+                ),
+            }
+            for layer in hparams.layers
+        ]
     )
 
     return reft_cfg
