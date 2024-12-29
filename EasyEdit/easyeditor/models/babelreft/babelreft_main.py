@@ -208,7 +208,7 @@ class BabelReftModel(ReftModel):
                         )
                         all_logits.append(intv_output.logits.bfloat16())
                     else:
-                        all_logits.append(og_output.logits[i].bfloat16())
+                        all_logits.append(og_output.logits[i].unsqueeze(0).bfloat16())
                 output_logits = torch.cat(all_logits, dim=0)
             return output_logits
 
@@ -293,7 +293,7 @@ class BabelReftModel(ReftModel):
                             # pyreft does not support different number of intv across examples
                 result.append(d or None)
             intervention_locs = [
-                [loc_info["all_token_pos"] for loc_info in r] if r is not None else [0]
+                [loc_info["all_token_pos"] for loc_info in r] if r is not None else [[0]]
                 for r in result for _ in range(len(self.interventions))
             ]
             intervention_mask = torch.tensor(
