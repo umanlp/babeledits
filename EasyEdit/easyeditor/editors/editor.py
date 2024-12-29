@@ -348,6 +348,8 @@ class BaseEditor:
         if 'pre_edit' in kwargs and kwargs['pre_edit'] is not None:
             metrics = kwargs['pre_edit']
             all_metrics = metrics
+            if lm_cfg:
+                lm_cfg['pre_scores'] = all_metrics[0]['pre'][lm_cfg['metric']]
         else:
             for i, request in enumerate(tqdm(requests)):
                 if self.alg_name == 'IKE':
