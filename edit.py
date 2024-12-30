@@ -446,8 +446,12 @@ def main(cfg: DictConfig) -> None:
             lm_metric = cfg.lm_metric
         else:
             lm_metric = None
+        
+        eval_phases = (
+            ["pre", "intermediate", "post"] if cfg.sequential else ["pre", "post"]
+        )
         summary = summary_metrics(
-            metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric
+            metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases
         )
         with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
             json.dump(summary, f, indent=4)
