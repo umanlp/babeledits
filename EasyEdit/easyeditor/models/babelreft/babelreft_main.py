@@ -195,12 +195,22 @@ class BabelReftModel(ReftModel):
                 # examples have different number of interventions, so we need to do a forward pass for each example
                 all_logits = []
                 batch_size = base["input_ids"].shape[0]
+                num_layers = len(self.interventions)
                 for i in range(
                     batch_size
                 ):  # need to do this cause pyvene does not support different number of intv across examples
                     if intervention_mask[i] == 1:
                         sel_base = {k: v[i].unsqueeze(0) for k, v in base.items()}
-                        sel_unit_locations = {'sources->base': (None, [unit_locations['sources->base'][1][i]])}
+                        intervention_sel = slice(
+                            i * num_layers,
+                            (i + 1) * num_layers,
+                        )
+                        sel_unit_locations = {
+                            "sources->base": (
+                                None,
+                                [unit_locations["sources->base"][1][intervention_sel]],
+                            )
+                        }
                         _, intv_output = super().forward(
                             base=sel_base,
                             output_original_output=False,

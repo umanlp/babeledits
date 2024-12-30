@@ -89,7 +89,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                 mean_metrics[eval][key][prompt_type] = dict()
                 metrics_to_gather = eval_metrics if key != "locality" else locality_metrics
                 for metric_type in metrics_to_gather:
-                    if eval == "pre" and metric_type == "rewrite_score":
+                    if eval == "pre" and metric_type in ["rewrite_score", "ppl"]:
                         continue
                     mean_metrics[eval][key][prompt_type].update(
                         {
