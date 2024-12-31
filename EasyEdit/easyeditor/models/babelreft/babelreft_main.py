@@ -208,7 +208,7 @@ class BabelReftModel(ReftModel):
                         sel_unit_locations = {
                             "sources->base": (
                                 None,
-                                [unit_locations["sources->base"][1][intervention_sel]],
+                                unit_locations["sources->base"][1][intervention_sel],
                             )
                         }
                         _, intv_output = super().forward(
