@@ -385,7 +385,7 @@ def main(cfg: DictConfig) -> None:
         babelreft_vocab = None
 
     if method == "FT":
-        metrics, _, _ = editor.edit(
+        metrics, _, _, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -393,7 +393,7 @@ def main(cfg: DictConfig) -> None:
             locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
-            sequential_edit=False,
+            sequential_edit=cfg.sequential,
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,
@@ -404,10 +404,10 @@ def main(cfg: DictConfig) -> None:
             pre_file=pre_file,  # TODO add to batch_edit
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
-            babelreft_vocab = babelreft_vocab
+            babelreft_vocab=babelreft_vocab,
         )
     else:
-        metrics, _, _ = editor.edit(
+        metrics, _, _, _ = editor.edit(
             prompts=prompts[:max_edits],
             # ground_truth=ground_truth[:max_edits],
             rephrase_prompts=generality_inputs,
@@ -416,7 +416,7 @@ def main(cfg: DictConfig) -> None:
             locality_inputs=locality_inputs,
             portability_inputs=portability_inputs,
             train_ds=train_ds,
-            sequential_edit=False,
+            sequential_edit=cfg.sequential,
             keep_original_weight=True,
             eval_metrics=cfg.metrics,
             generation_conf=gen_cfg,

@@ -33,3 +33,4 @@ pre_edit: null
 pre_eval_only: false
 wandb:
   project_name: "babeledits-hp_tuning"
+sequential: false
