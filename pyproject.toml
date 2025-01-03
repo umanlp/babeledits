@@ -40,9 +40,9 @@ dependencies = [
     "langcodes>=3.4.1",
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.5",
-    "plotly>=5.24.1",
     "jupyter>=1.1.1",
     "pyreft",
+    "plotly-express>=0.4.1",
 ]
 
 [tool.uv.sources]

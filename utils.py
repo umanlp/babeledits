@@ -540,8 +540,11 @@ def extract_aliases(data, src_lang, tgt_lang):
 def get_babelreft_vocab(data, subject_type, src_lang, tgt_lang):
     all_langs = sorted(list(set([src_lang] + tgt_lang)))
 
-    subjects = [[d["subjects"][lang] for lang in all_langs] for d in data.values()]
-    subjects += [[d[subject_type][lang] for lang in all_langs] for d in data.values()]
+    subjects = [
+        [d["subjects"][lang] for lang in all_langs]
+        + [d[subject_type][lang] for lang in all_langs]
+        for d in data.values()
+    ]
     subjects_aliases = [
         [
             d["subjects_aliases"][lang] if lang in d["subjects_aliases"] else []

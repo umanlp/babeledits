@@ -78,6 +78,9 @@ def main(cfg: DictConfig) -> None:
     print("Loading data")
     with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:
         data = json.load(file)
+    if cfg.sample_idx is not None:
+        sample_key = list(data.keys())[cfg.sample_idx]
+        data = {sample_key: data[sample_key]}
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)

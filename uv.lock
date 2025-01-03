@@ -338,7 +338,7 @@ dependencies = [
     { name = "opencv-python" },
     { name = "pandas" },
     { name = "peft" },
-    { name = "plotly" },
+    { name = "plotly-express" },
     { name = "pydantic" },
     { name = "pyreft" },
     { name = "scikit-learn" },
@@ -380,7 +380,7 @@ requires-dist = [
     { name = "opencv-python", specifier = ">=4.10.0.84" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "peft", specifier = ">=0.13.2" },
-    { name = "plotly", specifier = ">=5.24.1" },
+    { name = "plotly-express", specifier = ">=0.4.1" },
     { name = "pydantic", specifier = "==1.10.9" },
     { name = "pyreft", git = "https://github.com/tommaso-green/pyreft.git" },
     { name = "scikit-learn", specifier = ">=1.5.2" },
@@ -3397,6 +3397,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/79/4f/428f6d959818d7425a94c190a6b26fbc58035cbef40bf249be0b62a9aedd/plotly-5.24.1.tar.gz", hash = "sha256:dbc8ac8339d248a4bcc36e08a5659bacfe1b079390b8953533f4eb22169b4bae", size = 9479398 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/ae/580600f441f6fc05218bd6c9d5794f4aef072a7d9093b291f1c50a9db8bc/plotly-5.24.1-py3-none-any.whl", hash = "sha256:f67073a1e637eb0dc3e46324d9d51e2fe76e9727c892dde64ddf1e1b51f29089", size = 19054220 },
+]
+
+[[package]]
+name = "plotly-express"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "patsy" },
+    { name = "plotly" },
+    { name = "scipy" },
+    { name = "statsmodels" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/e8/e6e0518d9e2fc78915b3e13cb89011bbffbf4a895d9d98257d06cd5229a9/plotly_express-0.4.1.tar.gz", hash = "sha256:ff73a41ce02fb43d1d8e8fa131ef3e6589857349ca216b941b8f3f862bce0278", size = 2724 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/d6/8a2906f51e073a4be80cab35cfa10e7a34853e60f3ed5304ac470852a08d/plotly_express-0.4.1-py2.py3-none-any.whl", hash = "sha256:5f112922b0a6225dc7c010e3b86295a74449e3eac6cac8faa95175e99b7698ce", size = 2907 },
 ]
 
 [[package]]
