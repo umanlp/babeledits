@@ -46,7 +46,7 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                     item
                     for sublist in l
                     for item in sublist
-                    if item not in ["rewrite_acc", "rewrite_ppl", lm_metric]
+                    if item not in ["rewrite_acc", "rewrite_ppl", lm_metric, "norm_diff"]
                 ]
             )
         )
@@ -81,7 +81,11 @@ def summary_metrics(all_metrics, eval_metrics, locality_metrics, rewrite_metrics
                 mean_metrics[eval][lm_metric][lang] = float(
                     np.mean([score[eval][lm_metric][lang] for score in all_metrics])
                 )
-
+        if eval != "pre":
+            mean_metrics[eval]["norm_diff"] = dict()
+            mean_metrics[eval]["norm_diff"] = float(
+                np.mean([score[eval]["norm_diff"] for score in all_metrics])
+            )
     
         for key in get_all_other_keys(all_metrics, eval):
             mean_metrics[eval][key] = dict()

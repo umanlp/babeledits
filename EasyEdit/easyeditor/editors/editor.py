@@ -465,6 +465,13 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                norm_diff = []
+                for k, v in weights_copy.items():
+                    norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
+                all_metrics[i]["intermediate"]["norm_diff"] = (
+                    torch.tensor(norm_diff).mean().item()
+                )
                 if lm_cfg:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
@@ -473,12 +480,13 @@ class BaseEditor:
                     if i == 0:
                         weights_per_edit = {k: [] for k in weights_copy.keys()}
                     for k, v in weights_copy.items():
-                        weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                        weights_per_edit[k].append(nethook.get_parameter(edited_model, k).detach().clone().cpu())
 
             kwargs['eval_phase'] = 'post'
             kwargs["remove_pre_scores"] = True
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                all_metrics[i]["post"]["norm_diff"] = all_metrics[-1]["intermediate"]["norm_diff"]
                 if lm_cfg: # adding lm score of last edit
                     all_metrics[i]["post"].update({lm_cfg['metric']:all_metrics[-1]["intermediate"][lm_cfg['metric']]})
         else:
@@ -486,6 +494,13 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                norm_diff = []
+                for k, v in weights_copy.items():
+                    norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
+                all_metrics[i]["post"]["norm_diff"] = (
+                    torch.tensor(norm_diff).mean().item()
+                )
                 if lm_cfg:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
                     all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
@@ -740,12 +755,13 @@ class BaseEditor:
         return all_results, edited_model, weights_copy
 
     def evaluate_language_modeling(self, lm_cfg):
-        if isinstance(self.model, BabelReftModel) and 'pre_scores' in lm_cfg.keys():
-            _, intv_mask = self.model.get_unit_locations(
-                self.model.tokenizer(
-                    lm_cfg["prompts"], padding=True, return_tensors="pt"
-                )["input_ids"])
-            if not intv_mask.any():
+        if isinstance(self.model, BabelReftModel) and "pre_scores" in lm_cfg.keys():
+            matches = [
+                word
+                for word in self.model.get_vocab_words()
+                if word in "".join(lm_cfg["prompts"])
+            ]
+            if len(matches) == 0:
                 print(">>> No BabelReFT vocab tokens in the LM prompts, returning the previous scores...")
                 return lm_cfg["pre_scores"]
         if lm_cfg['metric'] == 'ppl':
