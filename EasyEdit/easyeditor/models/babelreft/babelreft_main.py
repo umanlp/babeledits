@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import numpy as np
 from pyreft import ReftModel
 import torch
 from .babelreft_hparams import BabelReFTHyperParams
@@ -249,19 +250,18 @@ class BabelReftModel(ReftModel):
             for seq in tok_sequences:
                 # print(seq, tokenizer.decode(seq))
                 d = []
-                word_found = False
+                np_seq = seq.cpu().numpy()
                 for idx, word_tokens in enumerate(self.vocab):
                     word_len = len(word_tokens)
-                    if word_found:
+                    matches = (np_seq[np.arange(len(seq) - word_len + 1)[:, None] + np.arange(word_len)] == word_tokens).all(axis=1)
+                    if matches.any():
+                        d.append(
+                            {
+                                "word_idx": idx,
+                                "last_token_pos": matches.argmax().item() + word_len - 1,
+                            }
+                        )
                         break
-                    for i in range(len(seq) - word_len + 1):
-                        if seq[i : i + word_len].tolist() == word_tokens:
-                            d.append(
-                                {"word_idx": idx, "last_token_pos": i + word_len - 1}
-                            )
-                            word_found = True
-                            break
-                            # pyreft does not support different number of intv across examples
                 result.append(d or None)
             intervention_locs = [
                 [loc_info["last_token_pos"] for loc_info in r] if r is not None else [0]
@@ -283,24 +283,25 @@ class BabelReftModel(ReftModel):
             for seq in tok_sequences:
                 # print(seq, tokenizer.decode(seq))
                 d = []
-                word_found = False
+                np_seq = seq.cpu().numpy()
                 for idx, word_tokens in enumerate(self.vocab):
                     word_len = len(word_tokens)
-                    if word_found:
+                    matches = (
+                        np_seq[
+                            np.arange(len(seq) - word_len + 1)[:, None]
+                            + np.arange(word_len)
+                        ]
+                        == word_tokens
+                    ).all(axis=1)
+                    if matches.any():
+                        start_idx = matches.argmax().item()
+                        d.append(
+                            {
+                                "word_idx": idx,
+                                "all_token_pos": list(range(start_idx, start_idx + word_len)),
+                            }
+                        )
                         break
-                    for i in range(len(seq) - word_len + 1):
-                        if seq[i : i + word_len].tolist() == word_tokens:
-                            d.append(
-                                {
-                                    "word_idx": idx,
-                                    "all_token_pos": [
-                                        idx for idx in range(i, i + word_len)
-                                    ],
-                                }
-                            )
-                            word_found = True
-                            break
-                            # pyreft does not support different number of intv across examples
                 result.append(d or None)
             intervention_locs = [
                 [loc_info["all_token_pos"] for loc_info in r] if r is not None else [[0]]
