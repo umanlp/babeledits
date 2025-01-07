@@ -68,6 +68,18 @@ Score: 0.2236
 Run name: stellar-sweep-23
 Comment: Rather weak scores, but the best layers seem to be in the middle region 20-27. (gemma has 42 layers)
 
+## Babelreft (all layers all tokens)
+
+### Llama 
+Score: 0.416
+Run name: blooming-sweep-3
+Best-found: method.low_rank_dim=4 method.lr=0.002 
+
+### Gemma2
+Score: 0.417
+Run name: worldly-sweep-7
+Best-found: method.low_rank_dim=16 method.lr=0.001
+
 ## Summary Table # TODO UPDATE
 
 | Method | Model | Best-found Hyperparameters | Score  | Run name         | Comment                                                                 |
