@@ -14,7 +14,7 @@ from pathlib import Path
 import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from sentence_transformers import SentenceTransformer
 from transformers import GenerationConfig
 
@@ -79,7 +79,7 @@ def main(cfg: DictConfig) -> None:
     with open(to_absolute_path(cfg.dataset), "r", encoding="utf-8") as file:
         data = json.load(file)
     if cfg.sample_idx is not None:
-        sample_idx = cfg.sample_idx if isinstance(cfg.sample_idx, list) else [cfg.sample_idx]
+        sample_idx = cfg.sample_idx if isinstance(cfg.sample_idx, ListConfig) else [cfg.sample_idx]
         sample_keys = [list(data.keys())[idx] for idx in sample_idx]
         data = {sample_key: data[sample_key] for sample_key in sample_keys}
     subjects = extract(data, cfg.edit_lang, cfg.subject_type)
@@ -361,6 +361,12 @@ def main(cfg: DictConfig) -> None:
                         f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"
                     ]
                 )
+        if lm_cfg is None:
+            if any([x in pre_edit[0]["pre"] for x in ["bpb", "ppl"]]):
+                print("Removing language model metrics from pre-edit cause eval_lm=False")
+                lm_metric = "bpb" if "bpb" in pre_edit[0]["pre"] else "ppl"
+                for x in pre_edit:
+                    x["pre"].pop(lm_metric)
     else:
         pre_edit = None
 

@@ -77,9 +77,12 @@ def main(cfg: DictConfig) -> None:
     # Setting up wandb
     if not cfg.pre_eval_only:
         yaml_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
-        yaml_dict["method"]["layers"] = int(
-            yaml_dict["method"]["layers"][0]
-        )  # converting list to int for easier usage in wandb
+        if isinstance(yaml_dict["method"]["layers"], list) and len(
+            yaml_dict["method"]["layers"]
+        ) == 1:
+            yaml_dict["method"]["layers"] = int(
+                yaml_dict["method"]["layers"][0]
+            )  # converting list to int for easier usage in wandb
         wandb_run = wandb.init(cfg.wandb.project_name, config=yaml_dict)
         run_id = wandb_run.id
         sweep_id = wandb_run.sweep_id if wandb_run.sweep_id is not None else "manual"
