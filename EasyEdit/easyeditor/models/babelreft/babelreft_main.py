@@ -28,7 +28,6 @@ def apply_babelreft_to_model(
     copy=False,
     return_orig_weights=True,
     keep_original_weight=False,
-    return_edited_weights=False,
     **kwargs,
 ):
     weights_copy = {}
@@ -87,12 +86,15 @@ def apply_babelreft_to_model(
 
     _ = trainer.train()
 
-    if return_edited_weights:
-        weights_copy["interventions"] = {}
-        for k, v in model.interventions.items():
-            intervention = v[0]
-            if isinstance(intervention, TrainableIntervention):
-                weights_copy["interventions"][k] = cp.deepcopy(intervention.state_dict())
+    weights_copy["babelreft_interventions"] = {}
+    for k, v in model.interventions.items():
+        intervention = v[0]
+        if isinstance(intervention, TrainableIntervention):
+            weights_copy["babelreft_interventions"][k] = cp.deepcopy(intervention.state_dict())
+    weights_copy["babelreft_init"] = {
+        "pos_type": model.pos_type
+    }
+    weights_copy["babelreft_vocab"] = model.get_vocab_words()
 
     tok.padding_side = "left"
     return model, weights_copy

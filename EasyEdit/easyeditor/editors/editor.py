@@ -467,7 +467,7 @@ class BaseEditor:
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
                 for k, v in weights_copy.items():
-                    if k == "interventions" and self.alg_name == "BabelReFT":
+                    if k.startswith("babelreft"):
                         continue
                     norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                 print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
@@ -489,9 +489,15 @@ class BaseEditor:
                     elif self.alg_name == "BabelReFT":
                         with torch.no_grad():
                             if i == 0:
-                                weights_per_edit = {k: [] for k in weights_copy["interventions"].keys()}
-                            for k, v in weights_copy["interventions"].items():
-                                weights_per_edit[k].append(v)
+                                weights_per_edit = {
+                                    "babelreft_init": weights_copy["babelreft_init"],
+                                    "hparams": self.hparams,
+                                    "babelreft_interventions": {k: [] for k in weights_copy["babelreft_interventions"].keys()},
+                                    "babelreft_vocab": [],
+                                }
+                            for k, v in weights_copy["babelreft_interventions"].items():
+                                weights_per_edit["babelreft_interventions"][k].append(v)
+                            weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -510,7 +516,7 @@ class BaseEditor:
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
                 for k, v in weights_copy.items():
-                    if k == "interventions" and self.alg_name == "BabelReFT":
+                    if k.startswith("babelreft"):
                         continue
                     norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                 print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
@@ -532,9 +538,15 @@ class BaseEditor:
                     elif self.alg_name == "BabelReFT":
                         with torch.no_grad():
                             if i == 0:
-                                weights_per_edit = {k: [] for k in weights_copy["interventions"].keys()}
-                            for k, v in weights_copy["interventions"].items():
-                                weights_per_edit[k].append(v)
+                                weights_per_edit = {
+                                    "babelreft_init": weights_copy["babelreft_init"],
+                                    "hparams": self.hparams,
+                                    "babelreft_interventions": {k: [] for k in weights_copy["babelreft_interventions"].keys()},
+                                    "babelreft_vocab": [],
+                                }
+                            for k, v in weights_copy["babelreft_interventions"].items():
+                                weights_per_edit["babelreft_interventions"][k].append(v)
+                            weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
