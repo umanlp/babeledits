@@ -8,6 +8,7 @@ from ...util import nethook
 import datasets
 from pyreft.dataset import ReftDataCollator
 from pyreft import ReftTrainerForCausalLM
+from pyvene import TrainableIntervention
 from transformers import (
     TrainerCallback,
     TrainingArguments,
@@ -20,13 +21,14 @@ import ahocorasick
 
 
 def apply_babelreft_to_model(
-    model,
+    model: 'BabelReftModel',
     tok,
     requests,
     hparams,
     copy=False,
     return_orig_weights=True,
     keep_original_weight=False,
+    return_edited_weights=False,
     **kwargs,
 ):
     weights_copy = {}
@@ -73,6 +75,7 @@ def apply_babelreft_to_model(
         learning_rate=hparams.lr,
         logging_steps=1,
         report_to=[],
+        save_strategy="no",
     )
     trainer = ReftTrainerForCausalLM(
         model=model,
@@ -83,6 +86,13 @@ def apply_babelreft_to_model(
     )
 
     _ = trainer.train()
+
+    if return_edited_weights:
+        weights_copy["interventions"] = {}
+        for k, v in model.interventions.items():
+            intervention = v[0]
+            if isinstance(intervention, TrainableIntervention):
+                weights_copy["interventions"][k] = cp.deepcopy(intervention.state_dict())
 
     tok.padding_side = "left"
     return model, weights_copy
