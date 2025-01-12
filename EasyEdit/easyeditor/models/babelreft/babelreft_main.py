@@ -264,19 +264,21 @@ class BabelReftModel(ReftModel):
                         break
                 result.append(d or None)
             intervention_locs = [
-                [loc_info["last_token_pos"] for loc_info in r] if r is not None else [0]
+                [[loc_info["last_token_pos"]] for loc_info in r]
+                if r is not None
+                else [[0]]
                 for r in result
+                for _ in range(len(self.interventions))
             ]
             intervention_mask = torch.tensor(
                 [
                     1 if r is not None else 0
                     for r in result
-                    for _ in range(len(self.interventions))
                 ],
                 device=tok_sequences.device,
             )
             return {
-                "sources->base": (None, [[x for x in intervention_locs]])
+                "sources->base": (None, intervention_locs)
             }, intervention_mask
         elif self.pos_type == "all_tokens":
             result = []
@@ -310,9 +312,7 @@ class BabelReftModel(ReftModel):
             intervention_mask = torch.tensor(
                 [1 if r is not None else 0 for r in result], device=tok_sequences.device
             )
-            return {
-                "sources->base": (None, [x for x in intervention_locs])
-            }, intervention_mask
+            return {"sources->base": (None, intervention_locs)}, intervention_mask
         else:
             raise ValueError(f"Invalid pos_type: {self.pos_type}")
 
