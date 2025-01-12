@@ -206,10 +206,7 @@ def compute_locality_quality(
             return_tensors="pt",
         ).to(f"cuda:{device}")
         with torch.no_grad():
-            if hparams.alg_name == 'BabelReFT':
-                logits = model(prompt_tok)
-            else:    
-                logits = model(**prompt_tok).logits
+            logits = model(**prompt_tok).logits
         last_non_masked = prompt_tok["attention_mask"].sum(1) - 1      
         to_gather = last_non_masked.unsqueeze(1).repeat(1, logits.size(-1)).unsqueeze(1)
         log_probs  =  (torch.gather(logits, 1, to_gather).squeeze(1)).log_softmax(dim=-1).cpu()

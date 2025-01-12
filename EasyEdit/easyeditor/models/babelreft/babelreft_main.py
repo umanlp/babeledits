@@ -17,6 +17,8 @@ from transformers import (
     DataCollatorForSeq2Seq,
 )
 import copy as cp
+from dataclasses import dataclass
+from typing import Any
 import ahocorasick
 
 
@@ -135,6 +137,10 @@ def check_same_intervention_size(pos_type, unit_locations):
             return False
 
 
+@dataclass
+class SimpleOutput:
+    logits: Any
+
 class BabelReftModel(ReftModel):
     def __init__(
         self,
@@ -156,7 +162,7 @@ class BabelReftModel(ReftModel):
 
     def forward(
         self,
-        base,
+        *args,
         sources: Optional[List] = None,
         unit_locations: Optional[Dict] = None,
         source_representations: Optional[Dict] = None,
@@ -165,7 +171,12 @@ class BabelReftModel(ReftModel):
         output_original_output: Optional[bool] = False,
         return_dict: Optional[bool] = None,
         use_cache: Optional[bool] = None,
+        **base,
     ):
+        if len(args) > 0:
+            base["input_ids"] = args[0]
+        if len(args) > 1:
+            base["attention_mask"] = args[1]
         if self.model.training:
             _, intv_output = super().forward(
                 base,
@@ -188,7 +199,7 @@ class BabelReftModel(ReftModel):
             og_output = self.model(**base) if not intervention_mask.all() else None
             if not intervention_mask.any():
                 # Vanilla forward pass, no interventions
-                return og_output.logits.bfloat16()
+                return SimpleOutput(logits=og_output.logits)
             elif check_same_intervention_size(self.pos_type, unit_locations):
                 # all examples have the same number of interventions, so we can do a single forward pass
                 _, intv_output = super().forward(
@@ -235,7 +246,7 @@ class BabelReftModel(ReftModel):
                     else:
                         all_logits.append(og_output.logits[i].unsqueeze(0).bfloat16())
                 output_logits = torch.cat(all_logits, dim=0)
-            return output_logits
+            return SimpleOutput(logits=output_logits)
 
     def add_words_to_vocab(self, word_list):
         word_list = [word for word in word_list if word not in self.vocab]
