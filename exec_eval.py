@@ -16,6 +16,10 @@ from lm_eval.api.registry import get_model
 import gzip
 import pickle
 
+from EasyEdit.easyeditor.models.babelreft.babelreft_main import BabelReftModel, get_reft_config, get_babelreft_model
+from pyvene import TrainableIntervention
+
+
 import torch
 
 def get_parameter(model, name):
@@ -496,15 +500,41 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         with gzip.open(args.load_weights, 'rb') as f:
             loaded_data = pickle.load(f)
 
+        if "babelreft_init" in loaded_data:
+            hparams = loaded_data["hparams"]
+            reft_config = get_reft_config(hparams, lm.model.config.hidden_size)
+            init_args = loaded_data["babelreft_init"]
+            reft_model = get_babelreft_model(
+                lm.model,
+                reft_config,
+                init_args["pos_type"],
+                lm.tokenizer,
+            )
+        else:
+            reft_model = None
+
         edit_tensor = loaded_data[list(loaded_data.keys())[0]]
         print(type(edit_tensor))
         num_edits = len(edit_tensor) #1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
         eval_logger.info(f"Number of edits: {num_edits}")
         for i in range(num_edits):
-            with torch.no_grad(): #loading weights into lm
-                for k, v in loaded_data.items():
-                    eval_logger.info(f"Loading weights: {k}")        
-                    get_parameter(lm.model, k)[...] = v[i].to(args.device)
+
+            if reft_model is not None:
+                with torch.no_grad():
+                    reft_model.reset_vocab()
+                    reft_model.add_words_to_vocab(loaded_data["babelreft_vocab"][i])
+                    for k, v in reft_model.interventions.items():
+                        intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
+                        intervention = v[0]
+                        if isinstance(intervention, TrainableIntervention):
+                            intervention.load_state_dict(intervention_state_dict)
+                    lm._model = reft_model
+            else:
+                with torch.no_grad(): #loading weights into lm
+                    for k, v in loaded_data.items():
+                        eval_logger.info(f"Loading weights: {k}")        
+                        get_parameter(lm.model, k)[...] = v[i].to(args.device)
+
             eval_logger.info(f">>> Loaded weights from {args.load_weights} for edit {i} <<<")
             evaluate_and_save_results(
                 lm, task_names, args, request_caching_args, evaluation_tracker, task_manager
