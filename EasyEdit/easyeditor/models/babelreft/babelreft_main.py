@@ -173,6 +173,13 @@ class BabelReftModel(ReftModel):
         use_cache: Optional[bool] = None,
         **base,
     ):
+        # This assume that if positional arguments are used, then the first one
+        # can only be input_ids and the second one (if there is one) can only be
+        # attention_mask. Thus, in cunjunction to `**base`, this means that `a`
+        # will be understood as input_ids in all of the following examples:
+        # - in forward(a, b)
+        # - in forward(a, unit_locations=c)
+        # - in forward(unit_locations=c, input_ids=a)
         if len(args) > 0:
             base["input_ids"] = args[0]
         if len(args) > 1:
