@@ -176,14 +176,18 @@ class BabelReftModel(ReftModel):
         # This assume that if positional arguments are used, then the first one
         # can only be input_ids and the second one (if there is one) can only be
         # attention_mask. Thus, in cunjunction to `**base`, this means that `a`
-        # will be understood as input_ids in all of the following examples:
+        # will be understood as input_ids in all of the following examples, only
+        # if `a` is not a dict:
         # - in forward(a, b)
         # - in forward(a, unit_locations=c)
         # - in forward(unit_locations=c, input_ids=a)
-        if len(args) > 0:
-            base["input_ids"] = args[0]
-        if len(args) > 1:
-            base["attention_mask"] = args[1]
+        if len(args) > 0 and isinstance(args[0], dict):
+            base = {**base, **args[0]}
+        else:
+            if len(args) > 0:
+                base["input_ids"] = args[0]
+            if len(args) > 1:
+                base["attention_mask"] = args[1]
         if self.model.training:
             _, intv_output = super().forward(
                 base,
