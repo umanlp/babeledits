@@ -282,6 +282,7 @@ class BabelReftModel(ReftModel):
 
     def reset_vocab(self):
         self.vocab.clear()
+        self.automaton = ahocorasick.Automaton()
 
     def get_unit_locations(self, tok_sequences):
         if len(self.vocab) == 0:
