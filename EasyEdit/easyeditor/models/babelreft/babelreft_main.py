@@ -16,6 +16,7 @@ from transformers import (
     DataCollatorForSeq2Seq,
 )
 import copy as cp
+import ahocorasick
 
 
 def apply_babelreft_to_model(
@@ -115,10 +116,10 @@ def check_same_intervention_size(pos_type, unit_locations):
     if pos_type != "all_tokens":
         return True
     else:
-        try: 
+        try:
             x = torch.tensor(unit_locations["sources->base"][1])
             return True
-        except ValueError: 
+        except ValueError:
             return False
 
 
@@ -134,9 +135,10 @@ class BabelReftModel(ReftModel):
         **kwargs,
     ):
         super(BabelReftModel, self).__init__(reft_config, model)
-        self.vocab = []
+        self.vocab = {}
         self.tokenizer = tokenizer
         self.pos_type = pos_type
+        self.automaton = ahocorasick.Automaton()
         if words_to_add is not None:
             self.add_words_to_vocab(words_to_add)
 
@@ -224,97 +226,123 @@ class BabelReftModel(ReftModel):
             return output_logits
 
     def add_words_to_vocab(self, word_list):
-        exp_word_list = [[word, f" {word}"] for word in word_list]
-        exp_word_list = [
-            item
-            for sublist in exp_word_list
-            for item in sublist
-            if item not in self.vocab
-        ]
-        if len(exp_word_list) == 0:
+        word_list = [word for word in word_list if word not in self.vocab]
+        if len(word_list) == 0:
             return
-        token_seqs = self.tokenizer(exp_word_list, add_special_tokens=False)[
-            "input_ids"
-        ]
-        self.vocab += token_seqs
+        all_words = word_list + [f" {w}" for w in word_list]
+        all_tokens = self.tokenizer(all_words, add_special_tokens=False)["input_ids"]
+        token_seqs = all_tokens[: len(word_list)]
+        token_seqs_space = all_tokens[len(word_list) :]
+        self.vocab.update(
+            {
+                word: [seq, seq_space]
+                for word, seq, seq_space in zip(word_list, token_seqs, token_seqs_space)
+            }
+        )
+        for idx, key in enumerate(word_list):
+            self.automaton.add_word(key, (idx, key))
+        self.automaton.make_automaton()
 
     def get_vocab_words(self):
-        return self.tokenizer.batch_decode(self.vocab)
+        return list(self.vocab.keys())
 
     def reset_vocab(self):
         self.vocab.clear()
 
     def get_unit_locations(self, tok_sequences):
-        if self.pos_type == "last_token":
-            result = []
-            for seq in tok_sequences:
-                # print(seq, tokenizer.decode(seq))
-                d = []
-                np_seq = seq.cpu().numpy()
-                for idx, word_tokens in enumerate(self.vocab):
-                    word_len = len(word_tokens)
-                    matches = (np_seq[np.arange(len(seq) - word_len + 1)[:, None] + np.arange(word_len)] == word_tokens).all(axis=1)
-                    if matches.any():
-                        d.append(
-                            {
-                                "word_idx": idx,
-                                "last_token_pos": matches.argmax().item() + word_len - 1,
-                            }
-                        )
-                        break
-                result.append(d or None)
-            intervention_locs = [
-                [[loc_info["last_token_pos"]] for loc_info in r]
-                if r is not None
-                else [[0]]
-                for r in result
-                for _ in range(len(self.interventions))
-            ]
-            intervention_mask = torch.tensor(
-                [
-                    1 if r is not None else 0
-                    for r in result
-                ],
-                device=tok_sequences.device,
-            )
+        if len(self.vocab) == 0:
             return {
-                "sources->base": (None, intervention_locs)
-            }, intervention_mask
-        elif self.pos_type == "all_tokens":
-            result = []
-            for seq in tok_sequences:
-                # print(seq, tokenizer.decode(seq))
-                d = []
-                np_seq = seq.cpu().numpy()
-                for idx, word_tokens in enumerate(self.vocab):
+                "sources->base": (None, [[[0]] for _ in range(len(tok_sequences))])
+            }, torch.zeros(len(tok_sequences), device=tok_sequences.device)
+        result = []
+        haystack = self.tokenizer.batch_decode(
+            tok_sequences, skip_special_tokens=True
+        )
+        for seq, tok_seq in zip(haystack, tok_sequences):
+            # print(seq, tokenizer.decode(seq))
+            word_matches = []
+            for _, (_, original_value) in self.automaton.iter(seq):
+                word_matches.append(original_value)
+                break  # only one match
+            if len(word_matches) == 0:
+                result.append(None)
+            else: #string match!
+                token_match_found = False
+                for word_tokens in self.vocab[word_matches[0]]:
                     word_len = len(word_tokens)
+                    word_tokens = torch.tensor(
+                        word_tokens, device=tok_sequences.device
+                    )
                     matches = (
-                        np_seq[
-                            np.arange(len(seq) - word_len + 1)[:, None]
-                            + np.arange(word_len)
+                        tok_seq[
+                            torch.arange(len(tok_seq) - word_len + 1)[:, None]
+                            + torch.arange(word_len)
                         ]
                         == word_tokens
                     ).all(axis=1)
                     if matches.any():
-                        start_idx = matches.argmax().item()
-                        d.append(
-                            {
-                                "word_idx": idx,
-                                "all_token_pos": list(range(start_idx, start_idx + word_len)),
-                            }
+                        start_idx = matches.long().argmax().item()
+                        if self.pos_type == "last_token":
+                            pos = [start_idx + word_len - 1]
+                        elif self.pos_type == "all_tokens":
+                            pos = list(range(start_idx, start_idx + word_len))
+                        else:
+                            raise ValueError(f"Invalid pos_type: {self.pos_type}")
+                        result.append(
+                            [
+                                {
+                                    "word": word_matches[0],
+                                    f"{self.pos_type}_pos": pos,
+                                }
+                            ]
                         )
+                        token_match_found = True
                         break
-                result.append(d or None)
-            intervention_locs = [
-                [loc_info["all_token_pos"] for loc_info in r] if r is not None else [[0]]
-                for r in result for _ in range(len(self.interventions))
-            ]
-            intervention_mask = torch.tensor(
-                [1 if r is not None else 0 for r in result], device=tok_sequences.device
-            )
-            return {"sources->base": (None, intervention_locs)}, intervention_mask
-        else:
-            raise ValueError(f"Invalid pos_type: {self.pos_type}")
+                if not token_match_found: # this could happen if the first token has some special character
+                    for word_tokens in self.vocab[word_matches[0]]:
+                        last_tok_match = torch.where(
+                            tok_seq == torch.tensor(word_tokens)[-1]
+                        )[0]
+                        if last_tok_match.numel() > 0:
+                            last_pos = last_tok_match[0].item()
+                            for i in reversed(range(0, last_pos, 1)):
+                                if word_matches[0] in self.tokenizer.decode(
+                                    tok_seq[i : last_pos + 1],
+                                    skip_special_tokens=True,
+                                ):
+                                    if self.pos_type == "last_token":
+                                        pos = [last_pos]
+                                    elif self.pos_type == "all_tokens":
+                                        pos = list(range(i, last_pos + 1))
+                                    else:
+                                        raise ValueError(f"Invalid pos_type: {self.pos_type}")
+                                    result.append(
+                                        [
+                                            {
+                                                "word": word_matches[0],
+                                                f"{self.pos_type}_pos": pos, # needs adaptation for all tokens
+                                            }
+                                        ]
+                                    )
+                                    token_match_found = True
+                                    break
+                            if token_match_found:
+                                break
+                    if not token_match_found:
+                        result.append(None)
+
+        intervention_locs = [
+            [loc_info[f"{self.pos_type}_pos"] for loc_info in r]
+            if r is not None
+            else [[0]]
+            for r in result
+            for _ in range(len(self.interventions))
+        ]
+        intervention_mask = torch.tensor(
+            [1 if r is not None else 0 for r in result],
+            device=tok_sequences.device,
+        )
+        return {"sources->base": (None, intervention_locs)}, intervention_mask
 
 
 def get_babelreft_model(
