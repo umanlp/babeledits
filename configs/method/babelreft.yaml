@@ -9,5 +9,6 @@ num_steps: 100
 lr: 5e-4
 low_rank_dim: 4
 component: "block_output"
+intervention_type: "loreft"
 model_parallel: false
 bf16: true
