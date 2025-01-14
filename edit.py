@@ -398,7 +398,8 @@ def main(cfg: DictConfig) -> None:
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
-            return_edited_weights=cfg.return_edited_weights
+            return_edited_weights=cfg.return_edited_weights,
+            return_edited_weights_at_end=cfg.return_edited_weights_at_end
         )
     else:
         metrics, _, _, edited_weights = editor.edit(
@@ -422,7 +423,8 @@ def main(cfg: DictConfig) -> None:
             pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
-            return_edited_weights=cfg.return_edited_weights
+            return_edited_weights=cfg.return_edited_weights,
+            return_edited_weights_at_end=cfg.return_edited_weights_at_end
         )
 
     print(
