@@ -83,6 +83,7 @@ def apply_babelreft_to_model(
         logging_steps=1,
         report_to=[],
     )
+    breakpoint()
     trainer = ReftTrainerForCausalLM(
         model=model,
         tokenizer=tok,
@@ -93,6 +94,7 @@ def apply_babelreft_to_model(
 
     _ = trainer.train()
 
+    breakpoint()
     tok.padding_side = "left"
     return model, weights_copy
 
@@ -417,11 +419,7 @@ class SubloreftIntervention(LoreftIntervention):
             RHS = self.rotate_layer.weight[..., subspaces[example_i]].T
             # print(diff.shape, LHS.shape, RHS.shape, base.shape, subspaces)
             batched_subspace += [LHS]
-            batched_weights += [RHS]        
-        LHS = torch.stack([diff[i, :, s] for i, s in enumerate(subspaces)])
-        RHS = torch.stack([self.rotate_layer.weight[..., s].T for s in subspaces])
-        batched_subspace = LHS
-        batched_weights = RHS
+            batched_weights += [RHS]
 
         batched_subspace = torch.stack(batched_subspace, dim=0)
         batched_weights = torch.stack(batched_weights, dim=0)
