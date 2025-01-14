@@ -148,7 +148,7 @@ class BaseEditor:
 
         if hparams.alg_name == "BabelReFT":
             reft_config = get_reft_config(hparams, self.model.config.hidden_size)
-            babelreft_model = get_babelreft_model(self.model, reft_config, hparams.pos_type, self.tok)
+            babelreft_model = get_babelreft_model(self.model, reft_config, hparams.pos_type, hparams.low_rank_dim, self.tok)
             babelreft_model.eval()
             babelreft_model.set_device(f"cuda:{hparams.device}")
             babelreft_model.print_trainable_parameters()

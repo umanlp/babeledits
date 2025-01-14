@@ -28,6 +28,7 @@ class BabelReFTHyperParams(HyperParams):
     low_rank_dim: int
     component: str
     bf16: bool
+    intervention_type: str 
     model_parallel: bool = False
 
     @classmethod

@@ -1,3 +1,6 @@
+import collections
+from re import sub
+from sys import intern
 from typing import Dict, List, Optional
 import numpy as np
 from pyreft import ReftModel
@@ -7,7 +10,7 @@ import pyreft
 from ...util import nethook
 import datasets
 from pyreft.dataset import ReftDataCollator
-from pyreft import ReftTrainerForCausalLM
+from pyreft import ReftTrainerForCausalLM, LoreftIntervention
 from transformers import (
     TrainerCallback,
     TrainingArguments,
@@ -45,16 +48,22 @@ def apply_babelreft_to_model(
     target_ids = cp.deepcopy(full_input_ids)
     target_ids[0, : input_ids.shape[-1]] = -100
 
+    intervention_locations, _, subspaces = model.get_intervention_setup(
+        full_input_ids
+    )
+    intervention_locations = torch.tensor(
+            intervention_locations["sources->base"][1]
+        )
+    data = {
+        "input_ids": full_input_ids,
+        "intervention_locations": intervention_locations.permute(1, 0, 2).tolist(),
+        "labels": target_ids,
+    }
+    if subspaces is not None:
+        data["subspaces"] = torch.tensor(subspaces).permute(1, 0, 2).tolist()
+
     train_dataset = datasets.Dataset.from_dict(
-        {
-            "input_ids": full_input_ids,
-            "intervention_locations": torch.tensor(
-                model.get_unit_locations(full_input_ids)[0]["sources->base"][1]
-            )
-            .permute(1, 0, 2)
-            .tolist(),
-            "labels": target_ids,
-        }
+        data
     )
 
     data_collator_fn = DataCollatorForSeq2Seq(
@@ -131,6 +140,7 @@ class BabelReftModel(ReftModel):
         pos_type,
         tokenizer,
         words_to_add=None,
+        low_rank_dim=None,
         *args,
         **kwargs,
     ):
@@ -139,6 +149,8 @@ class BabelReftModel(ReftModel):
         self.tokenizer = tokenizer
         self.pos_type = pos_type
         self.automaton = ahocorasick.Automaton()
+        self.low_rank_dim = low_rank_dim
+        self.word_to_subspace = collections.OrderedDict()
         if words_to_add is not None:
             self.add_words_to_vocab(words_to_add)
 
@@ -169,7 +181,7 @@ class BabelReftModel(ReftModel):
             return None, intv_output
 
         else:
-            unit_locations, intervention_mask = self.get_unit_locations(
+            unit_locations, intervention_mask, subspaces = self.get_intervention_setup(
                 base["input_ids"]
             )
             # at least one example does not have an intervention
@@ -183,6 +195,7 @@ class BabelReftModel(ReftModel):
                     base=base,
                     output_original_output=False,
                     unit_locations=unit_locations,
+                    subspaces=subspaces
                 )
                 # if only some examples have interventions, we need to replace the logits with the intervention logits
                 output_logits = (
@@ -214,10 +227,12 @@ class BabelReftModel(ReftModel):
                                 unit_locations["sources->base"][1][intervention_sel],
                             )
                         }
+                        sel_subspace = subspaces[intervention_sel]
                         _, intv_output = super().forward(
                             base=sel_base,
                             output_original_output=False,
                             unit_locations=sel_unit_locations,
+                            subspaces=sel_subspace,
                         )
                         all_logits.append(intv_output.logits.bfloat16())
                     else:
@@ -239,6 +254,30 @@ class BabelReftModel(ReftModel):
                 for word, seq, seq_space in zip(word_list, token_seqs, token_seqs_space)
             }
         )
+        if self.config.intervention_types[0] == SubloreftIntervention:
+            if len(self.word_to_subspace) > 0:
+                last_key = next(reversed(self.word_to_subspace))
+                last_value = self.word_to_subspace[last_key][-1]
+                self.word_to_subspace.update(
+                    {
+                        word: list(
+                            range(
+                                last_value + 1, 
+                                last_value + 1 + self.low_rank_dim,
+                            )
+                        )
+                        for word in word_list
+                    }
+                )
+            else:
+                last_key = None
+                last_value = None
+                self.word_to_subspace.update(
+                    {
+                        word: list(range(0, self.low_rank_dim))
+                        for word in word_list
+                    }
+                )
         for idx, key in enumerate(word_list):
             self.automaton.add_word(key, (idx, key))
         self.automaton.make_automaton()
@@ -248,16 +287,17 @@ class BabelReftModel(ReftModel):
 
     def reset_vocab(self):
         self.vocab.clear()
+        if self.config.intervention_types[0] == SubloreftIntervention:
+            self.word_to_subspace.clear()
 
-    def get_unit_locations(self, tok_sequences):
+    def get_intervention_setup(self, tok_sequences):
         if len(self.vocab) == 0:
             return {
                 "sources->base": (None, [[[0]] for _ in range(len(tok_sequences))])
-            }, torch.zeros(len(tok_sequences), device=tok_sequences.device)
+            }, torch.zeros(len(tok_sequences), device=tok_sequences.device), None
         result = []
-        haystack = self.tokenizer.batch_decode(
-            tok_sequences, skip_special_tokens=True
-        )
+        subspaces = []
+        haystack = self.tokenizer.batch_decode(tok_sequences, skip_special_tokens=True)
         for seq, tok_seq in zip(haystack, tok_sequences):
             # print(seq, tokenizer.decode(seq))
             word_matches = []
@@ -266,13 +306,11 @@ class BabelReftModel(ReftModel):
                 break  # only one match
             if len(word_matches) == 0:
                 result.append(None)
-            else: #string match!
+            else:  # string match!
                 token_match_found = False
                 for word_tokens in self.vocab[word_matches[0]]:
                     word_len = len(word_tokens)
-                    word_tokens = torch.tensor(
-                        word_tokens, device=tok_sequences.device
-                    )
+                    word_tokens = torch.tensor(word_tokens, device=tok_sequences.device)
                     matches = (
                         tok_seq[
                             torch.arange(len(tok_seq) - word_len + 1)[:, None]
@@ -297,8 +335,12 @@ class BabelReftModel(ReftModel):
                             ]
                         )
                         token_match_found = True
+                        if self.config.intervention_types[0] == SubloreftIntervention:
+                            subspaces.append(self.word_to_subspace[word_matches[0]])
                         break
-                if not token_match_found: # this could happen if the first token has some special character
+                if (
+                    not token_match_found
+                ):  # this could happen if the first token has some special character
                     for word_tokens in self.vocab[word_matches[0]]:
                         last_tok_match = torch.where(
                             tok_seq == torch.tensor(word_tokens)[-1]
@@ -315,21 +357,27 @@ class BabelReftModel(ReftModel):
                                     elif self.pos_type == "all_tokens":
                                         pos = list(range(i, last_pos + 1))
                                     else:
-                                        raise ValueError(f"Invalid pos_type: {self.pos_type}")
+                                        raise ValueError(
+                                            f"Invalid pos_type: {self.pos_type}"
+                                        )
                                     result.append(
                                         [
                                             {
                                                 "word": word_matches[0],
-                                                f"{self.pos_type}_pos": pos, # needs adaptation for all tokens
+                                                f"{self.pos_type}_pos": pos,  # needs adaptation for all tokens
                                             }
                                         ]
                                     )
                                     token_match_found = True
+                                    if self.config.intervention_types[0] == SubloreftIntervention:
+                                        subspaces.append(self.word_to_subspace[word_matches[0]])
                                     break
                             if token_match_found:
                                 break
                     if not token_match_found:
                         result.append(None)
+                        if self.config.intervention_types[0] == SubloreftIntervention:
+                            subspaces.append(None) # default subspace, will be purged by intervention mask anyway
 
         intervention_locs = [
             [loc_info[f"{self.pos_type}_pos"] for loc_info in r]
@@ -342,13 +390,51 @@ class BabelReftModel(ReftModel):
             [1 if r is not None else 0 for r in result],
             device=tok_sequences.device,
         )
-        return {"sources->base": (None, intervention_locs)}, intervention_mask
+        if self.config.intervention_types[0] == SubloreftIntervention:
+            subspaces = [[sub] for sub in subspaces for _ in range(len(self.interventions))]
+        else:
+            subspaces = None
+        return {"sources->base": (None, intervention_locs)}, intervention_mask, subspaces
+
+
+class SubloreftIntervention(LoreftIntervention):
+    """
+    This is a LoReFT that supports subspace interventions!
+    """
+
+    def forward(self, base, source=None, subspaces=None):
+        assert subspaces is not None
+        output = []
+
+        rotated_base = self.rotate_layer(base)
+        diff = self.act_fn(self.learned_source(base)) - rotated_base
+
+        batched_subspace = []
+        batched_weights = []
+
+        for example_i in range(len(subspaces)): #example level interventions
+            LHS = diff[example_i, :, subspaces[example_i]]
+            RHS = self.rotate_layer.weight[..., subspaces[example_i]].T
+            # print(diff.shape, LHS.shape, RHS.shape, base.shape, subspaces)
+            batched_subspace += [LHS]
+            batched_weights += [RHS]        
+        LHS = torch.stack([diff[i, :, s] for i, s in enumerate(subspaces)])
+        RHS = torch.stack([self.rotate_layer.weight[..., s].T for s in subspaces])
+        batched_subspace = LHS
+        batched_weights = RHS
+
+        batched_subspace = torch.stack(batched_subspace, dim=0)
+        batched_weights = torch.stack(batched_weights, dim=0)
+        output = base + torch.bmm(batched_subspace, batched_weights)
+
+        return self.dropout(output.to(base.dtype))
 
 
 def get_babelreft_model(
     model,
     reft_config,
     pos_type,
+    low_rank_dim,
     tokenizer,
     words_to_add=None,
     set_device=True,
@@ -357,7 +443,7 @@ def get_babelreft_model(
     """
     Create an instance of BabelReFT model.
     """
-    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add)
+    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add, low_rank_dim)
     if set_device:
         reft_model.set_device(model.device)
     if disable_model_grads:
@@ -366,17 +452,25 @@ def get_babelreft_model(
 
 
 def get_reft_config(hparams, hidden_size):
+    if hparams.intervention_type == "loreft":
+        intervention = pyreft.LoreftIntervention(
+            embed_dim=hidden_size, low_rank_dimension=hparams.low_rank_dim
+        )
+        low_rank_dim = hparams.low_rank_dim
+    elif hparams.intervention_type == "subloreft":
+        intervention = SubloreftIntervention(
+            embed_dim=hidden_size,
+            low_rank_dimension=hparams.low_rank_dim * hparams.num_edits,
+        )
+        low_rank_dim = hparams.low_rank_dim * hparams.num_edits
     reft_cfg = pyreft.ReftConfig(
         representations=[
             {
                 "layer": layer,  # only single layer intervention supported
                 "component": "block_output",
                 "unit": "pos",
-                "low_rank_dimension": hparams.low_rank_dim,
-                "intervention": pyreft.LoreftIntervention(
-                    embed_dim=hidden_size,
-                    low_rank_dimension=hparams.low_rank_dim,
-                ),
+                "low_rank_dimension": low_rank_dim,
+                "intervention": intervention,
             }
             for layer in hparams.layers
         ]
