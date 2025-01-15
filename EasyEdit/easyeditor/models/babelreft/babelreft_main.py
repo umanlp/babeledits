@@ -11,6 +11,7 @@ from ...util import nethook
 import datasets
 from pyreft.dataset import ReftDataCollator
 from pyreft import ReftTrainerForCausalLM, LoreftIntervention
+from pyreft.interventions import LowRankRotateLayer
 from transformers import (
     TrainerCallback,
     TrainingArguments,
@@ -403,6 +404,14 @@ class SubloreftIntervention(LoreftIntervention):
     """
     This is a LoReFT that supports subspace interventions!
     """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, keep_last_dim=True)
+
+        # This resets the rotate layer without registering the orthogonalization
+        # constraint (because it would leak backpropagation into unrelated
+        # subspace). It still uses orthogonal initialization, because why not
+        del self.rotate_layer
+        self.rotate_layer = LowRankRotateLayer(self.embed_dim, kwargs["low_rank_dimension"], init_orth=True)
 
     def forward(self, base, source=None, subspaces=None):
         assert subspaces is not None
