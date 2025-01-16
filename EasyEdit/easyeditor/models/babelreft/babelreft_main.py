@@ -10,7 +10,7 @@ import pyreft
 from ...util import nethook
 import datasets
 from pyreft.dataset import ReftDataCollator
-from pyreft import ReftTrainerForCausalLM, LoreftIntervention
+from pyreft import ReftTrainerForCausalLM, LoreftIntervention, NoreftIntervention
 from pyreft.interventions import LowRankRotateLayer
 from transformers import (
     TrainerCallback,
@@ -84,7 +84,7 @@ def apply_babelreft_to_model(
         logging_steps=1,
         report_to=[],
     )
-    breakpoint()
+    # breakpoint()
     trainer = ReftTrainerForCausalLM(
         model=model,
         tokenizer=tok,
@@ -95,7 +95,7 @@ def apply_babelreft_to_model(
 
     _ = trainer.train()
 
-    breakpoint()
+    # breakpoint()
     tok.padding_side = "left"
     return model, weights_copy
 
@@ -400,29 +400,26 @@ class BabelReftModel(ReftModel):
         return {"sources->base": (None, intervention_locs)}, intervention_mask, subspaces
 
 
-class SubloreftIntervention(LoreftIntervention):
+class SubloreftIntervention(NoreftIntervention):
     """
     This is a LoReFT that supports subspace interventions!
     """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, keep_last_dim=True)
+        super().__init__(**kwargs)
 
-        # This resets the rotate layer without registering the orthogonalization
-        # constraint (because it would leak backpropagation into unrelated
-        # subspace). It still uses orthogonal initialization, because why not
-        del self.rotate_layer
-        self.rotate_layer = LowRankRotateLayer(self.embed_dim, kwargs["low_rank_dimension"], init_orth=True)
+        self.proj_layer.weight.data.zero_()
+        self.learned_source.weight.data.zero_()
+        self.learned_source.bias.data.zero_()
 
     def forward(self, base, source=None, subspaces=None):
         assert subspaces is not None
         output = []
 
-        rotated_base = self.rotate_layer(base)
-        diff = self.act_fn(self.learned_source(base)) - rotated_base
+        proj_base = self.proj_layer(base)
+        diff = self.act_fn(self.learned_source(base)) - proj_base
 
         batched_subspace = []
         batched_weights = []
-
         for example_i in range(len(subspaces)): #example level interventions
             LHS = diff[example_i, :, subspaces[example_i]]
             RHS = self.rotate_layer.weight[..., subspaces[example_i]].T
@@ -468,6 +465,7 @@ def get_reft_config(hparams, hidden_size):
         intervention = SubloreftIntervention(
             embed_dim=hidden_size,
             low_rank_dimension=hparams.low_rank_dim * hparams.num_edits,
+            add_bias=False,
         )
         low_rank_dim = hparams.low_rank_dim * hparams.num_edits
     reft_cfg = pyreft.ReftConfig(
