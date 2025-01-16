@@ -406,9 +406,6 @@ class SubloreftIntervention(NoreftIntervention):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.proj_layer.weight.data.zero_()
-        self.learned_source.weight.data.zero_()
-        self.learned_source.bias.data.zero_()
 
     def forward(self, base, source=None, subspaces=None):
         assert subspaces is not None
@@ -430,9 +427,9 @@ class SubloreftIntervention(NoreftIntervention):
             .to(base.device)
         )
         batched_subspace = diff.gather(dim=-1, index=subspace_idx)
-        batched_weights = self.proj_layer.weight[None, :].repeat_interleave(len(subspaces), dim=0).gather(1, w_idx)
+        batched_weights = self.proj_layer.weight[None, :].repeat_interleave(len(subspaces), dim=0).gather(1, w_idx)        
+        
         batched_output = torch.bmm(batched_subspace, batched_weights)
-
         output = base + batched_output
 
         return self.dropout(output.to(base.dtype))
