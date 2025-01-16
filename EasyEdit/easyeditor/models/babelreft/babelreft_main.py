@@ -10,8 +10,7 @@ import pyreft
 from ...util import nethook
 import datasets
 from pyreft.dataset import ReftDataCollator
-from pyreft import ReftTrainerForCausalLM, LoreftIntervention, NoreftIntervention
-from pyreft.interventions import LowRankRotateLayer
+from pyreft import ReftTrainerForCausalLM, NoreftIntervention
 from transformers import (
     TrainerCallback,
     TrainingArguments,
@@ -418,18 +417,23 @@ class SubloreftIntervention(NoreftIntervention):
         proj_base = self.proj_layer(base)
         diff = self.act_fn(self.learned_source(base)) - proj_base
 
-        batched_subspace = []
-        batched_weights = []
-        for example_i in range(len(subspaces)): #example level interventions
-            LHS = diff[example_i, :, subspaces[example_i]]
-            RHS = self.rotate_layer.weight[..., subspaces[example_i]].T
-            # print(diff.shape, LHS.shape, RHS.shape, base.shape, subspaces)
-            batched_subspace += [LHS]
-            batched_weights += [RHS]
+        subspace_idx = (
+            torch.tensor(subspaces)
+            .repeat_interleave(base.shape[1], dim=0)
+            .reshape(base.shape[0], base.shape[1], len(subspaces[0]))
+            .to(base.device)
+        )
+        w_idx = (
+            torch.tensor(subspaces)
+            .repeat_interleave(base.shape[-1], dim=1)
+            .reshape(base.shape[0], len(subspaces[0]), base.shape[-1])
+            .to(base.device)
+        )
+        batched_subspace = diff.gather(dim=-1, index=subspace_idx)
+        batched_weights = self.proj_layer.weight[None, :].repeat_interleave(len(subspaces), dim=0).gather(1, w_idx)
+        batched_output = torch.bmm(batched_subspace, batched_weights)
 
-        batched_subspace = torch.stack(batched_subspace, dim=0)
-        batched_weights = torch.stack(batched_weights, dim=0)
-        output = base + torch.bmm(batched_subspace, batched_weights)
+        output = base + batched_output
 
         return self.dropout(output.to(base.dtype))
 
