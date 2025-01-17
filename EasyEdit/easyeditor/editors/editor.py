@@ -27,6 +27,7 @@ from ..evaluate.evaluate_utils import compute_ppl, compute_bpb
 from pathlib import Path
 import copy
 import gzip
+import os
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -48,9 +49,13 @@ def seed_everything(seed):
         rank = 0
     seed = (rank * 100000) + seed
 
+    os.environ["PYTHONHASHSEED"] = str(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     
 seed_everything(42)
   
