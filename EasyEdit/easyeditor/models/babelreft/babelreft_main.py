@@ -302,15 +302,13 @@ class BabelReftModel(ReftModel):
         haystack = self.tokenizer.batch_decode(tok_sequences, skip_special_tokens=True)
         for seq, tok_seq in zip(haystack, tok_sequences):
             # print(seq, tokenizer.decode(seq))
-            word_matches = []
-            for _, (_, original_value) in self.automaton.iter(seq):
-                word_matches.append(original_value)
-                break  # only one match
+            word_matches = [x[1][-1] for x in self.automaton.iter(seq)]
             if len(word_matches) == 0:
                 result.append(None)
             else:  # string match!
+                word_match=max(word_matches, key=len)
                 token_match_found = False
-                for word_tokens in self.vocab[word_matches[0]]:
+                for word_tokens in self.vocab[word_match]:
                     word_len = len(word_tokens)
                     word_tokens = torch.tensor(word_tokens, device=tok_sequences.device)
                     matches = (
@@ -331,26 +329,26 @@ class BabelReftModel(ReftModel):
                         result.append(
                             [
                                 {
-                                    "word": word_matches[0],
+                                    "word": word_match,
                                     f"{self.pos_type}_pos": pos,
                                 }
                             ]
                         )
                         token_match_found = True
                         if self.config.intervention_types[0] == SubloreftIntervention:
-                            subspaces.append(self.word_to_subspace[word_matches[0]])
+                            subspaces.append(self.word_to_subspace[word_match])
                         break
                 if (
                     not token_match_found
                 ):  # this could happen if the first token has some special character
-                    for word_tokens in self.vocab[word_matches[0]]:
+                    for word_tokens in self.vocab[word_match]:
                         last_tok_match = torch.where(
                             tok_seq == torch.tensor(word_tokens)[-1]
                         )[0]
                         if last_tok_match.numel() > 0:
                             last_pos = last_tok_match[0].item()
                             for i in reversed(range(0, last_pos, 1)):
-                                if word_matches[0] in self.tokenizer.decode(
+                                if word_match in self.tokenizer.decode(
                                     tok_seq[i : last_pos + 1],
                                     skip_special_tokens=True,
                                 ):
@@ -365,14 +363,14 @@ class BabelReftModel(ReftModel):
                                     result.append(
                                         [
                                             {
-                                                "word": word_matches[0],
+                                                "word": word_match,
                                                 f"{self.pos_type}_pos": pos,  # needs adaptation for all tokens
                                             }
                                         ]
                                     )
                                     token_match_found = True
                                     if self.config.intervention_types[0] == SubloreftIntervention:
-                                        subspaces.append(self.word_to_subspace[word_matches[0]])
+                                        subspaces.append(self.word_to_subspace[word_match])
                                     break
                             if token_match_found:
                                 break
