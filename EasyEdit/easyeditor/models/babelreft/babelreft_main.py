@@ -1,4 +1,5 @@
 import collections
+import os
 from re import sub
 from sys import intern
 from typing import Dict, List, Optional
@@ -74,25 +75,37 @@ def apply_babelreft_to_model(
         train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator
     )
 
+    output_dir = "./reft_res/"
+
+    saving_callback = SaveBestTrainingLossCallback(output_dir)
+
     train_module = data_module
     training_args = TrainingArguments(
         num_train_epochs=hparams.num_steps,
-        output_dir="./reft_res/",
+        output_dir=output_dir,
         per_device_train_batch_size=1,
         learning_rate=hparams.lr,
         logging_steps=1,
         report_to=[],
+        save_steps=0.1,
+        save_strategy="steps",
     )
     # breakpoint()
     trainer = ReftTrainerForCausalLM(
         model=model,
         tokenizer=tok,
         args=training_args,
-        callbacks=[TrainingLossThresholdCallback(threshold=0.01)],
+        callbacks=[TrainingLossThresholdCallback(threshold=0.01), saving_callback],
         **train_module,
     )
 
     _ = trainer.train()
+
+    print(f"Loading {saving_callback.best_checkpoint}")
+    trainer.model.load_intervention(
+        f"{saving_callback.best_checkpoint}/intervenable_model", 
+        include_model=False # Not really needed since we froze the whole model, but consistent with PyREFT way
+    )
 
     # breakpoint()
     tok.padding_side = "left"
@@ -118,6 +131,33 @@ class TrainingLossThresholdCallback(TrainerCallback):
                 )
                 control.should_training_stop = True
         return control
+    
+class SaveBestTrainingLossCallback(TrainerCallback):
+
+    def __init__(self, output_dir: str):
+        self.best_checkpoint = None
+        self._best_loss = None
+        self.output_dir = output_dir
+
+    def _get_most_recent_checkpoint(self):
+        elements = os.listdir(self.output_dir)
+        checkpoints = [elt for elt in elements if elt.startswith("checkpoint-")]
+        checkpoint_paths = [os.path.join(self.output_dir, ckpt) for ckpt in checkpoints] 
+        return max(checkpoint_paths, key=os.path.getctime)
+
+    def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        last_loss = None
+        log_history = state.log_history
+        for log in log_history[::-1]:
+            if "loss" in log:
+                last_loss = log["loss"]
+                break
+        
+        if last_loss is not None and (self._best_loss is None or last_loss < self._best_loss):
+            print(f"New best checkpoint with loss {last_loss}")
+            self._best_loss = last_loss
+            self.best_checkpoint = self._get_most_recent_checkpoint()
+                
 
 
 def check_same_intervention_size(pos_type, unit_locations):
