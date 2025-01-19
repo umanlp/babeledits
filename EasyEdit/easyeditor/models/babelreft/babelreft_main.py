@@ -21,7 +21,7 @@ from transformers import (
 )
 import copy as cp
 import ahocorasick
-
+import shutil
 
 def apply_babelreft_to_model(
     model,
@@ -75,9 +75,18 @@ def apply_babelreft_to_model(
         train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator
     )
 
-    output_dir = "./reft_res/"
+    output_base = "./reft_res/"
+    if not os.path.exists(output_base):
+        os.makedirs(output_base)
+    existing_dirs = [d for d in os.listdir(output_base) if d.startswith("edit_")]
+    if existing_dirs:
+        i = max(int(d.split("_")[1]) for d in existing_dirs) + 1
+    else:
+        i = 0
+    output_dir = os.path.join(output_base, f"edit_{i}")
+    os.makedirs(output_dir)
 
-    saving_callback = SaveBestTrainingLossCallback(output_dir)
+    saving_callback = SaveBestTrainingLossCallback()
 
     train_module = data_module
     training_args = TrainingArguments(
@@ -87,7 +96,7 @@ def apply_babelreft_to_model(
         learning_rate=hparams.lr,
         logging_steps=1,
         report_to=[],
-        save_steps=0.1,
+        save_steps=1,
         save_strategy="steps",
     )
     # breakpoint()
@@ -101,11 +110,14 @@ def apply_babelreft_to_model(
 
     _ = trainer.train()
 
-    print(f"Loading {saving_callback.best_checkpoint}")
+    # Loading best checkpoint
+    print(f"Loading {saving_callback.best_checkpoint_path}")
     trainer.model.load_intervention(
-        f"{saving_callback.best_checkpoint}/intervenable_model", 
+        f"{saving_callback.best_checkpoint_path}/intervenable_model", 
         include_model=False # Not really needed since we froze the whole model, but consistent with PyREFT way
     )
+    # Removing best checkpoint from disk
+    shutil.rmtree(saving_callback.best_checkpoint_path)
 
     # breakpoint()
     tok.padding_side = "left"
@@ -132,31 +144,41 @@ class TrainingLossThresholdCallback(TrainerCallback):
                 control.should_training_stop = True
         return control
     
+
 class SaveBestTrainingLossCallback(TrainerCallback):
+    def __init__(self):
+        self.best_loss = float('inf')
+        self.best_checkpoint_path = None
 
-    def __init__(self, output_dir: str):
-        self.best_checkpoint = None
-        self._best_loss = None
-        self.output_dir = output_dir
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None or 'loss' not in logs:
+            return
 
-    def _get_most_recent_checkpoint(self):
-        elements = os.listdir(self.output_dir)
-        checkpoints = [elt for elt in elements if elt.startswith("checkpoint-")]
-        checkpoint_paths = [os.path.join(self.output_dir, ckpt) for ckpt in checkpoints] 
-        return max(checkpoint_paths, key=os.path.getctime)
+        current_loss = logs['loss']
+        if current_loss < self.best_loss:
+            self.best_loss = current_loss
+            control.should_save = True
 
-    def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        last_loss = None
-        log_history = state.log_history
-        for log in log_history[::-1]:
-            if "loss" in log:
-                last_loss = log["loss"]
-                break
-        
-        if last_loss is not None and (self._best_loss is None or last_loss < self._best_loss):
-            print(f"New best checkpoint with loss {last_loss}")
-            self._best_loss = last_loss
-            self.best_checkpoint = self._get_most_recent_checkpoint()
+            # Construct the path for the new best checkpoint
+            step = state.global_step
+            self.best_checkpoint_path = os.path.join(args.output_dir, f'checkpoint-{step}')
+
+            print(f"New best model saved at step {step} with loss: {self.best_loss:.4f}")
+            print(f"Best checkpoint path: {self.best_checkpoint_path}")
+        else:
+            control.should_save = False
+
+    def on_save(self, args, state, control, **kwargs):
+        # Delete all checkpoints except the best one
+        for dirname in os.listdir(args.output_dir):
+            if dirname.startswith("checkpoint-"):
+                checkpoint_path = os.path.join(args.output_dir, dirname)
+                if checkpoint_path != self.best_checkpoint_path: # delete all prev ckpts except the best one
+                    shutil.rmtree(checkpoint_path)
+
+    def on_train_end(self, args, state, control, **kwargs):
+        print(f"Training completed. Best model checkpoint: {self.best_checkpoint_path}")
+        print(f"Best loss achieved: {self.best_loss:.4f}")
                 
 
 
