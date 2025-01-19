@@ -443,7 +443,9 @@ def main(cfg: DictConfig) -> None:
 
     with open(to_absolute_path(os.path.join(log_dir, "config.yaml")), "w") as yaml_file:
         config_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
-        config_dict['job_id'] = os.getenv("SLURM_JOB_ID") if os.getenv("SLURM_JOB_ID") else None
+        config_dict["job_id"] = (
+            os.getenv("SLURM_JOB_ID") if os.getenv("SLURM_JOB_ID") else None
+        )
         yaml.dump(
             config_dict,
             yaml_file,

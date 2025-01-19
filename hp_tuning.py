@@ -449,7 +449,6 @@ def main(cfg: DictConfig) -> None:
             os.getenv("SLURM_JOB_ID") if os.getenv("SLURM_JOB_ID") else None
         )
         yaml.dump(
-            yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
             config_dict,
             yaml_file,
             default_flow_style=False,
