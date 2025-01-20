@@ -178,10 +178,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
             outputs = model.prev_logits
         else:
             with torch.no_grad():
-                if isinstance(model, BabelReftModel):
-                    outputs = model(prompt_target_tok)
-                else:
-                    outputs = model(**prompt_target_tok)
+                outputs = model(**prompt_target_tok)
                 model.prev_logits = outputs
         if type(outputs) is torch.Tensor:
             logits = outputs
@@ -940,12 +937,7 @@ def compute_ppl(
         labels = encoded_batch
 
         with torch.no_grad():
-            if isinstance(model, BabelReftModel):
-                out_logits = model(
-                    base={"input_ids": encoded_batch, "attention_mask": attn_mask},
-                ).bfloat16()
-            else:
-                out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
+            out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
 
 
         shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next

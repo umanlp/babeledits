@@ -413,7 +413,6 @@ class BaseEditor:
                 "requested_rewrite": request,
                 eval_phase: compute_edit_quality(edited_model, self.model_name, self.hparams, self.tok, request, self.hparams.device, eval_metrics=eval_metrics, test_generation=test_generation, generation_conf=generation_conf, locality_metrics=locality_metrics, icl_examples=icl_examples, icl_template="{icl_examples}{prompt} {target}" if self.alg_name == "IKE" else None),
             })
-            #TODO continue
             if "metric_kwargs" in kwargs:
                 all_metrics[idx].update(compute_sent_metric(self.model, edited_model, self.model_name, self.hparams, self.tok,metric_kwargs=kwargs["metric_kwargs"][idx], device=self.hparams.device))
 
@@ -457,6 +456,7 @@ class BaseEditor:
             if verbose:
                 LOG.info(f"{idx} editing: {request['prompt']} -> {request['target_new']}  \n\n {all_metrics[idx]}")
 
+        weights_per_edit = None
 
         if sequential_edit:
             kwargs['eval_phase'] = 'intermediate'
@@ -467,6 +467,8 @@ class BaseEditor:
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
                 for k, v in weights_copy.items():
+                    if k.startswith("babelreft"):
+                        continue
                     norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                 print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
                 all_metrics[i]["intermediate"]["norm_diff"] = (
@@ -476,11 +478,29 @@ class BaseEditor:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+                
                 if return_edited_weights:
-                    if i == 0:
-                        weights_per_edit = {k: [] for k in weights_copy.keys()}
-                    for k, v in weights_copy.items():
-                        weights_per_edit[k].append(nethook.get_parameter(edited_model, k).detach().clone().cpu())
+                    if self.alg_name in ["FT", "ROME", "R-ROME"]:
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {k: [] for k in weights_copy.keys()}
+                            for k, v in weights_copy.items():
+                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                    elif self.alg_name == "BabelReFT":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "babelreft_init": weights_copy["babelreft_init"],
+                                    "hparams": self.hparams,
+                                    "babelreft_interventions": {k: [] for k in weights_copy["babelreft_interventions"].keys()},
+                                    "babelreft_vocab": [],
+                                }
+                            for k, v in weights_copy["babelreft_interventions"].items():
+                                weights_per_edit["babelreft_interventions"][k].append(v)
+                            weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    else:
+                        logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
+
 
             kwargs['eval_phase'] = 'post'
             kwargs["remove_pre_scores"] = True
@@ -496,6 +516,8 @@ class BaseEditor:
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
                 for k, v in weights_copy.items():
+                    if k.startswith("babelreft"):
+                        continue
                     norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                 print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
                 all_metrics[i]["post"]["norm_diff"] = (
@@ -505,6 +527,29 @@ class BaseEditor:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
                     all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+                
+                if return_edited_weights:
+                    if self.alg_name in ["FT", "ROME", "R-ROME"]:
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {k: [] for k in weights_copy.keys()}
+                            for k, v in weights_copy.items():
+                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                    elif self.alg_name == "BabelReFT":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "babelreft_init": weights_copy["babelreft_init"],
+                                    "hparams": self.hparams,
+                                    "babelreft_interventions": {k: [] for k in weights_copy["babelreft_interventions"].keys()},
+                                    "babelreft_vocab": [],
+                                }
+                            for k, v in weights_copy["babelreft_interventions"].items():
+                                weights_per_edit["babelreft_interventions"][k].append(v)
+                            weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    else:
+                        logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
+
                 if self.alg_name == 'KN' or self.alg_name == 'GRACE' or self.alg_name == 'WISE':
                     with torch.no_grad():
                         weights_copy()
@@ -515,20 +560,14 @@ class BaseEditor:
                     self.model = edited_model
                 elif self.alg_name == 'LoRA':
                     self.model = edited_model
+                elif self.alg_name == "BabelReFT":
+                    self.model.reset_vocab()
                 else:
-                    if return_edited_weights:
-                        with torch.no_grad():
-                            if i == 0:
-                                weights_per_edit = {k: [] for k in weights_copy.keys()}
-                            for k, v in weights_copy.items():
-                                weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
                     with torch.no_grad(): #restoring model
                         for k, v in weights_copy.items():
                             nethook.get_parameter(self.model, k)[...] = v.to(
                                 f"cuda:{self.hparams.device}"
                             )
-                if self.alg_name == "BabelReFT":
-                    self.model.reset_vocab()
 
         if isinstance(edited_model, LORA):
             edited_model = edited_model.model
@@ -537,8 +576,6 @@ class BaseEditor:
             eval_phases = ['pre', 'intermediate', 'post'] if sequential_edit else ['pre', 'post']
             print(summary_metrics(all_metrics, eval_metrics, locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases))
 
-        if not return_edited_weights:
-            weights_per_edit = None
         return all_metrics, edited_model, weights_copy, weights_per_edit
 
     def normal_edit(
