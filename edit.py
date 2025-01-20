@@ -24,6 +24,7 @@ from EasyEdit.easyeditor.editors.utils import summary_metrics
 from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from utils import extract, extract_aliases, get_babelreft_vocab
 import pickle
+import time
 
 
 def prompt_to_target(prompt_type, metric_type):
@@ -98,6 +99,7 @@ def main(cfg: DictConfig) -> None:
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
     hparams.device = cfg.device
+    hparams.num_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
     editor = BaseEditor.from_hparams(hparams)
 
@@ -442,8 +444,12 @@ def main(cfg: DictConfig) -> None:
         f.write(command)
 
     with open(to_absolute_path(os.path.join(log_dir, "config.yaml")), "w") as yaml_file:
+        config_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
+        config_dict["job_id"] = (
+            os.getenv("SLURM_JOB_ID") if os.getenv("SLURM_JOB_ID") else None
+        )
         yaml.dump(
-            yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
+            config_dict,
             yaml_file,
             default_flow_style=False,
             default_style="",
@@ -474,3 +480,12 @@ def main(cfg: DictConfig) -> None:
 
 if __name__ == "__main__":
     main()
+    start_time = time.time()
+    main()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    hours, rem = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print(f"Time required to execute main: {int(hours):02}:{int(minutes):02}:{int(seconds):02}")
+    job_id = os.getenv("SLURM_JOB_ID")
+    print(f"SLURM_JOB_ID: {job_id}")

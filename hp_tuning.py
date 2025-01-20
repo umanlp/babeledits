@@ -26,6 +26,7 @@ from EasyEdit.easyeditor.models.ike import encode_ike_facts
 from utils import extract, extract_aliases, get_babelreft_vocab
 import random
 import string
+import time
 
 
 def prompt_to_target(prompt_type, metric_type):
@@ -77,9 +78,10 @@ def main(cfg: DictConfig) -> None:
     # Setting up wandb
     if not cfg.pre_eval_only:
         yaml_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
-        if isinstance(yaml_dict["method"]["layers"], list) and len(
-            yaml_dict["method"]["layers"]
-        ) == 1:
+        if (
+            isinstance(yaml_dict["method"]["layers"], list)
+            and len(yaml_dict["method"]["layers"]) == 1
+        ):
             yaml_dict["method"]["layers"] = int(
                 yaml_dict["method"]["layers"][0]
             )  # converting list to int for easier usage in wandb
@@ -87,8 +89,10 @@ def main(cfg: DictConfig) -> None:
         run_id = wandb_run.id
         sweep_id = wandb_run.sweep_id if wandb_run.sweep_id is not None else "manual"
     else:
-        run_id = "pre_eval"  
-        random_hash = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        run_id = "pre_eval"
+        random_hash = "".join(
+            random.choices(string.ascii_lowercase + string.digits, k=8)
+        )
         run_id += f"_{random_hash}"
         sweep_id = "manual"
 
@@ -114,6 +118,7 @@ def main(cfg: DictConfig) -> None:
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
     hparams.device = cfg.device
+    hparams.num_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
 
     editor = BaseEditor.from_hparams(hparams)
 
@@ -156,9 +161,9 @@ def main(cfg: DictConfig) -> None:
         subjects_en = extract(data, "en", "subjects")
         subjects_gls = extract(data, cfg.edit_lang, "subjects")
         for p, s, s_en, s_gls in zip(prompts, subjects, subjects_en, subjects_gls):
-            assert (
-                s in p or s_en in p or s_gls in p
-            ), f"Neither subject {s} nor subject {s_en} or subject {s_gls} are present in prompt {p} and subject_in_prompt is set to loose"
+            assert s in p or s_en in p or s_gls in p, (
+                f"Neither subject {s} nor subject {s_en} or subject {s_gls} are present in prompt {p} and subject_in_prompt is set to loose"
+            )
         for idx in range(len(subjects)):
             if subjects[idx] not in prompts[idx]:
                 if subjects_en[idx] in prompts[idx]:
@@ -439,8 +444,12 @@ def main(cfg: DictConfig) -> None:
         f.write(command)
 
     with open(to_absolute_path(os.path.join(log_dir, "config.yaml")), "w") as yaml_file:
+        config_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
+        config_dict["job_id"] = (
+            os.getenv("SLURM_JOB_ID") if os.getenv("SLURM_JOB_ID") else None
+        )
         yaml.dump(
-            yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader),
+            config_dict,
             yaml_file,
             default_flow_style=False,
             default_style="",
@@ -460,7 +469,11 @@ def main(cfg: DictConfig) -> None:
             ["pre", "intermediate", "post"] if cfg.sequential else ["pre", "post"]
         )
         summary = summary_metrics(
-            metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases
+            metrics,
+            cfg.metrics,
+            cfg.locality_metrics,
+            lm_metric=lm_metric,
+            eval_phases=eval_phases,
         )
         with open(to_absolute_path(os.path.join(log_dir, "summary.json")), "w") as f:
             json.dump(summary, f, indent=4)
@@ -482,8 +495,21 @@ def main(cfg: DictConfig) -> None:
             )
 
         print(">>> FINISHED <<<")
-        print(f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}")
+        print(
+            f"Logs, metrics and configurations saved to {os.path.join('logs', log_dir)}"
+        )
 
 
 if __name__ == "__main__":
     main()
+    start_time = time.time()
+    main()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    hours, rem = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print(
+        f"Time required to execute main: {int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+    )
+    job_id = os.getenv("SLURM_JOB_ID")
+    print(f"SLURM_JOB_ID: {job_id}")
