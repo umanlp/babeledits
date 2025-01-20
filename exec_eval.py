@@ -508,6 +508,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 lm.model,
                 reft_config,
                 init_args["pos_type"],
+                reft_config.representations[0].low_rank_dimension,
                 lm.tokenizer,
             )
         else:

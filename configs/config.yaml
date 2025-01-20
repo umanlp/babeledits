@@ -33,4 +33,5 @@ pre_edit: null
 pre_eval_only: false
 sequential: false
 return_edited_weights: false
+return_edited_weights_at_end: false
 sample_idx: null

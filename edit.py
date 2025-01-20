@@ -379,6 +379,10 @@ def main(cfg: DictConfig) -> None:
     else:
         babelreft_vocab = None
 
+    if cfg.return_edited_weights:
+        print(">>> Saving edited weights")
+    if cfg.return_edited_weights_at_end:
+        print(">>> Saving edited weights at the last edit.")
     if method == "FT":
         metrics, _, _, edited_weights = editor.edit(
             prompts=prompts[:max_edits],
