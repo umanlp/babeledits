@@ -27,6 +27,7 @@ from ..evaluate.evaluate_utils import compute_ppl, compute_bpb
 from pathlib import Path
 import copy
 import gzip
+import os
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -48,9 +49,13 @@ def seed_everything(seed):
         rank = 0
     seed = (rank * 100000) + seed
 
+    os.environ["PYTHONHASHSEED"] = str(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     
 seed_everything(42)
   
@@ -148,7 +153,7 @@ class BaseEditor:
 
         if hparams.alg_name == "BabelReFT":
             reft_config = get_reft_config(hparams, self.model.config.hidden_size)
-            babelreft_model = get_babelreft_model(self.model, reft_config, hparams.pos_type, self.tok)
+            babelreft_model = get_babelreft_model(self.model, reft_config, hparams.pos_type, hparams.low_rank_dim, self.tok)
             babelreft_model.eval()
             babelreft_model.set_device(f"cuda:{hparams.device}")
             babelreft_model.print_trainable_parameters()
