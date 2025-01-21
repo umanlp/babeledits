@@ -466,6 +466,10 @@ class BaseEditor:
         if sequential_edit:
             kwargs['eval_phase'] = 'intermediate'
             kwargs['remove_pre_scores'] = False
+            if 'return_edited_weights_at_end' in kwargs.keys():
+                return_edited_weights_end = kwargs['return_edited_weights_at_end']
+            else:
+                return_edited_weights_end = False
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edited_model.eval()
@@ -484,7 +488,7 @@ class BaseEditor:
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
-                if return_edited_weights:
+                if return_edited_weights and not return_edited_weights_end:
                     if self.alg_name in ["FT", "ROME", "R-ROME"]:
                         with torch.no_grad():
                             if i == 0:
@@ -506,6 +510,25 @@ class BaseEditor:
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
+            if return_edited_weights_end:
+                if self.alg_name in ["FT", "ROME", "R-ROME"]:
+                    with torch.no_grad():
+                        weights_per_edit = {k: [] for k in weights_copy.keys()}
+                        for k, v in weights_copy.items():
+                            weights_per_edit[k].append(nethook.get_parameter(self.model, k).detach().clone().cpu())
+                elif self.alg_name == "BabelReFT":
+                    with torch.no_grad():
+                        weights_per_edit = {
+                                "babelreft_init": weights_copy["babelreft_init"],
+                                "hparams": self.hparams,
+                                "babelreft_interventions": {k: [] for k in weights_copy["babelreft_interventions"].keys()},
+                                "babelreft_vocab": [],
+                            }
+                        for k, v in weights_copy["babelreft_interventions"].items():
+                            weights_per_edit["babelreft_interventions"][k].append(v)
+                        weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                else:
+                    logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
             kwargs['eval_phase'] = 'post'
             kwargs["remove_pre_scores"] = True
