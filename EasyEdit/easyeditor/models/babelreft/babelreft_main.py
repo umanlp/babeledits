@@ -402,6 +402,7 @@ class BabelReftModel(ReftModel):
             word_matches = [x[1][-1] for x in self.automaton.iter(seq)]
             if len(word_matches) == 0:
                 result.append(None)
+                subspaces.append([0])
             else:  # string match!
                 word_match=max(word_matches, key=len)
                 token_match_found = False
@@ -474,7 +475,7 @@ class BabelReftModel(ReftModel):
                     if not token_match_found:
                         result.append(None)
                         if self.config.intervention_types[0] == SubloreftIntervention:
-                            subspaces.append(None) # default subspace, will be purged by intervention mask anyway
+                            subspaces.append([0]) # default subspace, will be purged by intervention mask anyway
 
         intervention_locs = [
             [loc_info[f"{self.pos_type}_pos"] for loc_info in r]
