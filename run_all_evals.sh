@@ -23,10 +23,13 @@ fi
 # Source SLURM parameters
 source "$(dirname "$0")/slurm_config.sh"
 
+# Convert SBATCH_PARAMS array to space-separated string
+SBATCH_OPTIONS=$(printf "%s " "${SBATCH_PARAMS[@]}")
+
 # Find all directories containing config.yaml
 find "$BASE_DIR" -name "config.yaml" -exec dirname {} \; | while read dir; do
     echo "Submitting evaluation for: $dir"
-    sbatch "${SBATCH_PARAMS[@]}" eval.sh --path "$dir"
+    sbatch $SBATCH_OPTIONS eval.sh "$dir"
     # Wait 2 seconds between submissions
     sleep 2
 done
