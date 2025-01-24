@@ -9,6 +9,7 @@ from EasyEdit.easyeditor.models import (
     FTHyperParams,
     R_ROMEHyperParams,
     BabelReFTHyperParams,
+    GraceHyperParams
 )
 from EasyEdit.easyeditor.util import HyperParams
 
@@ -19,7 +20,8 @@ methods = {
     "ike": IKEHyperParams,
     "mend": MENDHyperParams,
     "ft": FTHyperParams,
-    "babelreft": BabelReFTHyperParams
+    "babelreft": BabelReFTHyperParams,
+    "grace": GraceHyperParams
 }
 
 def get_hparm_class(method: str) -> type[HyperParams]:
