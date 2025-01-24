@@ -157,7 +157,7 @@ class TrainingLossThresholdCallback(TrainerCallback):
                 )
                 control.should_training_stop = True
         return control
-    
+
 
 class SaveBestTrainingLossCallback(TrainerCallback):
     def __init__(self):
@@ -235,6 +235,53 @@ class BabelReftModel(ReftModel):
         self.word_to_subspace = collections.OrderedDict()
         if words_to_add is not None:
             self.add_words_to_vocab(words_to_add)
+
+    def generate(
+        self,
+        base = None,
+        sources: List | None = None,
+        unit_locations: Dict | None = None,
+        source_representations: Dict | None = None,
+        intervene_on_prompt: bool = True,
+        subspaces: List | None = None,
+        **kwargs,
+    ):
+        
+        if base is None:
+            input_ids = kwargs["input_ids"]
+            del kwargs["input_ids"]
+        elif isinstance(base, dict):
+            input_ids = base["input_ids"]
+            for k, v in base.items():
+                if k != "input_ids":
+                    kwargs[k] = v
+        else:
+            input_ids = base
+
+
+        if input_ids.shape[0] > 1:
+            raise NotImplementedError(f"BabelReftModel can only handle batch size of 1 for generate")
+
+        unit_locations, intervention_mask, subspaces = self.get_intervention_setup(
+            input_ids
+        )
+        # at least one example does not have an intervention
+        if not intervention_mask[0]:
+            # Vanilla forward pass, no interventions
+            output = self.model.generate(input_ids, **kwargs)
+            return output
+
+        _, output = super().generate(
+            {"input_ids": input_ids},
+            sources,
+            unit_locations,
+            source_representations,
+            intervene_on_prompt,
+            subspaces,
+            output_original_output=False,
+            **kwargs,
+        )
+        return output
 
     def forward(
         self,
