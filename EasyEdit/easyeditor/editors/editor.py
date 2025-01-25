@@ -475,14 +475,16 @@ class BaseEditor:
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
-                for k, v in weights_copy.items():
-                    if k.startswith("babelreft"):
-                        continue
-                    norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
-                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
-                all_metrics[i]["intermediate"]["norm_diff"] = (
-                    torch.tensor(norm_diff).mean().item()
-                )
+                if self.alg_name not in ["GRACE", "KN", "WISE"]:
+                    for k, v in weights_copy.items():
+                        if k.startswith("babelreft"):
+                            continue
+                        norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                    mean_norm = torch.tensor(norm_diff).mean().item()
+                    print(f"Average Norm Difference: {mean_norm}")
+                else:
+                    mean_norm = -1
+                all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
                 if lm_cfg:
                     lm_score = self.evaluate_language_modeling(lm_cfg)
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
@@ -548,6 +550,8 @@ class BaseEditor:
                         if k.startswith("babelreft"):
                             continue
                         norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                else:
+                    norm_diff.append(-1)
                 print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
                 all_metrics[i]["post"]["norm_diff"] = (
                     torch.tensor(norm_diff).mean().item()
