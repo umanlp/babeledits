@@ -116,7 +116,7 @@ class GRACEAdapter(torch.nn.Module):
 
         self.layer = layer
         self.weight = self.layer.weight
-        self.init_epsilon = config.eps
+        self.init_epsilon = float(config.eps)
         self.dist_fn = config.dist_fn
         self.replacement = config.replacement
         self.device = layer.weight.device
