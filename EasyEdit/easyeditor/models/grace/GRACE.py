@@ -1,7 +1,7 @@
 import copy
 
 import torch
-from .utils import parent_module, brackets_to_periods
+from .utils import parent_module, brackets_to_periods, periods_to_brackets
 import transformers
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
@@ -29,13 +29,13 @@ class GRACE(torch.nn.Module):
         self.model = model
         self.config = config
         # self.tokenizer = model.tokenizer
-        layer = config.inner_params[0]
+        layer = config.rewrite_module_tmp.format(config.layers[0])
         self.device = device
         self.original_layer = None
 
         # --- ensure proper formatting (GRACE edits ~layers~ not weights matrices) ---        
         suffixes = [".weight", ".bias"]
-        self.layer = layer.rsplit(".", 1)[0] if any(layer.endswith(x) for x in suffixes) else layer
+        self.layer = periods_to_brackets(layer.rsplit(".", 1)[0] if any(layer.endswith(x) for x in suffixes) else layer)
         
         for n, p in self.model.named_parameters():
             p.requires_grad = False
@@ -94,6 +94,7 @@ class GRACE(torch.nn.Module):
                 # --- we only need to create an optimizer for the first iteration (but forward pass instantiates the key, so optimzer is passed after first inference) ---
                 optimizer = torch.optim.Adam(self.model.parameters(), config.edit_lr)
             loss = outputs.loss
+            print("GRACE Loss at iteration", i, ":", loss.item())
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
