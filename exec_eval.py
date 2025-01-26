@@ -17,6 +17,7 @@ import gzip
 import pickle
 
 from EasyEdit.easyeditor.models.babelreft.babelreft_main import BabelReftModel, get_reft_config, get_babelreft_model
+from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from pyvene import TrainableIntervention
 
 
@@ -504,15 +505,18 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             hparams = loaded_data["hparams"]
             reft_config = get_reft_config(hparams, lm.model.config.hidden_size)
             init_args = loaded_data["babelreft_init"]
-            reft_model = get_babelreft_model(
+            wrapped_model = get_babelreft_model(
                 lm.model,
                 reft_config,
                 init_args["pos_type"],
                 reft_config.representations[0].low_rank_dimension,
                 lm.tokenizer,
             )
+        elif loaded_data.get("_method") == "GRACE":
+            hparams = loaded_data["_hparams"]
+            wrapped_model = GRACE(model=lm.model, config=hparams, device=lm.model.device)
         else:
-            reft_model = None
+            wrapped_model = None
 
         edit_tensor = loaded_data[list(loaded_data.keys())[0]]
         print(type(edit_tensor))
@@ -520,16 +524,20 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         eval_logger.info(f"Number of edits: {num_edits}")
         for i in range(num_edits):
 
-            if reft_model is not None:
+            if isinstance(wrapped_model, BabelReftModel):
                 with torch.no_grad():
-                    reft_model.reset_vocab()
-                    reft_model.add_words_to_vocab(loaded_data["babelreft_vocab"][i])
-                    for k, v in reft_model.interventions.items():
+                    wrapped_model.reset_vocab()
+                    wrapped_model.add_words_to_vocab(loaded_data["babelreft_vocab"][i])
+                    for k, v in wrapped_model.interventions.items():
                         intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
                         intervention = v[0]
                         if isinstance(intervention, TrainableIntervention):
                             intervention.load_state_dict(intervention_state_dict)
-                    lm._model = reft_model
+                    lm._model = wrapped_model
+            if isinstance(wrapped_model, GRACE):
+                with torch.no_grad():
+                    wrapped_model.load_grace_state_dict(loaded_data["_adapter_state_dict"][i])
+                    lm._model = wrapped_model.model
             else:
                 with torch.no_grad(): #loading weights into lm
                     for k, v in loaded_data.items():
