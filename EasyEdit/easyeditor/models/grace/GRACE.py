@@ -11,7 +11,7 @@ def euc(query, key):
     # Euclidean distance
     if len(key.shape) < 2:
         key = key.view(1, -1)
-    return torch.cdist(key, query, p=2)
+    return torch.cdist(key.float(), query.float(), p=2).bfloat16()
 
 def perturb_values(chosen_value, num_pert, device):
     # Create a bunch of noised versions of the value, then create batch, then train value
@@ -203,11 +203,14 @@ class GRACEAdapter(torch.nn.Module):
                         token_to_edit = min(self.key_id, args[0].shape[1] - 1)
                 else:
                     # When evaluating editing performance, we need to edit the last token before the answer
-                    token_to_edit = self.prompt_len - 1
+                    token_to_edit = [x-1 for x in self.prompt_len]
             else:
                 # If training, we need to edit the last token of the prompt (set by edit function)
                 token_to_edit = self.key_id
-            query = args[0][:, token_to_edit, :] # Just use activation for last token
+            if isinstance(token_to_edit, list):
+                query = args[0][range(len(token_to_edit)), token_to_edit, :]
+            else:
+                query = args[0][:, token_to_edit, :] # Just use activation for last token
             if self.config.val_init == "cold":
                 new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device))
             elif self.config.val_init == "warm":
@@ -220,7 +223,7 @@ class GRACEAdapter(torch.nn.Module):
                 # Keys exist, so we have decide whether or not to update them (the fact that we've made it to this point means there was an error!)
 
                 # --- search through keys for a match for query ---
-                dists = torch.cdist(self.keys, query, p=2).view(-1, len(query))
+                dists = torch.cdist(self.keys.float(), query.float(), p=2).view(-1, len(query)).bfloat16()
                 smallest_distance, nearest_key = dists.min(0)
 
                 if smallest_distance > (self.init_epsilon + self.epsilons[nearest_key]):
@@ -247,7 +250,7 @@ class GRACEAdapter(torch.nn.Module):
         # print(token_to_edit)
         # compute distance from query to all keys and find the closest keys
 
-        dists = torch.cdist(self.keys, query, p=2).view(-1, len(query))
+        dists = torch.cdist(self.keys.float(), query.float(), p=2).view(-1, len(query)).bfloat16()
         if dists.nelement() == 0:
             return layer_out
         smallest_dist, self.chosen_key = dists.min(0)
@@ -255,6 +258,13 @@ class GRACEAdapter(torch.nn.Module):
         chosen_value = self.values[self.chosen_key]
         eps = self.epsilons[self.chosen_key].view(-1, 1)
 
+        if not self.training:
+            print("Distances: ", dists)
+            print("Smallest distance:", smallest_dist)
+            print("Epsilons:", self.epsilons)
+            print("Hitrate:", (smallest_dist <= eps).float().mean().item())
+            print("-"*50)
+            print()
         if (self.config.val_train == "adv") and (self.training):
             chosen_value = perturb_values(chosen_value, self.num_pert, self.device)
 

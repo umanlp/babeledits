@@ -35,6 +35,7 @@ class GraceHyperParams(HyperParams):
     attn_module_tmp: str
     ln_f_module: str
     lm_head_module: str
+    bf16: bool
     
     # Defaults
     batch_size: int = 1

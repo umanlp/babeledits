@@ -23,7 +23,7 @@ from ..util.hparams import HyperParams
 from ..util.alg_dict import *
 from ..evaluate.evaluate_utils import test_generation_quality
 from ..evaluate.evaluate import compute_locality_quality
-from ..evaluate.evaluate_utils import compute_ppl, compute_bpb
+from ..evaluate.evaluate_utils import compute_ppl, evaluate_language_modeling
 from pathlib import Path
 import copy
 import gzip
@@ -363,7 +363,7 @@ class BaseEditor:
                 all_metrics.append(metrics)
 
             if lm_cfg:
-                lm_score = self.evaluate_language_modeling(lm_cfg)
+                lm_score = evaluate_language_modeling(self.model, lm_cfg)
                 for evaluation in all_metrics:
                     evaluation["pre"].update({lm_cfg['metric']: lm_score})
                 lm_cfg['pre_scores'] = lm_score
@@ -486,7 +486,7 @@ class BaseEditor:
                     mean_norm = -1
                 all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
                 if lm_cfg:
-                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
@@ -557,7 +557,7 @@ class BaseEditor:
                     torch.tensor(norm_diff).mean().item()
                 )
                 if lm_cfg:
-                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
                     all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
@@ -823,22 +823,3 @@ class BaseEditor:
             summary_metrics(all_results)
 
         return all_results, edited_model, weights_copy
-
-    def evaluate_language_modeling(self, lm_cfg):
-        if isinstance(self.model, BabelReftModel) and "pre_scores" in lm_cfg.keys():
-            matches = [
-                word
-                for word in self.model.get_vocab_words()
-                if word in "".join(lm_cfg["prompts"])
-            ]
-            if len(matches) == 0:
-                print(">>> No BabelReFT vocab tokens in the LM prompts, returning the previous scores...")
-                return lm_cfg["pre_scores"]
-        if lm_cfg['metric'] == 'ppl':
-            ppl_output = compute_ppl(lm_cfg['prompts'], self.model, self.model_name, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
-            ppl_per_lang = {lang: float(np.mean([ppl_output[idx + j * len(lm_cfg["langs"])] for j in range(lm_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(lm_cfg["langs"])}
-            return ppl_per_lang
-        if lm_cfg['metric'] == 'bpb':
-            lang_mask = {lang: [idx + j * len(lm_cfg["langs"]) for j in range(lm_cfg["num_sent_per_lang"])] for idx, lang in enumerate(lm_cfg["langs"])}
-            bpb_per_lang = compute_bpb(lm_cfg['prompts'], self.model, self.model_name, lang_mask, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)
-            return bpb_per_lang

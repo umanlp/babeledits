@@ -180,8 +180,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         else:
             if isinstance(model, GRACE):
                 with torch.no_grad():
-                    assert len(set(num_prompt_toks)) == 1
-                    outputs = model(**prompt_target_tok, prompt_len=num_prompt_toks[0])
+                    outputs = model(**prompt_target_tok, prompt_len=prompt_len)
             else:
                 with torch.no_grad():
                     outputs = model(**prompt_target_tok)
@@ -234,8 +233,7 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         else:
             if isinstance(model, GRACE):
                 with torch.no_grad():
-                    assert len(set(num_prompt_toks)) == 1
-                    outputs = model(**prompt_target_tok, prompt_len=num_prompt_toks[0])
+                    outputs = model(**prompt_target_tok, prompt_len=prompt_len)
             else:
                 with torch.no_grad():
                     outputs = model(**prompt_target_tok)
@@ -947,8 +945,13 @@ def compute_ppl(
 
         labels = encoded_batch
 
-        with torch.no_grad():
-            out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
+        if isinstance(model, GRACE):
+            with torch.no_grad():
+                prompt_len = attn_mask.sum(1).tolist()
+                out_logits = model(input_ids=encoded_batch, attention_mask=attn_mask, prompt_len=prompt_len).logits
+        else:
+            with torch.no_grad():
+                out_logits = model(encoded_batch, attention_mask=attn_mask).logits.bfloat16()
 
 
         shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
@@ -1058,8 +1061,13 @@ def compute_bpb(
 
         labels = encoded_batch
 
-        with torch.no_grad():
-            out_logits = model(encoded_batch, attention_mask=attn_mask).logits
+        if isinstance(model, GRACE):
+            with torch.no_grad():
+                prompt_len = attn_mask.sum(1).tolist()
+                out_logits = model(input_ids=encoded_batch, attention_mask=attn_mask, prompt_len=prompt_len).logits
+        else:
+            with torch.no_grad():
+                out_logits = model(encoded_batch, attention_mask=attn_mask).logits
 
         shift_logits = out_logits[..., :-1, :].contiguous() #because we do not have the label for what comes next
         shift_labels = labels[..., 1:].contiguous()  # because we can predict only from the second token onwards
@@ -1084,3 +1092,57 @@ def compute_bpb(
         
 
     return lang_to_bpb
+
+def evaluate_language_modeling(model, lm_cfg):
+    model_name = model.model.name_or_path if (isinstance(model, BabelReftModel) or isinstance(model, GRACE)) else model.name_or_path
+    device = model.model.device if (isinstance(model, BabelReftModel) or isinstance(model, GRACE)) else model.device
+    if isinstance(model, BabelReftModel) and "pre_scores" in lm_cfg.keys():
+        matches = [
+            word
+            for word in model.get_vocab_words()
+            if word in "".join(lm_cfg["prompts"])
+        ]
+        if len(matches) == 0:
+            print(
+                ">>> No BabelReFT vocab tokens in the LM prompts, returning the previous scores..."
+            )
+            return lm_cfg["pre_scores"]
+    if lm_cfg["metric"] == "ppl":
+        ppl_output = compute_ppl(
+            lm_cfg["prompts"],
+            model,
+            model_name,
+            batch_size=lm_cfg["batch_size"],
+            device=device,
+            add_start_token=True,
+        )["perplexities"]
+        ppl_per_lang = {
+            lang: float(
+                np.mean(
+                    [
+                        ppl_output[idx + j * len(lm_cfg["langs"])]
+                        for j in range(lm_cfg["num_sent_per_lang"])
+                    ]
+                )
+            )
+            for idx, lang in enumerate(lm_cfg["langs"])
+        }
+        return ppl_per_lang
+    if lm_cfg["metric"] == "bpb":
+        lang_mask = {
+            lang: [
+                idx + j * len(lm_cfg["langs"])
+                for j in range(lm_cfg["num_sent_per_lang"])
+            ]
+            for idx, lang in enumerate(lm_cfg["langs"])
+        }
+        bpb_per_lang = compute_bpb(
+            lm_cfg["prompts"],
+            model,
+            model_name,
+            lang_mask,
+            batch_size=lm_cfg["batch_size"],
+            device=device,
+            add_start_token=True,
+        )
+        return bpb_per_lang
