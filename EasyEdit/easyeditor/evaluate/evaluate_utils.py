@@ -6,6 +6,7 @@ import nltk
 import typing
 from ..util.generate import generate_fast
 from ..models.babelreft.babelreft_main import BabelReftModel
+from ..models.grace.GRACE import GRACE
 import torch.nn.functional as F
 from ..trainer import *
 from sklearn.metrics import f1_score
@@ -177,9 +178,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         if model.prev_logits is not None:
             outputs = model.prev_logits
         else:
-            with torch.no_grad():
-                outputs = model(**prompt_target_tok)
-                model.prev_logits = outputs
+            if isinstance(model, GRACE):
+                with torch.no_grad():
+                    assert len(set(num_prompt_toks)) == 1
+                    outputs = model(**prompt_target_tok, prompt_len=num_prompt_toks[0])
+            else:
+                with torch.no_grad():
+                    outputs = model(**prompt_target_tok)
+            model.prev_logits = outputs 
         if type(outputs) is torch.Tensor:
             logits = outputs
         else:
@@ -226,9 +232,14 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
         if model.prev_logits is not None:
             outputs = model.prev_logits
         else:
-            with torch.no_grad():
-                outputs = model(**prompt_target_tok)
-                model.prev_logits = outputs 
+            if isinstance(model, GRACE):
+                with torch.no_grad():
+                    assert len(set(num_prompt_toks)) == 1
+                    outputs = model(**prompt_target_tok, prompt_len=num_prompt_toks[0])
+            else:
+                with torch.no_grad():
+                    outputs = model(**prompt_target_tok)
+            model.prev_logits = outputs 
         if type(outputs) is torch.Tensor:
             logits = outputs
         else:

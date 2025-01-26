@@ -1,5 +1,6 @@
 import copy
 
+from click import prompt
 import torch
 from .utils import parent_module, brackets_to_periods, periods_to_brackets
 import transformers
@@ -58,7 +59,13 @@ class GRACE(torch.nn.Module):
         #     print(kwargs)
         #     key_id = (kwargs["labels"] == -100).sum() - 1
         #     setattr(eval(f"self.model.{self.layer}"), "key_id", key_id) # Tell GRACE which token to use for its query (default is the last token)
-        return self.model(**kwargs)
+        
+        if "prompt_len" in kwargs:
+            setattr(eval(f"self.model.{self.layer}"), "prompt_len", kwargs["prompt_len"])
+            kwargs.pop("prompt_len")
+        output = self.model(**kwargs)
+        setattr(eval(f"self.model.{self.layer}"), "prompt_len", None) # resetting prompt_len to None
+        return output
 
     def reset_layer(self):
         layer_name = self.layer.rsplit(".", 1)[-1]
@@ -187,13 +194,19 @@ class GRACEAdapter(torch.nn.Module):
             return layer_out
         else:
             if not self.training:
-                if self.key_id == -1:
-                    token_to_edit = args[0].shape[1] - 1
-                    self.key_id = args[0].shape[1] - 1
+                if self.prompt_len is None:
+                    # This is were downstream inference happens
+                    if self.key_id == -1:
+                        token_to_edit = args[0].shape[1] - 1
+                        self.key_id = args[0].shape[1] - 1
+                    else:
+                        token_to_edit = min(self.key_id, args[0].shape[1] - 1)
                 else:
-                    token_to_edit = min(self.key_id, args[0].shape[1] - 1)
+                    # When evaluating editing performance, we need to edit the last token before the answer
+                    token_to_edit = self.prompt_len - 1
             else:
-                token_to_edit = min(self.key_id, args[0].shape[1] - 1)  # args[0].shape[1] - 1 is sequence length
+                # If training, we need to edit the last token of the prompt (set by edit function)
+                token_to_edit = self.key_id
             query = args[0][:, token_to_edit, :] # Just use activation for last token
             if self.config.val_init == "cold":
                 new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device))
