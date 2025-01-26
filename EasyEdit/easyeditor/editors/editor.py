@@ -509,6 +509,15 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    elif self.alg_name == "GRACE":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "_method": "GRACE",
+                                    "_adapter_state_dict": [],
+                                    "_hparams": self.hparams
+                                }
+                            weights_per_edit["_adapter_state_dict"].append(edited_model.get_grace_state_dict())
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -529,6 +538,13 @@ class BaseEditor:
                         for k, v in weights_copy["babelreft_interventions"].items():
                             weights_per_edit["babelreft_interventions"][k].append(v)
                         weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                elif self.alg_name == "GRACE":
+                    with torch.no_grad():
+                        weights_per_edit = {
+                            "_method": "GRACE",
+                            "_adapter_state_dict": [edited_model.get_grace_state_dict()],
+                            "_hparams": self.hparams
+                        }
                 else:
                     logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -544,6 +560,7 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                norm_diff = []
                 if self.alg_name not in ["GRACE", "KN", "WISE"]:
                     for k, v in weights_copy.items():
                         if k.startswith("babelreft"):
@@ -578,6 +595,15 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    elif self.alg_name == "GRACE":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "_method": "GRACE",
+                                    "_adapter_state_dict": [],
+                                    "_hparams": self.hparams
+                                }
+                            weights_per_edit["_adapter_state_dict"].append(edited_model.get_grace_state_dict())
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 

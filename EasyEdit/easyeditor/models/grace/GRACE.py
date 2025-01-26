@@ -5,6 +5,7 @@ import torch
 from .utils import parent_module, brackets_to_periods, periods_to_brackets
 import transformers
 import os
+import copy as cp
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def euc(query, key):
@@ -21,6 +22,16 @@ def perturb_values(chosen_value, num_pert, device):
     noise.requires_grad = True
     chosen_value = chosen_value + noise
     return chosen_value
+
+def move_state_dict_to_cpu(state_dict: dict):
+    return {
+        k: v.to("cpu") if isinstance(v, torch.Tensor) else (
+            move_state_dict_to_cpu(v)
+            if isinstance(v, dict)
+            else v
+        )
+        for k, v in state_dict.items()
+    }
 
 class GRACE(torch.nn.Module):
     def __init__(self, config, model, device):
@@ -53,7 +64,19 @@ class GRACE(torch.nn.Module):
         if type(original_layer) is not GRACEAdapter:
             setattr(edit_module, layer_name, GRACEAdapter(config, original_layer, transpose=transpose).to(self.device))
             self.original_layer = copy.deepcopy(original_layer)
-        
+
+    def load_grace_state_dict(self, state_dict: dict):
+        getattr(self.model, str(self.layer)).load_state_dict(state_dict)
+
+    def get_grace_state_dict(self):
+        state_dict = getattr(self.model, str(self.layer)).state_dict()
+        # By default, state dict contains references to the weights so any
+        # modification of the model would affect the state dict if we don't
+        # deepcopy
+        state_dict = cp.deepcopy(state_dict)
+        state_dict = move_state_dict_to_cpu(state_dict)
+        return state_dict
+
     def __call__(self, **kwargs):
         # if self.config.task == "hallucination":
         #     print(kwargs)
