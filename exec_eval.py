@@ -534,7 +534,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                         if isinstance(intervention, TrainableIntervention):
                             intervention.load_state_dict(intervention_state_dict)
                     lm._model = wrapped_model
-            if isinstance(wrapped_model, GRACE):
+            elif isinstance(wrapped_model, GRACE):
                 with torch.no_grad():
                     wrapped_model.load_grace_state_dict(loaded_data["_adapter_state_dict"][i])
                     lm._model = wrapped_model.model
