@@ -512,15 +512,20 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 reft_config.representations[0].low_rank_dimension,
                 lm.tokenizer,
             )
+
+            num_edits = len(loaded_data["babelreft_vocab"])
         elif loaded_data.get("_method") == "GRACE":
             hparams = loaded_data["_hparams"]
             wrapped_model = GRACE(model=lm.model, config=hparams, device=lm.model.device)
+            setattr(eval(f"wrapped_model.model.{wrapped_model.layer}"), "training", False)
+
+            num_edits = len(loaded_data["_adapter_state_dict"])
         else:
             wrapped_model = None
 
-        edit_tensor = loaded_data[list(loaded_data.keys())[0]]
-        print(type(edit_tensor))
-        num_edits = len(edit_tensor) #1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
+            edit_tensor = loaded_data[list(loaded_data.keys())[0]]
+            print(type(edit_tensor))
+            num_edits = len(edit_tensor) #1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
         eval_logger.info(f"Number of edits: {num_edits}")
         for i in range(num_edits):
 
