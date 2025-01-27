@@ -76,7 +76,7 @@ def main(cfg: DictConfig) -> None:
     model_name = hparams.model_name.replace("/", "_")
 
     # Setting up wandb
-    if not cfg.pre_eval_only:
+    if not cfg.pre_eval_only and cfg.log_on_wandb:
         yaml_dict = yaml.load(OmegaConf.to_yaml(cfg), Loader=yaml.FullLoader)
         if (
             isinstance(yaml_dict["method"]["layers"], list)
@@ -486,13 +486,15 @@ def main(cfg: DictConfig) -> None:
                 for lang in cfg.tgt_langs
             }
             avg_score = np.mean(list(lang_to_score.values()))
-            wandb.log({f"xl_reliability_score_{metric}_avg": avg_score})
-            wandb.log(
-                {
-                    f"xl_reliability_score_{metric}_{lang}": lang_to_score[lang]
-                    for lang in cfg.tgt_langs
-                }
-            )
+            print(f"Average {metric} score: {avg_score}")
+            if cfg.log_on_wandb:
+                wandb.log({f"xl_reliability_score_{metric}_avg": avg_score})
+                wandb.log(
+                    {
+                        f"xl_reliability_score_{metric}_{lang}": lang_to_score[lang]
+                        for lang in cfg.tgt_langs
+                    }
+                )
 
         print(">>> FINISHED <<<")
         print(
@@ -501,7 +503,6 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    main()
     start_time = time.time()
     main()
     end_time = time.time()

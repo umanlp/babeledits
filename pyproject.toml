@@ -49,3 +49,8 @@ dependencies = [
 
 [tool.uv.sources]
 pyreft = { git = "https://github.com/tommaso-green/pyreft.git" }
+
+[dependency-groups]
+dev = [
+    "pudb>=2024.1.3",
+]

@@ -483,7 +483,6 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    main()
     start_time = time.time()
     main()
     end_time = time.time()
