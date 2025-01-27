@@ -143,7 +143,7 @@ class GRACEAdapter(torch.nn.Module):
     def add_key(self, new_key, new_value, new_edit_id):
         keys = torch.vstack([self.keys, new_key.detach()]) # Add new key to list of keys
         values = torch.nn.Parameter(torch.vstack([self.values, new_value]), requires_grad=True) # Add new value to list of values
-        new_epsilon = torch.tensor(self.init_epsilon, device=self.device).view(1)
+        new_epsilon = torch.tensor(self.init_epsilon, device=self.device, dtype=new_key.dtype).view(1)
         if self.epsilons.nelement() == 0:
             epsilons = new_epsilon
         else:
@@ -171,13 +171,13 @@ class GRACEAdapter(torch.nn.Module):
     
     def init_key_value(self, query, value):
         key = query.detach()
-        epsilon = torch.tensor(self.init_epsilon, device=self.device, requires_grad=False).view(1)
+        epsilon = torch.tensor(self.init_epsilon, device=self.device, requires_grad=False, dtype=query.dtype).view(1)
         key_label = [self.edit_label]
         edit_ids = [self.edit_id]
         return key, value, epsilon, key_label, edit_ids
 
     def label_match(self, edit_label, key_label):
-        return edit_label.float().mean() == key_label.float().mean()
+        return torch.equal(key_label[key_label != -100], edit_label[edit_label != -100])
 
     def split_epsilons_in_half(self, nearest_key, smallest_distance):
         self.epsilons[nearest_key] = (smallest_distance / 2) - 1e-5 # Cut nearest epsilon in half
@@ -212,7 +212,7 @@ class GRACEAdapter(torch.nn.Module):
             else:
                 query = args[0][:, token_to_edit, :] # Just use activation for last token
             if self.config.val_init == "cold":
-                new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device))
+                new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device, dtype=query.dtype), requires_grad=True)
             elif self.config.val_init == "warm":
                 new_value = torch.nn.Parameter(layer_out[:, token_to_edit, :].detach(), requires_grad=True)
 
