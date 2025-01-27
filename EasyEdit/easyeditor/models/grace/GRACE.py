@@ -66,15 +66,22 @@ class GRACE(torch.nn.Module):
             self.original_layer = copy.deepcopy(original_layer)
 
     def load_grace_state_dict(self, state_dict: dict):
-        getattr(self.model, str(self.layer)).load_state_dict(state_dict)
+        layer: GRACEAdapter = eval(f"self.model.{self.layer}")
+        layer.keys = state_dict["keys"].clone().to(layer.device)
+        layer.values = torch.nn.Parameter(state_dict["values"].clone().to(layer.device), requires_grad=True)
+        layer.epsilons = state_dict["epsilons"].clone().to(layer.device)
+        layer.key_labels = state_dict["key_labels"].copy()
+        layer.edit_ids = state_dict["edit_ids"].copy()
 
     def get_grace_state_dict(self):
-        state_dict = getattr(self.model, str(self.layer)).state_dict()
-        # By default, state dict contains references to the weights so any
-        # modification of the model would affect the state dict if we don't
-        # deepcopy
-        state_dict = cp.deepcopy(state_dict)
-        state_dict = move_state_dict_to_cpu(state_dict)
+        layer: GRACEAdapter = eval(f"self.model.{self.layer}")
+        state_dict = {
+            "keys": layer.keys.detach().to("cpu").clone(),
+            "values": layer.values.detach().to("cpu").clone(),
+            "epsilons": layer.epsilons.detach().to("cpu").clone(),
+            "key_labels": layer.key_labels.copy(),
+            "edit_ids": layer.edit_ids.copy(),
+        }
         return state_dict
 
     def __call__(self, **kwargs):
@@ -154,6 +161,7 @@ class GRACEAdapter(torch.nn.Module):
         self.num_pert = config.num_pert
         self.key_id = -1
         self.ensure_replace_token_loc = False
+        self.prompt_len = None
     
         if transpose:
             self.key_shape = layer.weight.shape[1]
@@ -242,7 +250,7 @@ class GRACEAdapter(torch.nn.Module):
             if 'keys' not in self.__dict__ or self.keys.nelement() == 0:
                 # If no keys exist, initialize keys, values, epsilons, and key labels
                 self.keys, self.values, self.epsilons, self.key_labels, self.edit_ids = self.init_key_value(query, new_value)
-            elif self.iter == 0:
+            elif self.training and self.iter == 0:
                 # Keys exist, so we have decide whether or not to update them (the fact that we've made it to this point means there was an error!)
 
                 # --- search through keys for a match for query ---
