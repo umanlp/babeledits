@@ -544,18 +544,16 @@ class BaseEditor:
                 edited_model, weights_copy, icl_examples = edit_func(request)
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                norm_diff = []
                 if self.alg_name not in ["GRACE", "KN", "WISE"]:
                     for k, v in weights_copy.items():
                         if k.startswith("babelreft"):
                             continue
                         norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                    mean_norm = torch.tensor(norm_diff).mean().item()
+                    print(f"Average Norm Difference: {mean_norm}")
                 else:
-                    norm_diff.append(-1)
-                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
-                all_metrics[i]["post"]["norm_diff"] = (
-                    torch.tensor(norm_diff).mean().item()
-                )
+                    mean_norm = -1
+                all_metrics[i]["post"]["norm_diff"] = mean_norm
                 if lm_cfg:
                     lm_score = evaluate_language_modeling(edited_model, lm_cfg)
                     all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
