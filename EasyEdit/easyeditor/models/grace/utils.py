@@ -47,6 +47,15 @@ def ckpt_dir():
 
 def brackets_to_periods(name):
     return name.replace("[", ".").replace("]", "")
+
+def periods_to_brackets(s):
+    parts = s.split(".")
+    for i in range(len(parts)):
+        if parts[i].isdigit():
+            parts[i - 1] += "[" + parts[i] + "]"
+            parts.pop(i)
+            return ".".join(parts)
+    return s
     
 def get_params(model):
     return model.state_dict()

@@ -23,7 +23,7 @@ from ..util.hparams import HyperParams
 from ..util.alg_dict import *
 from ..evaluate.evaluate_utils import test_generation_quality
 from ..evaluate.evaluate import compute_locality_quality
-from ..evaluate.evaluate_utils import compute_ppl, compute_bpb
+from ..evaluate.evaluate_utils import compute_ppl, evaluate_language_modeling
 from pathlib import Path
 import copy
 import gzip
@@ -363,7 +363,7 @@ class BaseEditor:
                 all_metrics.append(metrics)
 
             if lm_cfg:
-                lm_score = self.evaluate_language_modeling(lm_cfg)
+                lm_score = evaluate_language_modeling(self.model, lm_cfg)
                 for evaluation in all_metrics:
                     evaluation["pre"].update({lm_cfg['metric']: lm_score})
                 lm_cfg['pre_scores'] = lm_score
@@ -475,16 +475,18 @@ class BaseEditor:
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
-                for k, v in weights_copy.items():
-                    if k.startswith("babelreft"):
-                        continue
-                    norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
-                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
-                all_metrics[i]["intermediate"]["norm_diff"] = (
-                    torch.tensor(norm_diff).mean().item()
-                )
+                if self.alg_name not in ["GRACE", "KN", "WISE"]:
+                    for k, v in weights_copy.items():
+                        if k.startswith("babelreft"):
+                            continue
+                        norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                    mean_norm = torch.tensor(norm_diff).mean().item()
+                    print(f"Average Norm Difference: {mean_norm}")
+                else:
+                    mean_norm = -1
+                all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
                 if lm_cfg:
-                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
                     all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
@@ -507,6 +509,15 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    elif self.alg_name == "GRACE":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "_method": "GRACE",
+                                    "_adapter_state_dict": [],
+                                    "_hparams": self.hparams
+                                }
+                            weights_per_edit["_adapter_state_dict"].append(edited_model.get_grace_state_dict())
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -527,6 +538,13 @@ class BaseEditor:
                         for k, v in weights_copy["babelreft_interventions"].items():
                             weights_per_edit["babelreft_interventions"][k].append(v)
                         weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                elif self.alg_name == "GRACE":
+                    with torch.no_grad():
+                        weights_per_edit = {
+                            "_method": "GRACE",
+                            "_adapter_state_dict": [edited_model.get_grace_state_dict()],
+                            "_hparams": self.hparams
+                        }
                 else:
                     logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -543,16 +561,18 @@ class BaseEditor:
                 edited_model.eval()
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
                 norm_diff = []
-                for k, v in weights_copy.items():
-                    if k.startswith("babelreft"):
-                        continue
-                    norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
-                print(f"Average Norm Difference: {torch.tensor(norm_diff).mean().item()}")
-                all_metrics[i]["post"]["norm_diff"] = (
-                    torch.tensor(norm_diff).mean().item()
-                )
+                if self.alg_name not in ["GRACE", "KN", "WISE"]:
+                    for k, v in weights_copy.items():
+                        if k.startswith("babelreft"):
+                            continue
+                        norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                    mean_norm = torch.tensor(norm_diff).mean().item()
+                    print(f"Average Norm Difference: {mean_norm}")
+                else:
+                    mean_norm = -1
+                all_metrics[i]["post"]["norm_diff"] = mean_norm
                 if lm_cfg:
-                    lm_score = self.evaluate_language_modeling(lm_cfg)
+                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
                     all_metrics[i]['post'].update({lm_cfg['metric']:lm_score})
                     print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
@@ -575,6 +595,15 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(weights_copy["babelreft_vocab"])
+                    elif self.alg_name == "GRACE":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "_method": "GRACE",
+                                    "_adapter_state_dict": [],
+                                    "_hparams": self.hparams
+                                }
+                            weights_per_edit["_adapter_state_dict"].append(edited_model.get_grace_state_dict())
                     else:
                         logging.warning(f"return_edited_weights is not supported for {self.alg_name}, will return None")
 
@@ -818,22 +847,3 @@ class BaseEditor:
             summary_metrics(all_results)
 
         return all_results, edited_model, weights_copy
-
-    def evaluate_language_modeling(self, lm_cfg):
-        if isinstance(self.model, BabelReftModel) and "pre_scores" in lm_cfg.keys():
-            matches = [
-                word
-                for word in self.model.get_vocab_words()
-                if word in "".join(lm_cfg["prompts"])
-            ]
-            if len(matches) == 0:
-                print(">>> No BabelReFT vocab tokens in the LM prompts, returning the previous scores...")
-                return lm_cfg["pre_scores"]
-        if lm_cfg['metric'] == 'ppl':
-            ppl_output = compute_ppl(lm_cfg['prompts'], self.model, self.model_name, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)['perplexities']
-            ppl_per_lang = {lang: float(np.mean([ppl_output[idx + j * len(lm_cfg["langs"])] for j in range(lm_cfg["num_sent_per_lang"])])) for idx, lang in enumerate(lm_cfg["langs"])}
-            return ppl_per_lang
-        if lm_cfg['metric'] == 'bpb':
-            lang_mask = {lang: [idx + j * len(lm_cfg["langs"]) for j in range(lm_cfg["num_sent_per_lang"])] for idx, lang in enumerate(lm_cfg["langs"])}
-            bpb_per_lang = compute_bpb(lm_cfg['prompts'], self.model, self.model_name, lang_mask, batch_size=lm_cfg['batch_size'], device=self.hparams.device, add_start_token=True)
-            return bpb_per_lang

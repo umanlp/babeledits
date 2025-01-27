@@ -10,7 +10,9 @@ class GraceHyperParams(HyperParams):
     
     edit_lr: int
     n_iter: int
+
     # Method
+    layers: List[int]
     eps: float
     dist_fn: str
     val_init: str
@@ -23,11 +25,18 @@ class GraceHyperParams(HyperParams):
     dropout: float
 
     # Module templates
-    inner_params: List[str]
     device: int
     alg_name: str
     model_name: str
 
+    rewrite_module_tmp: str
+    layer_module_tmp: str
+    mlp_module_tmp: str
+    attn_module_tmp: str
+    ln_f_module: str
+    lm_head_module: str
+    bf16: bool
+    
     # Defaults
     batch_size: int = 1
     max_length: int = 30

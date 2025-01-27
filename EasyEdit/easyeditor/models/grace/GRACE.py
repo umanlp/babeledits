@@ -1,16 +1,18 @@
 import copy
 
+from click import prompt
 import torch
-from .utils import parent_module, brackets_to_periods
+from .utils import parent_module, brackets_to_periods, periods_to_brackets
 import transformers
 import os
+import copy as cp
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def euc(query, key):
     # Euclidean distance
     if len(key.shape) < 2:
         key = key.view(1, -1)
-    return torch.cdist(key, query, p=2)
+    return torch.cdist(key.float(), query.float(), p=2).bfloat16()
 
 def perturb_values(chosen_value, num_pert, device):
     # Create a bunch of noised versions of the value, then create batch, then train value
@@ -21,6 +23,16 @@ def perturb_values(chosen_value, num_pert, device):
     chosen_value = chosen_value + noise
     return chosen_value
 
+def move_state_dict_to_cpu(state_dict: dict):
+    return {
+        k: v.to("cpu") if isinstance(v, torch.Tensor) else (
+            move_state_dict_to_cpu(v)
+            if isinstance(v, dict)
+            else v
+        )
+        for k, v in state_dict.items()
+    }
+
 class GRACE(torch.nn.Module):
     def __init__(self, config, model, device):
         super(GRACE, self).__init__()
@@ -29,13 +41,13 @@ class GRACE(torch.nn.Module):
         self.model = model
         self.config = config
         # self.tokenizer = model.tokenizer
-        layer = config.inner_params[0]
+        layer = config.rewrite_module_tmp.format(config.layers[0])
         self.device = device
         self.original_layer = None
 
         # --- ensure proper formatting (GRACE edits ~layers~ not weights matrices) ---        
         suffixes = [".weight", ".bias"]
-        self.layer = layer.rsplit(".", 1)[0] if any(layer.endswith(x) for x in suffixes) else layer
+        self.layer = periods_to_brackets(layer.rsplit(".", 1)[0] if any(layer.endswith(x) for x in suffixes) else layer)
         
         for n, p in self.model.named_parameters():
             p.requires_grad = False
@@ -52,13 +64,38 @@ class GRACE(torch.nn.Module):
         if type(original_layer) is not GRACEAdapter:
             setattr(edit_module, layer_name, GRACEAdapter(config, original_layer, transpose=transpose).to(self.device))
             self.original_layer = copy.deepcopy(original_layer)
-        
+
+    def load_grace_state_dict(self, state_dict: dict):
+        layer: GRACEAdapter = eval(f"self.model.{self.layer}")
+        layer.keys = state_dict["keys"].clone().to(layer.device)
+        layer.values = torch.nn.Parameter(state_dict["values"].clone().to(layer.device), requires_grad=True)
+        layer.epsilons = state_dict["epsilons"].clone().to(layer.device)
+        layer.key_labels = state_dict["key_labels"].copy()
+        layer.edit_ids = state_dict["edit_ids"].copy()
+
+    def get_grace_state_dict(self):
+        layer: GRACEAdapter = eval(f"self.model.{self.layer}")
+        state_dict = {
+            "keys": layer.keys.detach().to("cpu").clone(),
+            "values": layer.values.detach().to("cpu").clone(),
+            "epsilons": layer.epsilons.detach().to("cpu").clone(),
+            "key_labels": layer.key_labels.copy(),
+            "edit_ids": layer.edit_ids.copy(),
+        }
+        return state_dict
+
     def __call__(self, **kwargs):
         # if self.config.task == "hallucination":
         #     print(kwargs)
         #     key_id = (kwargs["labels"] == -100).sum() - 1
         #     setattr(eval(f"self.model.{self.layer}"), "key_id", key_id) # Tell GRACE which token to use for its query (default is the last token)
-        return self.model(**kwargs)
+        
+        if "prompt_len" in kwargs:
+            setattr(eval(f"self.model.{self.layer}"), "prompt_len", kwargs["prompt_len"])
+            kwargs.pop("prompt_len")
+        output = self.model(**kwargs)
+        setattr(eval(f"self.model.{self.layer}"), "prompt_len", None) # resetting prompt_len to None
+        return output
 
     def reset_layer(self):
         layer_name = self.layer.rsplit(".", 1)[-1]
@@ -94,6 +131,7 @@ class GRACE(torch.nn.Module):
                 # --- we only need to create an optimizer for the first iteration (but forward pass instantiates the key, so optimzer is passed after first inference) ---
                 optimizer = torch.optim.Adam(self.model.parameters(), config.edit_lr)
             loss = outputs.loss
+            print("GRACE Loss at iteration", i, ":", loss.item())
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -115,7 +153,7 @@ class GRACEAdapter(torch.nn.Module):
 
         self.layer = layer
         self.weight = self.layer.weight
-        self.init_epsilon = config.eps
+        self.init_epsilon = float(config.eps)
         self.dist_fn = config.dist_fn
         self.replacement = config.replacement
         self.device = layer.weight.device
@@ -123,6 +161,7 @@ class GRACEAdapter(torch.nn.Module):
         self.num_pert = config.num_pert
         self.key_id = -1
         self.ensure_replace_token_loc = False
+        self.prompt_len = None
     
         if transpose:
             self.key_shape = layer.weight.shape[1]
@@ -135,7 +174,7 @@ class GRACEAdapter(torch.nn.Module):
     def add_key(self, new_key, new_value, new_edit_id):
         keys = torch.vstack([self.keys, new_key.detach()]) # Add new key to list of keys
         values = torch.nn.Parameter(torch.vstack([self.values, new_value]), requires_grad=True) # Add new value to list of values
-        new_epsilon = torch.tensor(self.init_epsilon, device=self.device).view(1)
+        new_epsilon = torch.tensor(self.init_epsilon, device=self.device, dtype=new_key.dtype).view(1)
         if self.epsilons.nelement() == 0:
             epsilons = new_epsilon
         else:
@@ -163,13 +202,13 @@ class GRACEAdapter(torch.nn.Module):
     
     def init_key_value(self, query, value):
         key = query.detach()
-        epsilon = torch.tensor(self.init_epsilon, device=self.device, requires_grad=False).view(1)
+        epsilon = torch.tensor(self.init_epsilon, device=self.device, requires_grad=False, dtype=query.dtype).view(1)
         key_label = [self.edit_label]
         edit_ids = [self.edit_id]
         return key, value, epsilon, key_label, edit_ids
 
     def label_match(self, edit_label, key_label):
-        return edit_label.float().mean() == key_label.float().mean()
+        return torch.equal(key_label[key_label != -100], edit_label[edit_label != -100])
 
     def split_epsilons_in_half(self, nearest_key, smallest_distance):
         self.epsilons[nearest_key] = (smallest_distance / 2) - 1e-5 # Cut nearest epsilon in half
@@ -186,27 +225,36 @@ class GRACEAdapter(torch.nn.Module):
             return layer_out
         else:
             if not self.training:
-                if self.key_id == -1:
-                    token_to_edit = args[0].shape[1] - 1
-                    self.key_id = args[0].shape[1] - 1
+                if self.prompt_len is None:
+                    # This is were downstream inference happens
+                    if self.key_id == -1:
+                        token_to_edit = args[0].shape[1] - 1
+                        self.key_id = args[0].shape[1] - 1
+                    else:
+                        token_to_edit = min(self.key_id, args[0].shape[1] - 1)
                 else:
-                    token_to_edit = min(self.key_id, args[0].shape[1] - 1)
+                    # When evaluating editing performance, we need to edit the last token before the answer
+                    token_to_edit = [x-1 for x in self.prompt_len]
             else:
-                token_to_edit = min(self.key_id, args[0].shape[1] - 1)  # args[0].shape[1] - 1 is sequence length
-            query = args[0][:, token_to_edit, :] # Just use activation for last token
+                # If training, we need to edit the last token of the prompt (set by edit function)
+                token_to_edit = self.key_id
+            if isinstance(token_to_edit, list):
+                query = args[0][range(len(token_to_edit)), token_to_edit, :]
+            else:
+                query = args[0][:, token_to_edit, :] # Just use activation for last token
             if self.config.val_init == "cold":
-                new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device))
+                new_value = torch.nn.Parameter(torch.rand(1, self.value_shape, requires_grad=True, device=self.device, dtype=query.dtype), requires_grad=True)
             elif self.config.val_init == "warm":
                 new_value = torch.nn.Parameter(layer_out[:, token_to_edit, :].detach(), requires_grad=True)
 
             if 'keys' not in self.__dict__ or self.keys.nelement() == 0:
                 # If no keys exist, initialize keys, values, epsilons, and key labels
                 self.keys, self.values, self.epsilons, self.key_labels, self.edit_ids = self.init_key_value(query, new_value)
-            elif self.iter == 0:
+            elif self.training and self.iter == 0:
                 # Keys exist, so we have decide whether or not to update them (the fact that we've made it to this point means there was an error!)
 
                 # --- search through keys for a match for query ---
-                dists = torch.cdist(self.keys, query, p=2).view(-1, len(query))
+                dists = torch.cdist(self.keys.float(), query.float(), p=2).view(-1, len(query)).bfloat16()
                 smallest_distance, nearest_key = dists.min(0)
 
                 if smallest_distance > (self.init_epsilon + self.epsilons[nearest_key]):
@@ -233,7 +281,7 @@ class GRACEAdapter(torch.nn.Module):
         # print(token_to_edit)
         # compute distance from query to all keys and find the closest keys
 
-        dists = torch.cdist(self.keys, query, p=2).view(-1, len(query))
+        dists = torch.cdist(self.keys.float(), query.float(), p=2).view(-1, len(query)).bfloat16()
         if dists.nelement() == 0:
             return layer_out
         smallest_dist, self.chosen_key = dists.min(0)
@@ -241,6 +289,13 @@ class GRACEAdapter(torch.nn.Module):
         chosen_value = self.values[self.chosen_key]
         eps = self.epsilons[self.chosen_key].view(-1, 1)
 
+        if not self.training:
+            print("Distances: ", dists)
+            print("Smallest distance:", smallest_dist)
+            print("Epsilons:", self.epsilons)
+            print("Hitrate:", (smallest_dist <= eps).float().mean().item())
+            print("-"*50)
+            print()
         if (self.config.val_train == "adv") and (self.training):
             chosen_value = perturb_values(chosen_value, self.num_pert, self.device)
 
