@@ -64,6 +64,9 @@ class GRACE(torch.nn.Module):
         if type(original_layer) is not GRACEAdapter:
             setattr(edit_module, layer_name, GRACEAdapter(config, original_layer, transpose=transpose).to(self.device))
             self.original_layer = copy.deepcopy(original_layer)
+        # This is needed if we use sequential edits applied to the same object
+        else:
+            original_layer.values.requires_grad = True
 
     def load_grace_state_dict(self, state_dict: dict):
         layer: GRACEAdapter = eval(f"self.model.{self.layer}")
