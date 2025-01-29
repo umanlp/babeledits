@@ -184,7 +184,7 @@ class GRACEAdapter(torch.nn.Module):
             epsilons = torch.vstack([self.epsilons, new_epsilon]) # Add new epsilon to list of epsilons
         key_labels =  [self.edit_label] + self.key_labels # Add new key_label to list of key_labels
         
-        edit_ids = [self.edit_ids] + [new_edit_id]
+        edit_ids = self.edit_ids + [new_edit_id]
         return keys, values, epsilons, key_labels, edit_ids
     
     
