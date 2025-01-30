@@ -605,13 +605,15 @@ def get_reft_config(hparams, hidden_size):
             embed_dim=hidden_size, low_rank_dimension=hparams.low_rank_dim
         )
         low_rank_dim = hparams.low_rank_dim
+        print("Using LoReft with low rank dimension", low_rank_dim)
     elif hparams.intervention_type == "subloreft":
         intervention = SubloreftIntervention(
             embed_dim=hidden_size,
-            low_rank_dimension=hparams.low_rank_dim * hparams.num_edits,
+            low_rank_dimension=hparams.low_rank_dim * hparams.num_edit_factor,
             add_bias=False,
         )
-        low_rank_dim = hparams.low_rank_dim * hparams.num_edits
+        low_rank_dim = hparams.low_rank_dim * hparams.num_edit_factor
+        print("Using SubLoReft with low rank dimension", low_rank_dim)
     reft_cfg = pyreft.ReftConfig(
         representations=[
             {
