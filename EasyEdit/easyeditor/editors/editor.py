@@ -619,6 +619,12 @@ class BaseEditor:
                     self.model = edited_model
                 elif self.alg_name == "BabelReFT":
                     self.model.reset_vocab()
+                    with torch.no_grad(): #restoring model
+                        for k, v in weights_copy.items():
+                            if isinstance(v, torch.Tensor):
+                                nethook.get_parameter(self.model, k)[...] = v.to(
+                                    f"cuda:{self.hparams.device}"
+                                )
                 else:
                     with torch.no_grad(): #restoring model
                         for k, v in weights_copy.items():
