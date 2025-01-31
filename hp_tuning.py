@@ -118,7 +118,11 @@ def main(cfg: DictConfig) -> None:
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
     hparams.device = cfg.device
-    hparams.num_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
+    hparams.num_edit_factor = (
+        1
+        if not cfg.sequential
+        else (cfg.max_edits if cfg.max_edits is not None else len(prompts))
+    )
 
     editor = BaseEditor.from_hparams(hparams)
 
