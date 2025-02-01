@@ -20,7 +20,7 @@ prompt_type: "prompts_mt_marked"
 subject_type: "subjects_mt_marked"
 target_type: "targets_mt_marked"
 eval_prompt_type: ["prompts_mt","prompts_mt_marked"]
-subject_in_prompt: null
+subject_in_prompt: "loose"
 generality: true
 locality: true
 portability: true
