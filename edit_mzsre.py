@@ -103,7 +103,11 @@ def main(cfg: DictConfig) -> None:
     print("Data loaded")
     hparams = get_hparm_class(method).from_dict_config(hparams)
     hparams.device = cfg.device
-    hparams.num_edits = cfg.max_edits if cfg.max_edits is not None else len(prompts)
+    hparams.num_edit_factor = (
+        1
+        if not cfg.sequential
+        else (cfg.max_edits if cfg.max_edits is not None else len(prompts))
+    )
 
     editor = BaseEditor.from_hparams(hparams)
 
@@ -221,6 +225,50 @@ def main(cfg: DictConfig) -> None:
     else:
         lm_cfg = None
 
+
+    pre_file = (
+        to_absolute_path(os.path.join(log_dir, cfg.pre_file))
+        if cfg.pre_file is not None
+        else None
+    )
+    if cfg.pre_edit is not None:
+        print(f"Loading pre-edit metrics from {cfg.pre_edit}")
+        pre_file_path = Path(to_absolute_path(cfg.pre_edit))
+        pre_file_lang = [x for x in all_langs if x in pre_file_path.parts][0]
+        with gzip.open(pre_file_path, "rt") as f:
+            pre_edit = json.load(f)
+        pre_edit = pre_edit if cfg.max_edits is None else pre_edit[: cfg.max_edits]
+        if pre_file_lang != cfg.edit_lang:
+            print(
+                f"Pre-edit file is in {pre_file_lang}, but edit language is {cfg.edit_lang}. Adjustment will be made."
+            )
+        for evaluation in pre_edit:
+            for loc_key in evaluation["pre"]["locality"]:
+                # creating tensors for logprobs
+                evaluation["pre"]["locality"][loc_key]["nkl"]["logprobs"] = (
+                    torch.tensor(
+                        evaluation["pre"]["locality"][loc_key]["nkl"]["logprobs"]
+                    )
+                )
+            if (
+                pre_file_lang != cfg.edit_lang
+            ):  # if pre_file is in a different language, we need to change the key
+                evaluation["pre"]["rewrite_acc"] = copy.deepcopy(
+                    evaluation["pre"]["portability"][
+                        f"xlt-{cfg.prompt_type}-{cfg.edit_lang}"
+                    ]
+                )
+        if lm_cfg is None:
+            if any([x in pre_edit[0]["pre"] for x in ["bpb", "ppl"]]):
+                print(
+                    "Removing language model metrics from pre-edit cause eval_lm=False"
+                )
+                lm_metric = "bpb" if "bpb" in pre_edit[0]["pre"] else "ppl"
+                for x in pre_edit:
+                    x["pre"].pop(lm_metric)
+    else:
+        pre_edit = None
+
     if method == "BabelReFT":
         babelreft_vocab = get_babelreft_vocab(
             data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs
@@ -246,6 +294,8 @@ def main(cfg: DictConfig) -> None:
             locality_metrics=cfg.locality_metrics,
             lm_cfg=lm_cfg,
             edit_lang=cfg.edit_lang,
+            pre_file=pre_file,  # TODO add to batch_edit
+            pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
             return_edited_weights=cfg.return_edited_weights,
@@ -266,6 +316,8 @@ def main(cfg: DictConfig) -> None:
             locality_metrics=cfg.locality_metrics,
             lm_cfg=lm_cfg,
             edit_lang=cfg.edit_lang,
+            pre_file=pre_file,
+            pre_edit=pre_edit,
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
             return_edited_weights=cfg.return_edited_weights,
@@ -326,7 +378,6 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    main()
     start_time = time.time()
     main()
     end_time = time.time()
