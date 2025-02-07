@@ -1,0 +1,32 @@
+defaults:
+  - model: llama-3-1
+  - method: ft
+  - decoding_strategy: greedy
+  - _self_
+
+metrics: 
+  - token_em_lm_eval
+  - rewrite_score
+locality_metrics:
+  - nkl
+dataset: "datasets/mzsre/mzsre_test_final.json"
+edit_lang: "en"
+tgt_langs: ['de','fr','zh']
+multi_answer_eval: true
+max_edits: null
+device: 0
+log_subdir: "new_debug"
+prompt_type: "prompts"
+subject_type: "subjects"
+target_type: "targets"
+eval_prompt_type: ["prompts"]
+subject_in_prompt: null
+generality: true
+eval_lm: true
+data_lm : "data_ppl/ME-PPL_50_translated.json"
+batch_size_lm: 24
+lm_metric: "ppl"
+sequential: false
+return_edited_weights: false
+return_edited_weights_at_end: false
+sample_idx: null
