@@ -4,6 +4,6 @@ defaults:
 _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
 # timeout_min: 20 # 2 hours
 partition: ${oc.env:DEFPART}
-mem_gb : 200
-gres: gpu:A40:1
-additional_parameters: {"time": "26:00:00", "mail-user": "${oc.env:USER_MAIL}", "mail-type": "ALL"}
+mem_gb : 300
+gres: gpu:1
+additional_parameters: {"time": "24:00:00", "mail-user": "${oc.env:USER_MAIL}", "mail-type": "ALL"}
