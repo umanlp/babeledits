@@ -26,6 +26,9 @@ eval_lm: true
 data_lm : "data_ppl/ME-PPL_50_translated.json"
 batch_size_lm: 24
 lm_metric: "ppl"
+pre_file: null
+pre_edit: null
+pre_eval_only: false
 sequential: false
 return_edited_weights: false
 return_edited_weights_at_end: false
