@@ -91,7 +91,10 @@ def main(cfg: DictConfig) -> None:
     prompts = extract(data, cfg.edit_lang, cfg.prompt_type)
     targets = extract(data, cfg.edit_lang, cfg.target_type)
     if cfg.tgt_langs:
+        tgt_langs = sorted(
             [x for x in cfg.tgt_langs if x != cfg.edit_lang]
+        )  # TODO fix with multisource, since edit_lang will be a list
+        all_langs = sorted(list(set(tgt_langs + [cfg.edit_lang])))
     else:
         tgt_langs = None
         all_langs = [cfg.edit_lang]
@@ -188,7 +191,7 @@ def main(cfg: DictConfig) -> None:
         generality_inputs = {}
         for tgt_prompt_type, tgt_lang in xlt_confs:
             gen_key = f"{tgt_prompt_type}-{tgt_lang}"
-            target_key = targets
+            target_key = "targets"
             print(
                 f"Evaluating generality in {tgt_lang} using {tgt_prompt_type} with targets {target_key}"
             )
