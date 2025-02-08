@@ -1,28 +1,33 @@
 import argparse
+import gzip
 import json
 import logging
 import os
+import pickle
 import sys
 from functools import partial
+from pathlib import Path
 from typing import Union
 
+import torch
+import yaml
 from click import edit
 from lm_eval import evaluator, utils
+from lm_eval.api.registry import get_model
 from lm_eval.evaluator import request_caching_arg_to_dict
 from lm_eval.loggers import EvaluationTracker, WandbLogger
 from lm_eval.tasks import TaskManager
 from lm_eval.utils import handle_non_serializable, make_table, simple_parse_args_string
-from lm_eval.api.registry import get_model
-import gzip
-import pickle
-
-from EasyEdit.easyeditor.models.babelreft.babelreft_main import BabelReftModel, get_reft_config, get_babelreft_model
-from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from pyvene import TrainableIntervention
 
+from EasyEdit.easyeditor.models.babelreft.babelreft_main import (
+    BabelReftModel,
+    get_babelreft_model,
+    get_reft_config,
+)
+from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from utils import get_babelreft_vocab
 
-import torch
 
 def get_edits_for_debug(dataset_file: str | None):
     if dataset_file is None:
@@ -576,6 +581,12 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                             "en",
                             args.languages,
                         )
+                        conf_path = Path(args.load_weights).parent / "config.yaml"
+                        with open(conf_path, 'r') as file:
+                            config = yaml.safe_load(file)
+                            max_edits = config.get('max_edits')
+                            if max_edits is not None:
+                                vocab = vocab[:max_edits]
                         for subvocab in vocab:
                             wrapped_model.add_words_to_vocab(subvocab)
                     else:
