@@ -20,8 +20,23 @@ from EasyEdit.easyeditor.models.babelreft.babelreft_main import BabelReftModel, 
 from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from pyvene import TrainableIntervention
 
+from utils import get_babelreft_vocab
 
 import torch
+
+def get_edits_for_debug(dataset_file: str | None):
+    if dataset_file is None:
+        return None
+    with open(dataset_file, "r") as f:
+        dataset = json.load(f)
+    res = []
+    for sample in dataset.values():
+        for relation in sample["relations"].values():
+            ground_truth = relation["ground_truths"]["en"]
+            target = relation["edit"]["targets"]["en"]
+            prompt = relation["edit"]["prompts_mt_marked"]["en"]
+            res.append(f"{prompt} {ground_truth} -> {target}")
+    return res
 
 def get_parameter(model, name):
     """
@@ -287,6 +302,19 @@ def setup_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to a pickle file containing weights to be loaded into the model",
     )
+    parser.add_argument(
+        "--editing_dataset",
+        type=str,
+        default=None,
+        help="Path to the dataset that was used for editing",
+    )
+    parser.add_argument(
+        "--languages",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Languages used in BabelReft, required if you use a legacy version of a BabelReft model",
+    )
     return parser
 
 
@@ -509,8 +537,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 lm.model,
                 reft_config,
                 init_args["pos_type"],
-                reft_config.representations[0].low_rank_dimension,
+                hparams.low_rank_dim,
                 lm.tokenizer,
+                edited_facts_for_debug=get_edits_for_debug(args.editing_dataset),
             )
 
             num_edits = len(loaded_data["babelreft_vocab"])
@@ -524,7 +553,6 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             wrapped_model = None
 
             edit_tensor = loaded_data[list(loaded_data.keys())[0]]
-            print(type(edit_tensor))
             num_edits = len(edit_tensor) #1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
         eval_logger.info(f"Number of edits: {num_edits}")
         for i in range(num_edits):
@@ -532,7 +560,30 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             if isinstance(wrapped_model, BabelReftModel):
                 with torch.no_grad():
                     wrapped_model.reset_vocab()
-                    wrapped_model.add_words_to_vocab(loaded_data["babelreft_vocab"][i])
+                    # Reconstructing the intervention routing function
+                    vocab = loaded_data["babelreft_vocab"][i]
+                    # This if for the new saving method
+                    if isinstance(vocab[0], list):
+                        for subvocab in vocab:
+                            wrapped_model.add_words_to_vocab(subvocab)
+                    # this is for handling the legacy saving method
+                    elif args.editing_dataset and args.languages:
+                        with open(args.editing_dataset, "r", encoding="utf-8") as file:
+                            data = json.load(file)
+                        vocab = get_babelreft_vocab(
+                            data,
+                            "subjects_mt_marked",
+                            "en",
+                            args.languages,
+                        )
+                        for subvocab in vocab:
+                            wrapped_model.add_words_to_vocab(subvocab)
+                    else:
+                        raise Exception(
+                            f"You're using a saved BabelReft with the old saving method. Otherwise the class(vocab[0]) should be list and found `{vocab[0].__class__}`." + 
+                            " You can use the old BabelReft format, but you need to set the --editing_dataset and --languages arguments."
+                        )
+
                     for k, v in wrapped_model.interventions.items():
                         intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
                         intervention = v[0]
