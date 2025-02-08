@@ -274,16 +274,22 @@ class BabelReftModel(ReftModel):
             output = self.model.generate(input_ids, **kwargs)
             return output
 
-        _, output = super().generate(
+        original, output = super().generate(
             {"input_ids": input_ids},
             sources,
             unit_locations,
             source_representations,
             intervene_on_prompt,
             subspaces,
-            output_original_output=False,
+            output_original_output=self.edited_facts_for_debug is not None,
             **kwargs,
         )
+        if self.edited_facts_for_debug and not torch.equal(original, output):
+            original_text = self.tokenizer.decode(original[0][input_ids.shape[1]:], skip_special_tokens=True)
+            output_text = self.tokenizer.decode(output[0][input_ids.shape[1]:], skip_special_tokens=True)
+
+            logging.info(f"Generation output:\n  before intervention:\n{original_text}\n\n  after intervention:\n{output_text}")
+
         return output
 
     def forward(
