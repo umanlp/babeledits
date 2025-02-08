@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from typing import Any
 import ahocorasick
 import shutil
+import logging
 
 def apply_babelreft_to_model(
     model: 'BabelReftModel',
@@ -132,7 +133,6 @@ def apply_babelreft_to_model(
     weights_copy["babelreft_init"] = {
         "pos_type": model.pos_type
     }
-    weights_copy["babelreft_vocab"] = model.get_vocab_words()
     
     tok.padding_side = "left"
     return model, weights_copy
@@ -223,6 +223,7 @@ class BabelReftModel(ReftModel):
         tokenizer,
         words_to_add=None,
         low_rank_dim=None,
+        edited_facts_for_debug: List[str] | None = None,
         *args,
         **kwargs,
     ):
@@ -235,6 +236,8 @@ class BabelReftModel(ReftModel):
         self.word_to_subspace = collections.OrderedDict()
         if words_to_add is not None:
             self.add_words_to_vocab(words_to_add)
+
+        self.edited_facts_for_debug = edited_facts_for_debug
 
     def generate(
         self,
@@ -524,6 +527,14 @@ class BabelReftModel(ReftModel):
                         if self.config.intervention_types[0] == SubloreftIntervention:
                             subspaces.append([0]) # default subspace, will be purged by intervention mask anyway
 
+                if token_match_found and self.edited_facts_for_debug:
+                    word = result[-1][0]["word"]
+                    subspace = subspaces[-1] if self.config.intervention_types[0] == SubloreftIntervention else None
+                    fact_idx = None
+                    if subspace:
+                        fact_idx = subspace[0] // self.low_rank_dim
+                    logging.info(f"Found object '{word}' from fact '{self.edited_facts_for_debug[fact_idx] if fact_idx is not None else 'unknown'}' in sequence: {seq}")
+
         intervention_locs = [
             [loc_info[f"{self.pos_type}_pos"] for loc_info in r]
             if r is not None
@@ -587,11 +598,12 @@ def get_babelreft_model(
     words_to_add=None,
     set_device=True,
     disable_model_grads=True,
+    edited_facts_for_debug=None,
 ):
     """
     Create an instance of BabelReFT model.
     """
-    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add, low_rank_dim)
+    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add, low_rank_dim, edited_facts_for_debug=edited_facts_for_debug)
     if set_device:
         reft_model.set_device(model.device)
     if disable_model_grads:
@@ -607,12 +619,14 @@ def get_reft_config(hparams, hidden_size):
         low_rank_dim = hparams.low_rank_dim
         print("Using LoReft with low rank dimension", low_rank_dim)
     elif hparams.intervention_type == "subloreft":
+        # This is for retro-compatibility
+        fact_nb = hparams.num_edit_factor if hasattr(hparams, "num_edit_factor") else hparams.num_edits
         intervention = SubloreftIntervention(
             embed_dim=hidden_size,
-            low_rank_dimension=hparams.low_rank_dim * hparams.num_edit_factor,
+            low_rank_dimension=hparams.low_rank_dim * fact_nb,
             add_bias=False,
         )
-        low_rank_dim = hparams.low_rank_dim * hparams.num_edit_factor
+        low_rank_dim = hparams.low_rank_dim * fact_nb
         print("Using SubLoReft with low rank dimension", low_rank_dim)
     reft_cfg = pyreft.ReftConfig(
         representations=[
