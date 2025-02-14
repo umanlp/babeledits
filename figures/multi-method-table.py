@@ -7,15 +7,20 @@ import pandas as pd
 def get_langs_from_summary(summary_results):
     return sorted(list(summary_results["pre"]["ppl"].keys()))
 
-method_list = ["FT-L", "FT-M", "R-ROME"]
-model = "meta-llama_Meta-Llama-3.1-8B-Instruct"
-logdir="logs/v8_rev6"
+method_list = ["FT-L", "FT-M", "R-ROME", "GRACE", "BabelReFT"]
+model = "meta-llama_Meta-Llama-3.1-8B-Instruct" 
+# model = "google_gemma-2-9b-it" 
+logdir="logs/v8_rev7"
 edit_lang="en"
 prompt_type="prompts_mt_marked"
-
+eval_metric="rewrite_score"
 summary_res_path = f"../{logdir}/{model}/{{}}/{edit_lang}/{prompt_type}/summary.json"
 
-method_to_summary = {method:sienna.load(summary_res_path.format(method)) for method in method_list}
+method_to_summary = {method:sienna.load(summary_res_path.format(method)) for method in method_list if method != "BabelReFT"}
+method_to_summary["BabelReFT"] = sienna.load(
+    f"../logs/v8_rev7_subloreft_lm/meta-llama_Meta-Llama-3.1-8B-Instruct/BabelReFT/{edit_lang}/prompts_mt_marked/summary.json"
+)
+print(method_to_summary.keys())
 
 def create_metrics_table(method_to_summary, langs):
     metrics = [
@@ -31,19 +36,19 @@ def create_metrics_table(method_to_summary, langs):
     getters = {
         "reliability": lambda x_post, x_pre, lang: x_post["portability"][
             f"xlt-prompts_mt_marked-{lang}"
-        ]["token_em_lm_eval"],
+        ][f"{eval_metric}"],
         "generality": lambda x_post, x_pre, lang: x_post["rephrase_acc"][
             f"prompts_gen_mt_marked-{lang}"
-        ]["token_em_lm_eval"],
+        ][f"{eval_metric}"],
         "locality": lambda x_post, x_pre, lang: x_post["locality"][
             f"prompts_loc_mt_marked-{lang}"
         ]["nkl"],
         "multi-hop portability": lambda x_post, x_pre, lang: x_post["portability"][
             f"multi-hop_prompts_port_mt_marked-{lang}"
-        ]["token_em_lm_eval"],
+        ][f"{eval_metric}"],
         "subj-alias portability": lambda x_post, x_pre, lang: x_post["portability"]
         .get(f"subj-alias_prompts_subj_alias-{lang}", {})
-        .get("token_em_lm_eval", np.nan),
+        .get(f"{eval_metric}", np.nan),
         "delta PPL": lambda x_post, x_pre, lang: x_post["ppl"][lang] - x_pre["ppl"][lang],
     }
 
@@ -101,6 +106,8 @@ langs = get_langs_from_summary(next(iter(method_to_summary.values())))
 # Create the table
 df, styled_df = create_metrics_table(method_to_summary, langs)
 
+styled_df
+# %%
 # Generate LaTeX output with adjustments for MultiIndex
 latex_table = styled_df.to_latex(
     position="!h",
@@ -110,11 +117,17 @@ latex_table = styled_df.to_latex(
     clines="skip-last;data",
 )
 
+if model == "google_gemma-2-9b-it":
+    filename = "multi_method_table_output_gemma.tex"
+if model == "meta-llama_Meta-Llama-3.1-8B-Instruct":
+    filename = "multi_method_table_output_llama.tex"
+
 # Write the table to a file
-with open("multi_method_table_output.tex", "w", encoding="utf-8") as f:
+with open(filename, "w", encoding="utf-8") as f:
     f.write(latex_table)
 
-print("Table written to multi_method_table_output.tex")
+print(f"Table written to {filename}")
+styled_df
 # %%
 
 
