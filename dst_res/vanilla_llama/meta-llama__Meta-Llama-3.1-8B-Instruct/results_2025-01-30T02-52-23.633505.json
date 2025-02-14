@@ -1,0 +1,892 @@
+{
+  "results": {
+    "belebele_arb_Arab": {
+      "alias": "belebele_arb_Arab",
+      "acc,none": 0.7322222222222222,
+      "acc_stderr,none": 0.014768244481214539,
+      "acc_norm,none": 0.7322222222222222,
+      "acc_norm_stderr,none": 0.014768244481214539
+    },
+    "belebele_deu_Latn": {
+      "alias": "belebele_deu_Latn",
+      "acc,none": 0.7711111111111111,
+      "acc_stderr,none": 0.014011705158884507,
+      "acc_norm,none": 0.7711111111111111,
+      "acc_norm_stderr,none": 0.014011705158884507
+    },
+    "belebele_eng_Latn": {
+      "alias": "belebele_eng_Latn",
+      "acc,none": 0.8866666666666667,
+      "acc_stderr,none": 0.01057253608849262,
+      "acc_norm,none": 0.8866666666666667,
+      "acc_norm_stderr,none": 0.01057253608849262
+    },
+    "belebele_fra_Latn": {
+      "alias": "belebele_fra_Latn",
+      "acc,none": 0.8277777777777777,
+      "acc_stderr,none": 0.012592780405781523,
+      "acc_norm,none": 0.8277777777777777,
+      "acc_norm_stderr,none": 0.012592780405781523
+    },
+    "belebele_hrv_Latn": {
+      "alias": "belebele_hrv_Latn",
+      "acc,none": 0.74,
+      "acc_stderr,none": 0.014629271097998378,
+      "acc_norm,none": 0.74,
+      "acc_norm_stderr,none": 0.014629271097998378
+    },
+    "belebele_ita_Latn": {
+      "alias": "belebele_ita_Latn",
+      "acc,none": 0.81,
+      "acc_stderr,none": 0.013083967721831992,
+      "acc_norm,none": 0.81,
+      "acc_norm_stderr,none": 0.013083967721831992
+    },
+    "belebele_jpn_Jpan": {
+      "alias": "belebele_jpn_Jpan",
+      "acc,none": 0.7766666666666666,
+      "acc_stderr,none": 0.013890384297198723,
+      "acc_norm,none": 0.7766666666666666,
+      "acc_norm_stderr,none": 0.013890384297198723
+    },
+    "belebele_kat_Geor": {
+      "alias": "belebele_kat_Geor",
+      "acc,none": 0.5233333333333333,
+      "acc_stderr,none": 0.016657765513332545,
+      "acc_norm,none": 0.5233333333333333,
+      "acc_norm_stderr,none": 0.016657765513332545
+    },
+    "belebele_mya_Mymr": {
+      "alias": "belebele_mya_Mymr",
+      "acc,none": 0.43777777777777777,
+      "acc_stderr,none": 0.01654630456414351,
+      "acc_norm,none": 0.43777777777777777,
+      "acc_norm_stderr,none": 0.01654630456414351
+    },
+    "belebele_zho_Hans": {
+      "alias": "belebele_zho_Hans",
+      "acc,none": 0.8533333333333334,
+      "acc_stderr,none": 0.011799000521176606,
+      "acc_norm,none": 0.8533333333333334,
+      "acc_norm_stderr,none": 0.011799000521176606
+    },
+    "xquad_ar": {
+      "alias": "xquad_ar",
+      "f1,none": 0.5341680681072069,
+      "f1_stderr,none": 0.011347630814695794,
+      "exact_match,none": 0.28907563025210087,
+      "exact_match_stderr,none": 0.013146995494609641
+    },
+    "xquad_de": {
+      "alias": "xquad_de",
+      "f1,none": 0.592629496818025,
+      "f1_stderr,none": 0.010954460911002353,
+      "exact_match,none": 0.34705882352941175,
+      "exact_match_stderr,none": 0.013805357151198688
+    },
+    "xquad_en": {
+      "alias": "xquad_en",
+      "f1,none": 0.5278166291411973,
+      "f1_stderr,none": 0.011210803128028288,
+      "exact_match,none": 0.3243697478991597,
+      "exact_match_stderr,none": 0.013576373832812464
+    },
+    "xquad_zh": {
+      "alias": "xquad_zh",
+      "f1,none": 0.27833913655960113,
+      "f1_stderr,none": 0.012295660222097965,
+      "exact_match,none": 0.2235294117647059,
+      "exact_match_stderr,none": 0.012082002332144064
+    }
+  },
+  "group_subtasks": {
+    "belebele_arb_Arab": [],
+    "belebele_deu_Latn": [],
+    "belebele_eng_Latn": [],
+    "belebele_fra_Latn": [],
+    "belebele_hrv_Latn": [],
+    "belebele_ita_Latn": [],
+    "belebele_jpn_Jpan": [],
+    "belebele_kat_Geor": [],
+    "belebele_mya_Mymr": [],
+    "belebele_zho_Hans": [],
+    "xquad_ar": [],
+    "xquad_de": [],
+    "xquad_en": [],
+    "xquad_zh": []
+  },
+  "configs": {
+    "belebele_arb_Arab": {
+      "task": "belebele_arb_Arab",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "arb_Arab",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_deu_Latn": {
+      "task": "belebele_deu_Latn",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "deu_Latn",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_eng_Latn": {
+      "task": "belebele_eng_Latn",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "eng_Latn",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_fra_Latn": {
+      "task": "belebele_fra_Latn",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "fra_Latn",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_hrv_Latn": {
+      "task": "belebele_hrv_Latn",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "hrv_Latn",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_ita_Latn": {
+      "task": "belebele_ita_Latn",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "ita_Latn",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_jpn_Jpan": {
+      "task": "belebele_jpn_Jpan",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "jpn_Jpan",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_kat_Geor": {
+      "task": "belebele_kat_Geor",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "kat_Geor",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_mya_Mymr": {
+      "task": "belebele_mya_Mymr",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "mya_Mymr",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "belebele_zho_Hans": {
+      "task": "belebele_zho_Hans",
+      "dataset_path": "facebook/belebele",
+      "dataset_name": "zho_Hans",
+      "test_split": "test",
+      "fewshot_split": "test",
+      "doc_to_text": "P: {{flores_passage}}\nQ: {{question.strip()}}\nA: {{mc_answer1}}\nB: {{mc_answer2}}\nC: {{mc_answer3}}\nD: {{mc_answer4}}\nAnswer:",
+      "doc_to_target": "{{['1', '2', '3', '4'].index(correct_answer_num)}}",
+      "doc_to_choice": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "first_n"
+      },
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "{{question}}",
+      "metadata": {
+        "version": 0.0
+      }
+    },
+    "xquad_ar": {
+      "task": "xquad_ar",
+      "tag": "xquad",
+      "dataset_path": "xquad",
+      "dataset_name": "xquad.ar",
+      "validation_split": "validation",
+      "doc_to_text": "سيا: {{context}}\n\nسؤال: {{question}}\n\nإجابة:",
+      "doc_to_target": "{{answers[\"text\"][0]}}",
+      "process_results": "def process_results_qa(doc, results):\n    preds = results[0]\n    reference = doc[\"answers\"][\"text\"][0]\n    f1_sum = squad_metrics.compute_f1(reference, preds)\n    exact_match = squad_metrics.compute_exact(reference, preds)\n    return {\"f1\": f1_sum, \"exact_match\": exact_match}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "f1",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "until": [
+          "\n"
+        ],
+        "do_sample": false,
+        "temperature": 0.0,
+        "max_new_tokens": 50
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0
+      }
+    },
+    "xquad_de": {
+      "task": "xquad_de",
+      "tag": "xquad",
+      "dataset_path": "xquad",
+      "dataset_name": "xquad.de",
+      "validation_split": "validation",
+      "doc_to_text": "Kontext: {{context}}\n\nFrage: {{question}}\n\nAntwort:",
+      "doc_to_target": "{{answers[\"text\"][0]}}",
+      "process_results": "def process_results_qa(doc, results):\n    preds = results[0]\n    reference = doc[\"answers\"][\"text\"][0]\n    f1_sum = squad_metrics.compute_f1(reference, preds)\n    exact_match = squad_metrics.compute_exact(reference, preds)\n    return {\"f1\": f1_sum, \"exact_match\": exact_match}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "f1",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "until": [
+          "\n"
+        ],
+        "do_sample": false,
+        "temperature": 0.0,
+        "max_new_tokens": 50
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0
+      }
+    },
+    "xquad_en": {
+      "task": "xquad_en",
+      "tag": "xquad",
+      "dataset_path": "xquad",
+      "dataset_name": "xquad.en",
+      "validation_split": "validation",
+      "doc_to_text": "Context: {{context}}\n\nQuestion: {{question}}\n\nAnswer:",
+      "doc_to_target": "{{answers[\"text\"][0]}}",
+      "process_results": "def process_results_qa(doc, results):\n    preds = results[0]\n    reference = doc[\"answers\"][\"text\"][0]\n    f1_sum = squad_metrics.compute_f1(reference, preds)\n    exact_match = squad_metrics.compute_exact(reference, preds)\n    return {\"f1\": f1_sum, \"exact_match\": exact_match}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "f1",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "until": [
+          "\n"
+        ],
+        "do_sample": false,
+        "temperature": 0.0,
+        "max_new_tokens": 50
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0
+      }
+    },
+    "xquad_zh": {
+      "task": "xquad_zh",
+      "tag": "xquad",
+      "dataset_path": "xquad",
+      "dataset_name": "xquad.zh",
+      "validation_split": "validation",
+      "doc_to_text": "语境: {{context}}\n\n问题: {{question}}\n\n回答:",
+      "doc_to_target": "{{answers[\"text\"][0]}}",
+      "process_results": "def process_results_qa(doc, results):\n    preds = results[0]\n    reference = doc[\"answers\"][\"text\"][0]\n    f1_sum = squad_metrics.compute_f1(reference, preds)\n    exact_match = squad_metrics.compute_exact(reference, preds)\n    return {\"f1\": f1_sum, \"exact_match\": exact_match}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "f1",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "until": [
+          "\n"
+        ],
+        "do_sample": false,
+        "temperature": 0.0,
+        "max_new_tokens": 50
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0
+      }
+    }
+  },
+  "versions": {
+    "belebele_arb_Arab": 0.0,
+    "belebele_deu_Latn": 0.0,
+    "belebele_eng_Latn": 0.0,
+    "belebele_fra_Latn": 0.0,
+    "belebele_hrv_Latn": 0.0,
+    "belebele_ita_Latn": 0.0,
+    "belebele_jpn_Jpan": 0.0,
+    "belebele_kat_Geor": 0.0,
+    "belebele_mya_Mymr": 0.0,
+    "belebele_zho_Hans": 0.0,
+    "xquad_ar": 1.0,
+    "xquad_de": 1.0,
+    "xquad_en": 1.0,
+    "xquad_zh": 1.0
+  },
+  "n-shot": {
+    "belebele_arb_Arab": 0,
+    "belebele_deu_Latn": 0,
+    "belebele_eng_Latn": 0,
+    "belebele_fra_Latn": 0,
+    "belebele_hrv_Latn": 0,
+    "belebele_ita_Latn": 0,
+    "belebele_jpn_Jpan": 0,
+    "belebele_kat_Geor": 0,
+    "belebele_mya_Mymr": 0,
+    "belebele_zho_Hans": 0,
+    "xquad_ar": 0,
+    "xquad_de": 0,
+    "xquad_en": 0,
+    "xquad_zh": 0
+  },
+  "higher_is_better": {
+    "belebele_arb_Arab": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_deu_Latn": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_eng_Latn": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_fra_Latn": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_hrv_Latn": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_ita_Latn": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_jpn_Jpan": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_kat_Geor": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_mya_Mymr": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "belebele_zho_Hans": {
+      "acc": true,
+      "acc_norm": true
+    },
+    "xquad_ar": {
+      "exact_match": true,
+      "f1": true
+    },
+    "xquad_de": {
+      "exact_match": true,
+      "f1": true
+    },
+    "xquad_en": {
+      "exact_match": true,
+      "f1": true
+    },
+    "xquad_zh": {
+      "exact_match": true,
+      "f1": true
+    }
+  },
+  "n-samples": {
+    "xquad_zh": {
+      "original": 1190,
+      "effective": 1190
+    },
+    "xquad_en": {
+      "original": 1190,
+      "effective": 1190
+    },
+    "xquad_de": {
+      "original": 1190,
+      "effective": 1190
+    },
+    "xquad_ar": {
+      "original": 1190,
+      "effective": 1190
+    },
+    "belebele_zho_Hans": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_mya_Mymr": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_kat_Geor": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_jpn_Jpan": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_ita_Latn": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_hrv_Latn": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_fra_Latn": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_eng_Latn": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_deu_Latn": {
+      "original": 900,
+      "effective": 900
+    },
+    "belebele_arb_Arab": {
+      "original": 900,
+      "effective": 900
+    }
+  },
+  "config": {
+    "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "model_args": "pretrained=meta-llama/Meta-Llama-3.1-8B-Instruct,dtype=bfloat16",
+    "model_num_parameters": 8030261248,
+    "model_dtype": "torch.bfloat16",
+    "model_revision": "main",
+    "model_sha": "0e9e39f249a16976918f6564b8830bc894c89659",
+    "batch_size": "auto",
+    "batch_sizes": [
+      2
+    ],
+    "device": "cuda:0",
+    "use_cache": null,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "gen_kwargs": {
+      "max_new_tokens": 50
+    },
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234
+  },
+  "git_hash": "87192981554042f3679f8b206adad58312e75bc0",
+  "date": 1738194660.470677,
+  "pretty_env_info": "'NoneType' object has no attribute 'splitlines'",
+  "transformers_version": "4.45.1",
+  "upper_git_hash": null,
+  "tokenizer_pad_token": [
+    "<|eot_id|>",
+    "128009"
+  ],
+  "tokenizer_eos_token": [
+    "<|eot_id|>",
+    "128009"
+  ],
+  "tokenizer_bos_token": [
+    "<|begin_of_text|>",
+    "128000"
+  ],
+  "eot_token_id": 128009,
+  "max_length": 131072,
+  "task_hashes": {},
+  "model_source": "<lm_eval.models.huggingface.HFLM object at 0x148c40a94d30>",
+  "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "model_name_sanitized": "meta-llama__Meta-Llama-3.1-8B-Instruct",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 1441774.137124316,
+  "end_time": 1449096.754990315,
+  "total_evaluation_time_seconds": "7322.617865998996"
+}
