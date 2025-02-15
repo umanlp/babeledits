@@ -238,6 +238,7 @@ subset = fdf.iloc[selected_rows]
 
 # Exclude the 'lang' column if it exists
 cols = [col for col in subset.columns if col.startswith("xquad")]
+xticks = ["xQuAD (AR)", "xQuAD (DE)", "xQuAD (EN)", "xQuAD (ZH)"]
 
 # Transpose the data so that columns become the x-axis
 data = subset[cols].T
@@ -254,9 +255,16 @@ fig = go.Figure()
 
 # Add vanilla bars with color
 vanilla_color = "#1f77b4"  # Default plotly color
+fig = go.Figure(layout=dict(
+    plot_bgcolor='white',
+    width=800,  # Increase width
+    height=600,  # Increase height
+    margin=dict(t=50, b=50, l=50, r=50)  # Add margins
+))
+
 fig.add_trace(
     go.Bar(
-        x=cols,
+        x=xticks,
         y=vanilla_data,
         name="vanilla",
         width=bar_width,
@@ -274,7 +282,7 @@ for i, row_label in enumerate(data.columns):
     lang_code = row_label.split("_")[1]
     fig.add_trace(
         go.Bar(
-            x=cols,
+            x=xticks,
             y=data[row_label],
             name=lang_code,
             width=bar_width,
@@ -285,7 +293,8 @@ for i, row_label in enumerate(data.columns):
     )
 
 fig.show()
-fig.write_image("collapse_plot.png")
+# fig.write_image("collapse_plot.png")
 # %%
-fdf.columns
+
+fig.write_image("collapse_plot.png")
 # %%
