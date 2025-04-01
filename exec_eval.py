@@ -25,6 +25,7 @@ from EasyEdit.easyeditor.models.babelreft.babelreft_main import (
     get_babelreft_model,
     get_reft_config,
 )
+import EasyEdit.easyeditor.models.reft.reft_main as reft
 from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from utils import get_babelreft_vocab
 
@@ -548,6 +549,15 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             )
 
             num_edits = len(loaded_data["babelreft_vocab"])
+        elif "reft_init" in loaded_data:
+            hparams = loaded_data["hparams"]
+            reft_config = reft.get_reft_config(hparams, lm.model.config.hidden_size)
+            init_args = loaded_data["reft_init"]
+            wrapped_model = reft.get_reft_model(
+                lm.model,
+                reft_config,
+                lm.tokenizer,
+            )
         elif loaded_data.get("_method") == "GRACE":
             hparams = loaded_data["_hparams"]
             wrapped_model = GRACE(model=lm.model, config=hparams, device=lm.model.device)
@@ -595,6 +605,14 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                             " You can use the old BabelReft format, but you need to set the --editing_dataset and --languages arguments."
                         )
 
+                    for k, v in wrapped_model.interventions.items():
+                        intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
+                        intervention = v[0]
+                        if isinstance(intervention, TrainableIntervention):
+                            intervention.load_state_dict(intervention_state_dict)
+                    lm._model = wrapped_model
+            elif isinstance(wrapped_model, reft.ReftModel):
+                with torch.no_grad():
                     for k, v in wrapped_model.interventions.items():
                         intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
                         intervention = v[0]
