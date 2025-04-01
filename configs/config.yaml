@@ -25,6 +25,7 @@ generality: true
 locality: true
 portability: true
 eval_lm: true
+eval_intermediate: false
 data_lm : "data_ppl/ME-PPL_50_translated.json"
 batch_size_lm: 24
 lm_metric: "ppl"
