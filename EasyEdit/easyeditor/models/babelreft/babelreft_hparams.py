@@ -17,6 +17,7 @@ class BabelReFTHyperParams(HyperParams):
     lm_head_module: str
     device: int
     alg_name: str
+    vocab_type: str
 
     # Method
     layers: List[int]
