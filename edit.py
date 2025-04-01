@@ -373,11 +373,12 @@ def main(cfg: DictConfig) -> None:
         pre_edit = None
 
     if method == "BabelReFT":
-        babelreft_vocab = get_babelreft_vocab(
-            data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs
-        )
+            babelreft_vocab = get_babelreft_vocab(
+                data, cfg.subject_type, cfg.edit_lang, cfg.tgt_langs, cfg.method.vocab_type
+            )
     else:
         babelreft_vocab = None
+        
 
     if cfg.return_edited_weights:
         print(">>> Saving edited weights")

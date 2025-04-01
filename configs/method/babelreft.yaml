@@ -12,3 +12,4 @@ component: "block_output"
 intervention_type: "subloreft"
 model_parallel: false
 bf16: true
+vocab_type: "all"

@@ -537,24 +537,28 @@ def extract_aliases(data, src_lang, tgt_lang):
         "subj_aliases": subj_aliases,
     }
 
-def get_babelreft_vocab(data, subject_type, src_lang, tgt_lang):
-    all_langs = sorted(list(set([src_lang] + tgt_lang)))
+def get_babelreft_vocab(data, subject_type, src_lang, tgt_lang, vocab_type):
+    if vocab_type == "all":
 
-    subjects = [
-        [d["subjects"][lang] for lang in all_langs]
-        + [d[subject_type][lang] for lang in all_langs]
-        for d in data.values()
-    ]
-    subjects_aliases = [
-        [
-            d["subjects_aliases"][lang] if lang in d["subjects_aliases"] else []
-            for lang in all_langs
+        all_langs = sorted(list(set([src_lang] + tgt_lang)))
+
+        subjects = [
+            [d["subjects"][lang] for lang in all_langs]
+            + [d[subject_type][lang] for lang in all_langs]
+            for d in data.values()
         ]
-        for d in data.values()
-    ]
-    subjects_aliases = list(
-        map(lambda s: list(itertools.chain.from_iterable(s)), subjects_aliases)
-    )
+        subjects_aliases = [
+            [
+                d["subjects_aliases"][lang] if lang in d["subjects_aliases"] else []
+                for lang in all_langs
+            ]
+            for d in data.values()
+        ]
+        subjects_aliases = list(
+            map(lambda s: list(itertools.chain.from_iterable(s)), subjects_aliases)
+        )
 
-    subject_vocab = [list(set(a + b)) for a, b in zip(subjects, subjects_aliases)]
+        subject_vocab = [list(set(a + b)) for a, b in zip(subjects, subjects_aliases)]
+    else:
+        subject_vocab = [[d[subject_type][src_lang]] for d in data.values()]
     return subject_vocab
