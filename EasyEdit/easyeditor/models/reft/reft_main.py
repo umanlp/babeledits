@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from pyreft import ReftModel
 import torch
-from .reft_hparams import ReftHyperParams
+from .reft_hparams import ReFTHyperParams
 from ..babelreft.babelreft_main import SubloreftIntervention
 import pyreft
 from ...util import nethook

@@ -10,7 +10,7 @@ import numpy as np
 import random
 from ..models.melo.melo import LORA
 from ..models.babelreft.babelreft_main import get_babelreft_model, get_reft_config, BabelReftModel
-import ..models.reft.reft_main as reft
+from ..models.reft import reft_main as reft
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 from transformers import LlamaTokenizer
 from transformers import T5ForConditionalGeneration, T5Tokenizer

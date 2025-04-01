@@ -6,7 +6,7 @@ from ...util.hparams import HyperParams
 
 
 @dataclass
-class BabelReFTHyperParams(HyperParams):
+class ReFTHyperParams(HyperParams):
     # Model
     model_name: str
     rewrite_module_tmp: str
@@ -22,14 +22,11 @@ class BabelReFTHyperParams(HyperParams):
     # Method
     layers: List[int]
     num_steps: int
-    pos_type: str
     # batch_size: 1
     # max_length: 40
     lr: float
-    low_rank_dim: int
     component: str
     bf16: bool
-    intervention_type: str 
     model_parallel: bool = False
 
     @classmethod

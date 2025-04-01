@@ -16,6 +16,7 @@ from ..models.wise import WISEHyperParams, apply_wise_to_model
 from ..models.r_rome import R_ROMEHyperParams, apply_r_rome_to_model
 from ..models.emmet import EMMETHyperParams, apply_emmet_to_model
 from ..models.babelreft import BabelReFTHyperParams, apply_babelreft_to_model
+from ..models.reft import ReFTHyperParams, apply_reft_to_model
 
 ALG_DICT = {
     'ROME': apply_rome_to_model,
@@ -34,7 +35,8 @@ ALG_DICT = {
     'WISE': apply_wise_to_model,
     'R-ROME': apply_r_rome_to_model,
     "EMMET": apply_emmet_to_model,
-    "BabelReFT": apply_babelreft_to_model
+    "BabelReFT": apply_babelreft_to_model,
+    "ReFT": apply_reft_to_model,
 }
 
 ALG_MULTIMODAL_DICT = {
