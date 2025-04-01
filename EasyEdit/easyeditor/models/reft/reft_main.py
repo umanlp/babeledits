@@ -29,7 +29,7 @@ import shutil
 import logging
 
 def apply_reft_to_model(
-    model: 'ReftModel',
+    model: 'CustomReftModel',
     tok,
     requests,
     hparams,
@@ -189,15 +189,70 @@ class SaveBestTrainingLossCallback(TrainerCallback):
         print(f"Training completed. Best model checkpoint: {self.best_checkpoint_path}")
         print(f"Best loss achieved: {self.best_loss:.4f}")
                 
+class CustomReftModel(ReftModel):
+    def __init__(
+        self,
+        reft_config,
+        model,
+        tokenizer,
+        edited_facts_for_debug: List[str] | None = None,
+        *args,
+        **kwargs,
+    ):
+        super(CustomReftModel, self).__init__(reft_config, model)
+        self.tokenizer = tokenizer
+        self.edited_facts_for_debug = edited_facts_for_debug
 
+    def generate(
+        self,
+        base = None,
+        sources: List | None = None,
+        unit_locations: Dict | None = None,
+        source_representations: Dict | None = None,
+        intervene_on_prompt: bool = True,
+        subspaces: List | None = None,
+        **kwargs,
+    ):
+        if base is None:
+            input_ids = kwargs["input_ids"]
+            del kwargs["input_ids"]
+        elif isinstance(base, dict):
+            input_ids = base["input_ids"]
+            for k, v in base.items():
+                if k != "input_ids":
+                    kwargs[k] = v
+        else:
+            input_ids = base
+
+
+        if input_ids.shape[0] > 1:
+            raise NotImplementedError(f"CustomReftModel can only handle batch size of 1 for generate")
+
+        unit_locations = torch.tensor([[[input_ids.shape[-1] - 1]]])
+
+        original, output = super().generate(
+            {"input_ids": input_ids},
+            sources,
+            unit_locations,
+            source_representations,
+            intervene_on_prompt,
+            subspaces,
+            output_original_output=self.edited_facts_for_debug is not None,
+            **kwargs,
+        )
+        if self.edited_facts_for_debug and not torch.equal(original, output):
+            original_text = self.tokenizer.decode(original[0][input_ids.shape[1]:], skip_special_tokens=True)
+            output_text = self.tokenizer.decode(output[0][input_ids.shape[1]:], skip_special_tokens=True)
+
+            logging.info(f"Generation output:\n  before intervention:\n{original_text}\n\n  after intervention:\n{output_text}")
+
+        return output
 
 def get_reft_model(
     model,
     reft_config,
-    pos_type,
-    low_rank_dim,
     tokenizer,
-    words_to_add=None,
+
     set_device=True,
     disable_model_grads=True,
     edited_facts_for_debug=None,
@@ -206,7 +261,7 @@ def get_reft_model(
     Create an instance of BabelReFT model.
     """
     # @felix adapt, needs to be a CustomReftModel which subclasses pyreft.ReftModel, with a generate method which sets intervention_locations to last token(s)
-    reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add, low_rank_dim, edited_facts_for_debug=edited_facts_for_debug)
+    reft_model = CustomReftModel(reft_config, model, tokenizer, edited_facts_for_debug=edited_facts_for_debug)
     if set_device:
         reft_model.set_device(model.device)
     if disable_model_grads:

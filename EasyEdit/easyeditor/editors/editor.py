@@ -10,6 +10,7 @@ import numpy as np
 import random
 from ..models.melo.melo import LORA
 from ..models.babelreft.babelreft_main import get_babelreft_model, get_reft_config, BabelReftModel
+import ..models.reft.reft_main as reft
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 from transformers import LlamaTokenizer
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -159,6 +160,14 @@ class BaseEditor:
             babelreft_model.set_device(f"cuda:{hparams.device}")
             babelreft_model.print_trainable_parameters()
             self.model = babelreft_model
+
+        if hparams.alg_name == "ReFT":
+            reft_config = reft.get_reft_config(hparams, self.model.config.hidde_size)
+            reft_model = reft.get_reft_model(self.model, reft_config, self.tok)
+            reft_model.eval()
+            reft_model.set_device(f"cuda:{hparams.device}")
+            reft_model.print_trainable_parameters()
+            self.model = reft_model
             
         self.model.prev_logits = None
         self.hparams = hparams
@@ -479,7 +488,7 @@ class BaseEditor:
                     norm_diff = []
                     if self.alg_name not in ["GRACE", "KN", "WISE"]:
                         for k, v in weights_copy.items():
-                            if k.startswith("babelreft"):
+                            if k.startswith("babelreft") or k.startswih("reft"):
                                 continue
                             norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                         mean_norm = torch.tensor(norm_diff).mean().item()
@@ -517,6 +526,16 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(cp.deepcopy(saved_babelreft_vocab))
+                    elif self.alg_name == "ReFT":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "reft_init": weights_copy["reft_init"],
+                                    "hparams": self.hparams,
+                                    "reft_interventions": {k: [] for k in weights_copy["reft_interventions"].keys()},
+                                }
+                            for k, v in weights_copy["reft_interventions"].items():
+                                weights_per_edit["reft_interventions"][k].append(v)
                     elif self.alg_name == "GRACE":
                         with torch.no_grad():
                             if i == 0:
@@ -546,6 +565,15 @@ class BaseEditor:
                         for k, v in weights_copy["babelreft_interventions"].items():
                             weights_per_edit["babelreft_interventions"][k].append(v)
                         weights_per_edit["babelreft_vocab"].append(cp.deepcopy(saved_babelreft_vocab))
+                elif self.alg_name == "ReFT":
+                    with torch.no_grad():
+                        weights_per_edit = {
+                                "reft_init": weights_copy["reft_init"],
+                                "hparams": self.hparams,
+                                "reft_interventions": {k: [] for k in weights_copy["reft_interventions"].keys()},
+                            }
+                        for k, v in weights_copy["reft_interventions"].items():
+                            weights_per_edit["reft_interventions"][k].append(v)
                 elif self.alg_name == "GRACE":
                     with torch.no_grad():
                         weights_per_edit = {
@@ -567,7 +595,7 @@ class BaseEditor:
                     norm_diff = []
                     if self.alg_name not in ["GRACE", "KN", "WISE"]:
                         for k, v in weights_copy.items():
-                            if k.startswith("babelreft"):
+                            if k.startswith("babelreft") or k.startswith("reft"):
                                 continue
                             norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                         mean_norm = torch.tensor(norm_diff).mean().item()
@@ -585,7 +613,7 @@ class BaseEditor:
                 norm_diff = []
                 if self.alg_name not in ["GRACE", "KN", "WISE"]:
                     for k, v in weights_copy.items():
-                        if k.startswith("babelreft"):
+                        if k.startswith("babelreft") or k.startswith("reft"):
                             continue
                         norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
                     mean_norm = torch.tensor(norm_diff).mean().item()
@@ -619,6 +647,16 @@ class BaseEditor:
                             for k, v in weights_copy["babelreft_interventions"].items():
                                 weights_per_edit["babelreft_interventions"][k].append(v)
                             weights_per_edit["babelreft_vocab"].append(cp.deepcopy(saved_babelreft_vocab))
+                    elif self.alg_name == "ReFT":
+                        with torch.no_grad():
+                            if i == 0:
+                                weights_per_edit = {
+                                    "reft_init": weights_copy["reft_init"],
+                                    "hparams": self.hparams,
+                                    "reft_interventions": {k: [] for k in weights_copy["reft_interventions"].keys()},
+                                }
+                            for k, v in weights_copy["reft_interventions"].items():
+                                weights_per_edit["reft_interventions"][k].append(v)
                     elif self.alg_name == "GRACE":
                         with torch.no_grad():
                             if i == 0:
@@ -643,6 +681,13 @@ class BaseEditor:
                     self.model = edited_model
                 elif self.alg_name == "BabelReFT":
                     self.model.reset_vocab()
+                    with torch.no_grad(): #restoring model
+                        for k, v in weights_copy.items():
+                            if isinstance(v, torch.Tensor):
+                                nethook.get_parameter(self.model, k)[...] = v.to(
+                                    f"cuda:{self.hparams.device}"
+                                )
+                elif self.alg_name == "ReFT":
                     with torch.no_grad(): #restoring model
                         for k, v in weights_copy.items():
                             if isinstance(v, torch.Tensor):
