@@ -473,23 +473,24 @@ class BaseEditor:
                 return_edited_weights_end = False
             for i, request in enumerate(tqdm(requests, total=len(requests))):
                 edited_model, weights_copy, icl_examples = edit_func(request)
-                edited_model.eval()
-                edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                norm_diff = []
-                if self.alg_name not in ["GRACE", "KN", "WISE"]:
-                    for k, v in weights_copy.items():
-                        if k.startswith("babelreft"):
-                            continue
-                        norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
-                    mean_norm = torch.tensor(norm_diff).mean().item()
-                    print(f"Average Norm Difference: {mean_norm}")
-                else:
-                    mean_norm = -1
-                all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
-                if lm_cfg:
-                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
-                    all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
-                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+                if kwargs['eval_intermediate']:
+                    edited_model.eval()
+                    edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
+                    norm_diff = []
+                    if self.alg_name not in ["GRACE", "KN", "WISE"]:
+                        for k, v in weights_copy.items():
+                            if k.startswith("babelreft"):
+                                continue
+                            norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                        mean_norm = torch.tensor(norm_diff).mean().item()
+                        print(f"Average Norm Difference: {mean_norm}")
+                    else:
+                        mean_norm = -1
+                        all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
+                    if lm_cfg:
+                        lm_score = evaluate_language_modeling(edited_model, lm_cfg)
+                        all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
+                        print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
                 # we're saving the vocabulary after each step for saving/loading the edited model
                 if (return_edited_weights_end or return_edited_weights) and self.alg_name == "BabelReFT":
@@ -557,9 +558,23 @@ class BaseEditor:
 
             kwargs['eval_phase'] = 'post'
             kwargs["remove_pre_scores"] = True
+            edited_model.eval()
             for i, request in enumerate(requests):
                 edit_evaluation(all_metrics, request, edited_model, i, test_generation, icl_examples, eval_metrics, generation_conf, **kwargs)
-                all_metrics[i]["post"]["norm_diff"] = all_metrics[-1]["intermediate"]["norm_diff"]
+                if kwargs['eval_intermediate']:
+                    all_metrics[i]["post"]["norm_diff"] = all_metrics[-1]["intermediate"]["norm_diff"]
+                else:
+                    norm_diff = []
+                    if self.alg_name not in ["GRACE", "KN", "WISE"]:
+                        for k, v in weights_copy.items():
+                            if k.startswith("babelreft"):
+                                continue
+                            norm_diff.append(torch.norm(nethook.get_parameter(self.model, k) - v.to(f"cuda:{self.hparams.device}"), p="fro").item())
+                        mean_norm = torch.tensor(norm_diff).mean().item()
+                        print(f"Average Norm Difference: {mean_norm}")
+                    else:
+                        mean_norm = -1
+                    all_metrics[i]["post"]["norm_diff"] = mean_norm
                 if lm_cfg: # adding lm score of last edit
                     all_metrics[i]["post"].update({lm_cfg['metric']:all_metrics[-1]["intermediate"][lm_cfg['metric']]})
         else:
@@ -645,7 +660,7 @@ class BaseEditor:
             edited_model = edited_model.model
         if len(all_metrics) != 0:
             lm_metric = lm_cfg['metric'] if lm_cfg else None
-            eval_phases = ['pre', 'intermediate', 'post'] if sequential_edit else ['pre', 'post']
+            eval_phases = ['pre', 'intermediate', 'post'] if sequential_edit and kwargs['eval_intermediate'] else  ['pre', 'post']
             print(summary_metrics(all_metrics, eval_metrics, locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases))
 
         return all_metrics, edited_model, weights_copy, weights_per_edit
