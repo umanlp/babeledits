@@ -54,7 +54,7 @@ def apply_reft_to_model(
     target_ids = cp.deepcopy(full_input_ids)
     target_ids[0, : input_ids.shape[-1]] = -100
 
-    intervention_locations = torch.tensor([[[0, full_input_ids.shape[-1] - 1]]])
+    intervention_locations = torch.tensor([[[full_input_ids.shape[-1] - 1]]]) # This is the key change @felix
     data = {
         "input_ids": full_input_ids,
         "intervention_locations": intervention_locations.permute(1, 0, 2).tolist(),
@@ -191,22 +191,6 @@ class SaveBestTrainingLossCallback(TrainerCallback):
                 
 
 
-def check_same_intervention_size(pos_type, unit_locations):
-    """
-    Check that, for each example in the batch, the number of interventions (positions on which to intervene) is the same.
-    """
-    if pos_type != "all_tokens":
-        return True
-    else:
-        try:
-            x = torch.tensor(unit_locations["sources->base"][1])
-            return True
-        except ValueError:
-            return False
-
-
-
-
 def get_reft_model(
     model,
     reft_config,
@@ -221,7 +205,7 @@ def get_reft_model(
     """
     Create an instance of BabelReFT model.
     """
-    # TODO adapt
+    # @felix adapt, needs to be a CustomReftModel which subclasses pyreft.ReftModel, with a generate method which sets intervention_locations to last token(s)
     reft_model = BabelReftModel(reft_config, model, pos_type, tokenizer, words_to_add, low_rank_dim, edited_facts_for_debug=edited_facts_for_debug)
     if set_device:
         reft_model.set_device(model.device)
