@@ -1,39 +1,41 @@
-# Download, Parse, Aggregate Wikpedia Page View Dumps
-Pipeline for downloading, parsing and aggregating static page view dumps from Wikipedia.
+# Counts pageviews per languages
+
+This is a Python pipeline that allows to count the pageviews for specific pages
+on Wikipedia and separates them by languages. 
+
+It is a fork of
+[gesiscss/wiki-donwload-parse-page-views](https://github.com/gesiscss/wiki-download-parse-page-views)
+which separates pageviews by languages.
 
 # How it works?
 
-In case you need an anual number of pageviews for specific pages on Wikipedia before 2015. you will unfortunately not be able to rely on the API (at least not at time of writing this doc) as it gives access to new records (post 2015). However, a collection of [static dumps](https://dumps.wikimedia.org/other/pagecounts-raw/) is available. 
+This pipeline follows three steps:
 
-This pipline was made in order to: 
+1. fetch file names of the dump files to download (with `fetch_file_names.py`)
+2. download the files (with `downloader.py`)
+3. parse the dump files to build the counting data (`full_parser`)
 
-1. Fetch names of all files to be downloaded
-2. Download the needed files (paralelized)
-3. Parse them after downloading (paralelized)
-4. Aggregate files for each year in order to get the anual number of views for selected pages
+**Warning**: the Wikipedia dumps can be quite large, so plan ahead for disk space. For example, if you are downloading 2021 data, you will need 427GB of space, which contains 419GB of dump files (that you can delete once the pipeline ended) and the result itself is 8.1GB.
 
-The following scripts need to be ran respectively:
+## Installation
 
-1. [fetch_file_names.py](https://github.com/gesiscss/wiki-download-parse-page-views/blob/master/fetch_file_names.py)
-2. [downloader.py](https://github.com/gesiscss/wiki-download-parse-page-views/blob/master/downloader.py)
-3. [parser.py](https://github.com/gesiscss/wiki-download-parse-page-views/blob/master/parser.py)
-4. [group_by.py](https://github.com/gesiscss/wiki-download-parse-page-views/blob/master/group_by.py)
+This repository uses `uv` to manage dependencies. Alternatively, a `requirements.txt` is available for creating any kind of virtual environment.
 
-# Fetching file names and URLs
+To install everything, just run (provided that `uv` is installed):
 
-First, we need to get the names of files we want to download. For every year, there is a set of files available, so it is also good to specify about which years we are interested in. 
-
-### fetch_file_names.py 
-
-The script generates a csv file containing file names, file sizes and URLs from which the files should be downloaded. Script parameters:
-* year_start - first year to be downloaded
-* year_end - last year to be downloaded (all years in between are  downloaded)
-* output_dir - directory where files for each year will be stored
-
-```{r, engine='bash', count_lines}
-python fetch_file_names.py  [year_start] [year_end] [output_dir]
 ```
-### Output file
+uv sync
+```
+
+## Fetch file names
+
+First, you need to fetch the address of the Wikipedia dumps that correspond to the time window that you're interested in.
+
+```
+uv run fetch_file_names.py [start_year] [end_year] [destination]
+```
+
+For each year between `[start_year]` and `[end_year]` (bounds included), it will create a file `[year].csv` inside `[destination]`, which will look like this:
 
 file | size |url |
 --- |--- |--- |
@@ -41,66 +43,36 @@ pagecounts-20140101-000000.gz |82| https://.. |
 pagecounts-20140201-000000.gz |81| https://.. |
 ... | ... | ... |
 
-# Downloading files
+## Downloading data
 
-Now, when we have downloaded the file names and URLs, we can download them! 
+This script concurently downloads [Wikipedia pagecount dumps](https://dumps.wikimedia.org/other/pagecounts-raw/) [qzip]. The file previously generated **file.csv** contains a list of urls for the files mentioned. The **dumps_directory** refers to directory where files should be downloaded. 
 
-### downloader.py 
-
-This script concurently downloads [Wikipedia pagecount dumps](https://dumps.wikimedia.org/other/pagecounts-raw/) [qzip]. The file previously generated **file.csv** contains a list of urls for the files mentioned. The **path_save** refers to directory where files should be downloaded. 
-
-```{r, engine='bash', count_lines}
-python downloader.py [file.csv] [path_save] [thread_number]
+```
+uv run downloader.py [file.csv] [dumps_directory] [thread_number]
 ```
 **THE SERVER IS CURRENTLY BLOCKING IN CASE OF USING MORE THEN 3 THREADS**
 
-# Parsing files
+If it fails donwloading some of the files, you can run the `cleaner.py` scripts that tries to donwload them again.
 
-As the files have information on every page on Wikipedia which was accessed within the hour specified in the file name, we should remove page names that we do not need.
+## Parsing data
 
-### Input file
+To parse the dumps, you can run:
 
-For parsing, a csv file containing wikipedia page names has to be provided in the following format:
-
-names_u | names_q |
---- |--- |
-Barack_Obama |Barack_Obama| 
-René_Konen |Ren%C3%A9_Konen| 
-Zoran_Đinđić |Zoran_%C4%90in%C4%91i%C4%87|
-... | ... | 
-
-The column **names_u** is standard utf-8 encoding (the unquated representation), however in the files a nother type of encoding is used, so we need a **names_q** which is the 'qouated' representation. Both [quote and unquote](https://stackoverflow.com/questions/300445/how-to-unquote-a-urlencoded-unicode-string-in-python) can be done with [urllib](https://docs.python.org/2/library/urllib.html).
-
-### parser.py
-
-Opens specified list of files in **files_dir**, filters them per names in **page_names_file** and **project_name** ("en" for english wikipedia, "de" for german, etc.), saves filtered files in **save_dir** using
-a specified **num_threads**.
-
-```{r, engine='bash', count_lines}
-python parser.py [page_names_file] [files_dir] [save_dir] [project_name] [num_threads]
+```
+uv run full_parser.py [dumps_directory] [output_directory] [num_threads]
 ```
 
-# Getting the aggregated pageviews
+It will create inside `[output_directory]` one file for each language under the name `[lang_code].txt` which looks like follows:
 
-After parsing the files, it is time to aggregate the page views! 
-
-Loads files from **file_dir** as pandas dataframes, concatinates them, performs aggregation and saves them as csv on **save_path**. 
-
-```{r, engine='bash', count_lines}
-python groupby.py [file_dir] [save_path] 
-```
-
-### Output file
-
-names_u | names_q | views |
---- |--- | --- |
-Barack_Obama |Barack_Obama| 3562998 | 
-René_Konen |Ren%C3%A9_Konen| 156456 |
-Zoran_Đinđić |Zoran_%C4%90in%C4%91i%C4%87| 96846 |
-... | ... | ... |
-
-# Dependencies
-
-```{r, engine='bash', count_lines}
-#todo requirements.txt
+```{txt}
+Main_Page 2146239511
+Special:Search 520609143
+- 122015857
+Bible 48749947
+Cleopatra 46014921
+Deaths_in_2021 44892478
+Microsoft_Office 26266066
+Elon_Musk 25335944
+XXXX 25287619
+Elizabeth_II 24744205
 ```

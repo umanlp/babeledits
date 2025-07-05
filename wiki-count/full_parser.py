@@ -107,7 +107,7 @@ def depile_thread(num_reading_threads, save_dir, data_queue: Queue, tqdm_queue: 
     for (domain, title), views in data.items():
         new_data[domain][title] = views
     for domain in new_data:
-        with open(os.path.join(save_dir, f"{domain}.csv"), "w") as f:
+        with open(os.path.join(save_dir, f"{domain}.txt"), "w") as f:
             title_with_count = [(title, count) for title, count in new_data[domain].items()]
             title_with_count.sort(key=lambda x: x[1], reverse=True)
             for title, count in title_with_count:
