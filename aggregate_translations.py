@@ -589,7 +589,7 @@ for syn_idx, syn_id in enumerate(data):
                     )
 
 
-save_path = Path(dataset_path).parent / "translated" / Path(dataset_path).name
+save_path = Path(dataset_path).parent / "translated" / "dataset_final.json"
 save_path.parent.mkdir(parents=True, exist_ok=True)
 with open(save_path, "w") as f:
     json.dump(data, f, indent=4, ensure_ascii=False)

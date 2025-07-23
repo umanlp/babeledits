@@ -25,7 +25,7 @@ from EasyEdit.easyeditor.models.babelreft.babelreft_main import (
     get_babelreft_model,
     get_reft_config,
 )
-import EasyEdit.easyeditor.models.reft.reft_main as reft
+from EasyEdit.easyeditor.models.reft import reft_main as reft_module
 from EasyEdit.easyeditor.models.grace.GRACE import GRACE
 from utils import get_babelreft_vocab
 
@@ -44,6 +44,7 @@ def get_edits_for_debug(dataset_file: str | None):
             res.append(f"{prompt} {ground_truth} -> {target}")
     return res
 
+
 def get_parameter(model, name):
     """
     Finds the named parameter within the given model.
@@ -57,6 +58,7 @@ def get_parameter(model, name):
     if name == "lm_head.weight":
         return model.lm_head.weight
     raise LookupError(name)
+
 
 def _int_or_none_list_arg_type(
     min_len: int, max_len: int, defaults: str, value: str, split_char: str = ","
@@ -443,7 +445,6 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         cache_requests=args.cache_requests
     )
 
-
     lm = get_model(args.model).create_from_arg_string(
         args.model_args,
         {
@@ -453,7 +454,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         },
     )
 
-    def evaluate_and_save_results(lm, task_names, args, request_caching_args, evaluation_tracker, task_manager):
+    def evaluate_and_save_results(
+        lm, task_names, args, request_caching_args, evaluation_tracker, task_manager
+    ):
         results = evaluator.simple_evaluate(
             model=lm,
             model_args=args.model_args,
@@ -532,7 +535,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 wandb_logger.run.finish()
 
     if args.load_weights is not None:
-        with gzip.open(args.load_weights, 'rb') as f:
+        with gzip.open(args.load_weights, "rb") as f:
             loaded_data = pickle.load(f)
 
         if "babelreft_init" in loaded_data:
@@ -549,29 +552,38 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             )
 
             num_edits = len(loaded_data["babelreft_vocab"])
-        elif "reft_init" in loaded_data:
+        elif 'reft_interventions' in loaded_data:
             hparams = loaded_data["hparams"]
-            reft_config = reft.get_reft_config(hparams, lm.model.config.hidden_size)
             init_args = loaded_data["reft_init"]
-            wrapped_model = reft.get_reft_model(
+            reft_config = reft_module.get_reft_config(
+                hparams, lm.model.config.hidden_size, 
+            )
+            wrapped_model = reft_module.get_reft_model(
                 lm.model,
                 reft_config,
                 lm.tokenizer,
+                init_args["pos_type"],
             )
+            num_edits = 1 # TODO: change this, it's not generally correct
         elif loaded_data.get("_method") == "GRACE":
             hparams = loaded_data["_hparams"]
-            wrapped_model = GRACE(model=lm.model, config=hparams, device=lm.model.device)
-            setattr(eval(f"wrapped_model.model.{wrapped_model.layer}"), "training", False)
+            wrapped_model = GRACE(
+                model=lm.model, config=hparams, device=lm.model.device
+            )
+            setattr(
+                eval(f"wrapped_model.model.{wrapped_model.layer}"), "training", False
+            )
 
             num_edits = len(loaded_data["_adapter_state_dict"])
         else:
             wrapped_model = None
 
             edit_tensor = loaded_data[list(loaded_data.keys())[0]]
-            num_edits = len(edit_tensor) #1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
+            num_edits = len(
+                edit_tensor
+            )  # 1 if edit_tensor.dim() == 2 else edit_tensor.shape[0]
         eval_logger.info(f"Number of edits: {num_edits}")
         for i in range(num_edits):
-
             if isinstance(wrapped_model, BabelReftModel):
                 with torch.no_grad():
                     wrapped_model.reset_vocab()
@@ -592,49 +604,64 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                             args.languages,
                         )
                         conf_path = Path(args.load_weights).parent / "config.yaml"
-                        with open(conf_path, 'r') as file:
+                        with open(conf_path, "r") as file:
                             config = yaml.safe_load(file)
-                            max_edits = config.get('max_edits')
+                            max_edits = config.get("max_edits")
                             if max_edits is not None:
                                 vocab = vocab[:max_edits]
                         for subvocab in vocab:
                             wrapped_model.add_words_to_vocab(subvocab)
                     else:
                         raise Exception(
-                            f"You're using a saved BabelReft with the old saving method. Otherwise the class(vocab[0]) should be list and found `{vocab[0].__class__}`." + 
-                            " You can use the old BabelReft format, but you need to set the --editing_dataset and --languages arguments."
+                            f"You're using a saved BabelReft with the old saving method. Otherwise the class(vocab[0]) should be list and found `{vocab[0].__class__}`."
+                            + " You can use the old BabelReft format, but you need to set the --editing_dataset and --languages arguments."
                         )
 
                     for k, v in wrapped_model.interventions.items():
-                        intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
+                        intervention_state_dict = loaded_data[
+                            "babelreft_interventions"
+                        ][k][i]
                         intervention = v[0]
                         if isinstance(intervention, TrainableIntervention):
                             intervention.load_state_dict(intervention_state_dict)
                     lm._model = wrapped_model
-            elif isinstance(wrapped_model, reft.ReftModel):
+            elif isinstance(wrapped_model, reft_module.ReftModel):
                 with torch.no_grad():
                     for k, v in wrapped_model.interventions.items():
-                        intervention_state_dict = loaded_data["babelreft_interventions"][k][i]
+                        intervention_state_dict = loaded_data[
+                            "reft_interventions"
+                        ][k][i]
                         intervention = v[0]
                         if isinstance(intervention, TrainableIntervention):
                             intervention.load_state_dict(intervention_state_dict)
                     lm._model = wrapped_model
             elif isinstance(wrapped_model, GRACE):
                 with torch.no_grad():
-                    wrapped_model.load_grace_state_dict(loaded_data["_adapter_state_dict"][i])
+                    wrapped_model.load_grace_state_dict(
+                        loaded_data["_adapter_state_dict"][i]
+                    )
                     lm._model = wrapped_model.model
             else:
-                with torch.no_grad(): #loading weights into lm
+                with torch.no_grad():  # loading weights into lm
                     for k, v in loaded_data.items():
-                        eval_logger.info(f"Loading weights: {k}")        
+                        eval_logger.info(f"Loading weights: {k}")
                         get_parameter(lm.model, k)[...] = v[i].to(args.device)
 
-            eval_logger.info(f">>> Loaded weights from {args.load_weights} for edit {i} <<<")
+            eval_logger.info(
+                f">>> Loaded weights from {args.load_weights} for edit {i} <<<"
+            )
             evaluate_and_save_results(
-                lm, task_names, args, request_caching_args, evaluation_tracker, task_manager
+                lm,
+                task_names,
+                args,
+                request_caching_args,
+                evaluation_tracker,
+                task_manager,
             )
     else:
-        evaluate_and_save_results(lm, task_names, args, request_caching_args, evaluation_tracker, task_manager)
+        evaluate_and_save_results(
+            lm, task_names, args, request_caching_args, evaluation_tracker, task_manager
+        )
 
 
 if __name__ == "__main__":

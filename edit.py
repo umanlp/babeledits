@@ -406,7 +406,8 @@ def main(cfg: DictConfig) -> None:
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
             return_edited_weights=cfg.return_edited_weights,
-            return_edited_weights_at_end=cfg.return_edited_weights_at_end
+            return_edited_weights_at_end=cfg.return_edited_weights_at_end,
+            eval_intermediate=cfg.eval_intermediate
         )
     else:
         metrics, _, _, edited_weights = editor.edit(
@@ -431,7 +432,8 @@ def main(cfg: DictConfig) -> None:
             pre_eval_only=cfg.pre_eval_only,
             babelreft_vocab=babelreft_vocab,
             return_edited_weights=cfg.return_edited_weights,
-            return_edited_weights_at_end=cfg.return_edited_weights_at_end
+            return_edited_weights_at_end=cfg.return_edited_weights_at_end,
+            eval_intermediate=cfg.eval_intermediate
         )
 
     print(
@@ -471,7 +473,7 @@ def main(cfg: DictConfig) -> None:
             lm_metric = None
         
         eval_phases = (
-            ["pre", "intermediate", "post"] if cfg.sequential else ["pre", "post"]
+            ["pre", "intermediate", "post"] if cfg.sequential and cfg.eval_intermediate else ["pre", "post"]
         )
         summary = summary_metrics(
             metrics, cfg.metrics, cfg.locality_metrics, lm_metric=lm_metric, eval_phases=eval_phases
