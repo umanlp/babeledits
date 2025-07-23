@@ -6,6 +6,7 @@ import nltk
 import typing
 from ..util.generate import generate_fast
 from ..models.babelreft.babelreft_main import BabelReftModel
+from EasyEdit.easyeditor.models.reft import reft_main as reft_module
 from ..models.grace.GRACE import GRACE
 import torch.nn.functional as F
 from ..trainer import *
@@ -1094,8 +1095,8 @@ def compute_bpb(
     return lang_to_bpb
 
 def evaluate_language_modeling(model, lm_cfg):
-    model_name = model.model.name_or_path if (isinstance(model, BabelReftModel) or isinstance(model, GRACE)) else model.name_or_path
-    device = model.model.device if (isinstance(model, BabelReftModel) or isinstance(model, GRACE)) else model.device
+    model_name = model.model.name_or_path if (isinstance(model, BabelReftModel) or isinstance(model, GRACE) or isinstance(model, reft_module.CustomReftModel)) else model.name_or_path
+    device = model.model.device if (isinstance(model, BabelReftModel) or isinstance(model, GRACE) or isinstance(model, reft_module.CustomReftModel)) else model.device
     if isinstance(model, BabelReftModel) and "pre_scores" in lm_cfg.keys():
         matches = [
             word

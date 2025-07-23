@@ -17,7 +17,7 @@ class ReFTHyperParams(HyperParams):
     lm_head_module: str
     device: int
     alg_name: str
-    vocab_type: str
+    pos_type: str
 
     # Method
     layers: List[int]
@@ -25,8 +25,10 @@ class ReFTHyperParams(HyperParams):
     # batch_size: 1
     # max_length: 40
     lr: float
+    low_rank_dim: int
     component: str
     bf16: bool
+    intervention_type: str
     model_parallel: bool = False
 
     @classmethod

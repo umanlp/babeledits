@@ -127,7 +127,7 @@ def apply_babelreft_to_model(
 
     weights_copy["babelreft_interventions"] = {}
     for k, v in model.interventions.items():
-        intervention = v[0]
+        intervention = v
         if isinstance(intervention, TrainableIntervention):
             weights_copy["babelreft_interventions"][k] = cp.deepcopy(intervention.state_dict())
     weights_copy["babelreft_init"] = {
