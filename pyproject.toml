@@ -41,16 +41,18 @@ dependencies = [
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.5",
     "jupyter>=1.1.1",
-    "pyreft",
     "plotly-express>=0.4.1",
     "lm-eval>=0.4.7",
     "pyahocorasick>=2.1.0",
+    "pyreft>=0.0.2",
 ]
-
-[tool.uv.sources]
-pyreft = { git = "https://github.com/tommaso-green/pyreft.git" }
 
 [dependency-groups]
 dev = [
     "pudb>=2024.1.3",
+]
+
+[tool.uv]
+override-dependencies = [
+    "ydata-profiling; sys_platform == 'never'",
 ]
