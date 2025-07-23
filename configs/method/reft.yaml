@@ -1,12 +1,14 @@
 alg_name: "ReFT"
-device: "cpu"
+device: "cuda"
 
-layers: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
+layers: [12]
+pos_type: "all_tokens"
 num_steps: 100
 # batch_size: 1
 # max_length: 40
 lr: 5e-4
+low_rank_dim: 4
+intervention_type: "loreft"
 component: "block_output"
 model_parallel: false
 bf16: true
-vocab_type: "all"
