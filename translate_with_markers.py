@@ -1,52 +1,103 @@
 # %%
-from google.cloud import translate
-from upload_glossary import upload_to_gcs
 import sienna
 import pandas as pd
 from pathlib import Path
 import argparse
 from utils import (
-    download_blob,
     extract,
-    folder_exists,
-    delete_folder,
     format_prompt,
-    translate_text,
     extract_target,
     extract_subject,
     clean_prompt,
 )
-# %%
+from translate_utils import translate_file_custom
+import concurrent.futures
+from typing import List
+
+
+def translate_single_language_markers(src_path: str, tgt_path: str, lang: str, prompt_pattern: List[str], data: dict, src_lang: str, num_threads: int, limit: int, timeout: int):
+    """
+    Translate marked prompts to a single target language and process the results.
+    
+    Returns:
+        tuple: (lang, success_bool, error_message)
+    """
+    try:
+        print(f"Starting marked translation to {lang}...")
+        
+        # Use translate_file_custom for translation
+        result = translate_file_custom(
+            src_path,
+            tgt_path,
+            lang,
+            num_threads=num_threads,
+            limit=limit,
+            timeout=timeout
+        )
+        
+        if result:
+            # Read the translated file and add marker-specific processing
+            df = pd.read_csv(tgt_path, sep="\t")
+            
+            # Add prompt_type column based on the pattern we created earlier
+            df["prompt_type"] = prompt_pattern
+            
+            # Extract subjects and objects from marked translations
+            df[f"subject_{lang}"] = [
+                extract_subject(x) if prompt_type != "prompt_port" else "-"
+                for x, prompt_type in zip(df[f"tgt_{lang}"], df["prompt_type"])
+            ]
+            df[f"object_{lang}"] = [extract_target(x) for x in df[f"tgt_{lang}"]]
+            df[f"tgt_raw_{lang}"] = df[f"tgt_{lang}"]
+            df[f"tgt_{lang}"] = [clean_prompt(x) for x in df[f"tgt_{lang}"]]
+            
+            # Reorder columns to match expected format for marked translations
+            df = df[
+                [
+                    "req_id",
+                    "prompt_type",
+                    "src",
+                    f"tgt_raw_{lang}",
+                    f"tgt_{lang}",
+                    f"subject_{lang}",
+                    f"object_{lang}",
+                ]
+            ]
+            
+            # Check for NaN values
+            if df.isnull().values.any():
+                print(f"⚠️ Data for {lang} has some problems with NaN values. Please check.")
+            
+            # Sort by req_id for consistency
+            df = df.sort_values("req_id", ascending=True)
+            
+            # Save the final file
+            df.to_csv(tgt_path, sep="\t", index=False)
+            print(f"Marked translation to {lang} completed successfully!")
+            return (lang, True, None)
+        else:
+            error_msg = f"Translation function returned None for {lang}"
+            print(f"Marked translation to {lang} failed!")
+            return (lang, False, error_msg)
+            
+    except Exception as e:
+        error_msg = f"Exception occurred during {lang} marked translation: {str(e)}"
+        print(f"Marked translation to {lang} failed with error: {error_msg}")
+        return (lang, False, error_msg)
+
+
+def chunk_list(lst: List, chunk_size: int):
+    """Split a list into chunks of specified size."""
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Translate text using a glossary")
+    parser = argparse.ArgumentParser(description="Translate text with markers using local translation")
     parser.add_argument(
         "--dataset_path",
         default="datasets/debug/dataset.json",
         help="Path to the dataset",
-    )
-    parser.add_argument(
-        "--project_id", default="babeledits-trial", help="ID of the GCP project"
-    )
-    parser.add_argument(
-        "--src_bucket_name",
-        default="babeledits-transl-src",
-        help="Name of the bucket which contains files to be translated",
-    )
-    parser.add_argument(
-        "--tgt_bucket_name",
-        default="babeledits-transl-tgt",
-        help="Name of the bucket which will contain output translations",
-    )
-    parser.add_argument(
-        "--src_blob_path",
-        default="translations_marked/debug",
-        help="Name of the path where the source files are stored",
-    )
-    parser.add_argument(
-        "--tgt_blob_path",
-        default="translations_marked/debug/",
-        help="Name of the path where the translations will stored",
     )
     parser.add_argument("--src_lang", default="en", help="Source language code")
     parser.add_argument(
@@ -55,16 +106,6 @@ if __name__ == "__main__":
         nargs="+",
         help="Target language code(s)",
     )
-    # parser.add_argument(
-    #     "--output_dir", default="datasets/debug/translated", help="Output directory"
-    # )
-    parser.add_argument(
-        "-d",
-        "--delete",
-        action="store_true",
-        help="Delete the target folder in GCS without asking for user confirmation",
-    )
-
     parser.add_argument(
         "--rephrase", action="store_true", help="rephrase the questions"
     )
@@ -74,20 +115,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--portability", action="store_true", help="whether to also get portability"
     )
+    parser.add_argument(
+        "--num_threads", type=int, default=4, help="Number of threads for translation"
+    )
+    parser.add_argument(
+        "--timeout", type=int, default=30, help="Timeout for translation requests"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit processing to the first N prompts (saves to debug folder)"
+    )
+    parser.add_argument(
+        "--max_parallel_langs", type=int, default=10, help="Maximum number of target languages to translate in parallel"
+    )
     args, _ = parser.parse_known_args()
 
-    
     dataset_path = args.dataset_path
-    project_id = args.project_id
     src_lang = args.src_lang
     tgt_langs = args.tgt_langs
-    src_bucket_name = args.src_bucket_name
-    src_blob_name = Path(args.src_blob_path) / "prompts_marked_en.tsv"
-
-    tgt_bucket_name = args.tgt_bucket_name
-    tgt_blob_path = args.tgt_blob_path
-    if not args.tgt_blob_path.endswith("/"):
-        tgt_blob_path += "/"
 
     data = sienna.load(dataset_path)
     print(f"Reading dataset from {dataset_path}...")
@@ -141,7 +185,7 @@ if __name__ == "__main__":
                     ][args.src_lang],
                 )
             )
-        if "portability" in example["relations"][relation]["edit"]:
+        if "portability" in example["relations"][relation]["edit"]: # no need for formatting, we do not really need the subject for portability
             port_relation = list(
                 example["relations"][relation]["edit"]["portability"]["multi_hop"].keys()
             )[0]
@@ -154,102 +198,105 @@ if __name__ == "__main__":
                 ][args.src_lang] + f" <o>{port_target}</o>"
             )
 
-    # Convert prompts to tsv, upload to GCS
-    df = pd.DataFrame(all_prompts, columns=["prompt"])
-    tsv_src_path = Path(dataset_path).parent / "tsv_marked" / "src"
+    # Apply limit if specified
+    if args.limit is not None:
+        all_prompts = all_prompts[:args.limit]
+        print(f"Limited to first {len(all_prompts)} prompts")
+
+    # Create prompt pattern for later assignment
+    prompt_pattern = []
+    for syn_id, example in data.items():
+        relation = list(example["relations"].keys())[0]
+        if "targets" in example["relations"][relation]["edit"]:
+            prompt_pattern.append("prompt")
+        if "generality" in example["relations"][relation]["edit"]:
+            prompt_pattern.append("prompt_gen")
+        if "locality" in example["relations"][relation]["edit"]:
+            prompt_pattern.append("prompt_loc")
+        if "portability" in example["relations"][relation]["edit"]:
+            prompt_pattern.append("prompt_port")
+
+    # Apply same limit to prompt_pattern to keep them aligned
+    if args.limit is not None:
+        prompt_pattern = prompt_pattern[:args.limit]
+
+    # Determine output paths based on whether limit is used
+    base_path = Path(dataset_path).parent
+    if args.limit is not None:
+        # Use debug folder when limit is specified
+        tsv_base_path = base_path / "debug" / f"limit_{args.limit}" / "tsv_marked"
+        print(f"Using debug folder for limited marked translation: {tsv_base_path}")
+    else:
+        # Use normal path when no limit
+        tsv_base_path = base_path / "tsv_marked"
+
+    # Convert prompts to tsv, save locally
+    df = pd.DataFrame(enumerate(all_prompts), columns=["req_id", "prompt"])
+    tsv_src_path = tsv_base_path / "src"
     tsv_src_path.mkdir(parents=True, exist_ok=True)
     prompt_src_path = tsv_src_path / "prompts_marked_en.tsv"
-    df.to_csv(prompt_src_path, sep="\t")
+    df.to_csv(prompt_src_path, sep="\t", index=False)
 
-    print(
-        f"Uploading prompts loaded from {prompt_src_path} to {src_bucket_name} at location {src_blob_name}..."
-    )
-    upload_to_gcs(str(src_bucket_name), str(prompt_src_path), str(src_blob_name))
+    print(f"Created source file at {prompt_src_path} with {len(all_prompts)} marked prompts")
+    print(f"Translating marked prompts from {src_lang} to {tgt_langs}")
+    print(f"Will process up to {args.max_parallel_langs} languages in parallel")
 
-    input_uri = f"gs://{src_bucket_name}/{src_blob_name}"
-    output_uri = f"gs://{tgt_bucket_name}/{tgt_blob_path}"
-    print(f"Translating {len(all_prompts)} prompts from {src_lang} to {tgt_langs}")
-    if folder_exists(output_uri):
-        if args.delete:
-            delete_folder(output_uri)
-        else:
-            user_input = input(
-                f"The URI {output_uri} exists. Do you want to delete it? (yes/no): "
-            )
-            if user_input.lower() == "yes":
-                delete_folder(output_uri)
-            else:
-                print("Exiting...")
-                exit()
-    print(f"Input URI: {input_uri}", f"Output URI: {output_uri}", sep="\n")
-    response, file_names = translate_text(
-        project_id, input_uri, output_uri, src_lang, tgt_langs
-    )
-    print(response)
-    print(f"Files produced {file_names}")
-
-    # %%
-    tsv_tgt_path = Path(dataset_path).parent / "tsv_marked" / "tgt"
+    # Create target directory
+    tsv_tgt_path = tsv_base_path / "tgt"
     tsv_tgt_path.mkdir(parents=True, exist_ok=True)
-    index_blob_name = [x for x in file_names if x.endswith("index.csv")][0]
-    index_path = tsv_tgt_path / "index_marked.csv"
-    print(
-        f"Downloading index as well from {tgt_bucket_name} at location {index_blob_name} to {index_path}..."
-    )
-    download_blob(tgt_bucket_name, index_blob_name, index_path)
-    index_df = pd.read_csv(
-        index_path, names=["orig_file", "lang", "output_file"], usecols=[0, 1, 2]
-    )
 
-    for index, row in index_df.iterrows():
-        lang = row["lang"]
-        prompt_tgt_path = tsv_tgt_path / f"prompts_marked_{lang}.tsv"
-        tgt_blob_name = (
-            row["output_file"].replace("gs://", "").replace(tgt_bucket_name + "/", "")
-        )
-        print(
-            f"Downloading translations from {tgt_bucket_name} at location {tgt_blob_name} to {prompt_tgt_path}..."
-        )
-        download_blob(tgt_bucket_name, tgt_blob_name, prompt_tgt_path)
+    # Split target languages into chunks for parallel processing
+    lang_chunks = list(chunk_list(tgt_langs, args.max_parallel_langs))
+    total_chunks = len(lang_chunks)
+    
+    successful_translations = []
+    failed_translations = []
 
-        df = pd.read_csv(
-            prompt_tgt_path,
-            sep="\t",
-            names=["req_id", "src", f"tgt_{lang}"],
-            header=0,
-        )
-        df.sort_values("req_id", inplace=True)
-        prompt_pattern = []
-        for syn_id, example in data.items():
-            relation = list(example["relations"].keys())[0]
-            if "targets" in example["relations"][relation]["edit"]:
-                prompt_pattern.append("prompt")
-            if "generality" in example["relations"][relation]["edit"]:
-                prompt_pattern.append("prompt_gen")
-            if "locality" in example["relations"][relation]["edit"]:
-                prompt_pattern.append("prompt_loc")
-            if "portability" in example["relations"][relation]["edit"]:
-                prompt_pattern.append("prompt_port")
-        df["prompt_type"] = prompt_pattern
-        df[f"subject_{lang}"] = [
-            extract_subject(x) if prompt_type != "prompt_port" else "-"
-            for x, prompt_type in zip(df[f"tgt_{lang}"], df["prompt_type"])
-        ]
-        df[f"object_{lang}"] = [extract_target(x) for x in df[f"tgt_{lang}"]]
-        df[f"tgt_raw_{lang}"] = df[f"tgt_{lang}"]
-        df[f"tgt_{lang}"] = [clean_prompt(x) for x in df[f"tgt_{lang}"]]
-        df = df[
-            [
-                "req_id",
-                "prompt_type",
-                "src",
-                f"tgt_raw_{lang}",
-                f"tgt_{lang}",
-                f"subject_{lang}",
-                f"object_{lang}",
-            ]
-        ]
+    # Process each chunk of languages in parallel
+    for chunk_idx, lang_chunk in enumerate(lang_chunks, 1):
+        print(f"\n=== Processing chunk {chunk_idx}/{total_chunks}: {lang_chunk} ===")
+        
+        # Prepare futures for parallel execution
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(lang_chunk)) as executor:
+            futures = {}
+            
+            for lang in lang_chunk:
+                prompt_tgt_path = tsv_tgt_path / f"prompts_marked_{lang}.tsv"
+                
+                # Submit translation task
+                future = executor.submit(
+                    translate_single_language_markers,
+                    str(prompt_src_path),
+                    str(prompt_tgt_path),
+                    lang,
+                    prompt_pattern,
+                    data,
+                    args.src_lang,
+                    args.num_threads,
+                    args.limit,
+                    args.timeout
+                )
+                futures[future] = lang
+            
+            # Wait for all translations in this chunk to complete
+            for future in concurrent.futures.as_completed(futures):
+                lang, success, error_msg = future.result()
+                if success:
+                    successful_translations.append(lang)
+                else:
+                    failed_translations.append((lang, error_msg))
+        
+        print(f"Chunk {chunk_idx} completed.")
 
-        if df.isnull().values.any():
-            print(f"⚠️ Data for {lang} has some problems with NaN values. Please check.")
-        df.to_csv(prompt_tgt_path, sep="\t", index=False)
+    # Print final summary
+    print(f"\n=== Marked Translation Summary ===")
+    print(f"Successful translations ({len(successful_translations)}): {successful_translations}")
+    if failed_translations:
+        print(f"Failed translations ({len(failed_translations)}):")
+        for lang, error in failed_translations:
+            print(f"  - {lang}: {error}")
+    
+    if args.limit is not None:
+        print(f"\nLimited marked translation completed! Results saved to: {tsv_base_path}")
+    else:
+        print("\nAll marked translations completed!")

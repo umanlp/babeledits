@@ -4,7 +4,64 @@ import pandas as pd
 from pathlib import Path
 import argparse
 from utils import extract
-from translate_gt import translate_file_custom
+from translate_utils import translate_file_custom
+import concurrent.futures
+from typing import List
+
+
+def translate_single_language(src_path: str, tgt_path: str, lang: str, prompt_pattern: List[str], num_threads: int, limit: int, timeout: int):
+    """
+    Translate to a single target language and process the results.
+    
+    Returns:
+        tuple: (lang, success_bool, error_message)
+    """
+    try:
+        print(f"Starting translation to {lang}...")
+        
+        # Use translate_file_custom for translation
+        result = translate_file_custom(
+            src_path,
+            tgt_path,
+            lang,
+            num_threads=num_threads,
+            limit=limit,
+            timeout=timeout
+        )
+        
+        if result:
+            # Read the translated file and add prompt_type information
+            df = pd.read_csv(tgt_path, sep="\t")
+            
+            # Add prompt_type column based on the pattern we created earlier
+            df["prompt_type"] = prompt_pattern
+            
+            # Reorder columns to match expected format
+            df = df[["req_id", "prompt_type", "src", f"tgt_{lang}"]]
+            
+            # Check for NaN values
+            if df.isnull().values.any():
+                print(f"Warning: Data for {lang} has some NaN values. Please check.")
+            
+            # Save the final file
+            df.to_csv(tgt_path, sep="\t", index=False)
+            print(f"Translation to {lang} completed successfully!")
+            return (lang, True, None)
+        else:
+            error_msg = f"Translation function returned None for {lang}"
+            print(f"Translation to {lang} failed!")
+            return (lang, False, error_msg)
+            
+    except Exception as e:
+        error_msg = f"Exception occurred during {lang} translation: {str(e)}"
+        print(f"Translation to {lang} failed with error: {error_msg}")
+        return (lang, False, error_msg)
+
+
+def chunk_list(lst: List, chunk_size: int):
+    """Split a list into chunks of specified size."""
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
 
 
 if __name__ == "__main__":
@@ -39,6 +96,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--limit", type=int, default=None, help="Limit processing to the first N prompts (saves to debug folder)"
+    )
+    parser.add_argument(
+        "--max_parallel_langs", type=int, default=10, help="Maximum number of target languages to translate in parallel"
     )
     args, _ = parser.parse_known_args()
 
@@ -115,46 +175,61 @@ if __name__ == "__main__":
 
     print(f"Created source file at {prompt_src_path} with {len(all_prompts)} prompts")
     print(f"Translating from {src_lang} to {tgt_langs}")
+    print(f"Will process up to {args.max_parallel_langs} languages in parallel")
 
     # Create target directory
     tsv_tgt_path = tsv_base_path / "tgt"
     tsv_tgt_path.mkdir(parents=True, exist_ok=True)
 
-    # Translate to each target language
-    for lang in tgt_langs:
-        print(f"\nTranslating to {lang}...")
-        prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
-        
-        # Use translate_file_custom for translation
-        result = translate_file_custom(
-            str(prompt_src_path),
-            str(prompt_tgt_path),
-            lang,
-            num_threads=args.num_threads,
-            limit=args.limit,  # Pass limit to the translation function
-            timeout=args.timeout
-        )
-        
-        if result:
-            # Read the translated file and add prompt_type information
-            df = pd.read_csv(prompt_tgt_path, sep="\t")
-            
-            # Add prompt_type column based on the pattern we created earlier
-            df["prompt_type"] = prompt_pattern
-            
-            # Reorder columns to match expected format
-            df = df[["req_id", "prompt_type", "src", f"tgt_{lang}"]]
-            
-            # Check for NaN values
-            if df.isnull().values.any():
-                print(f"Warning: Data for {lang} has some NaN values. Please check.")
-            
-            # Save the final file
-            df.to_csv(prompt_tgt_path, sep="\t", index=False)
-            print(f"Translation to {lang} completed successfully!")
-        else:
-            print(f"Translation to {lang} failed!")
+    # Split target languages into chunks for parallel processing
+    lang_chunks = list(chunk_list(tgt_langs, args.max_parallel_langs))
+    total_chunks = len(lang_chunks)
+    
+    successful_translations = []
+    failed_translations = []
 
+    # Process each chunk of languages in parallel
+    for chunk_idx, lang_chunk in enumerate(lang_chunks, 1):
+        print(f"\n=== Processing chunk {chunk_idx}/{total_chunks}: {lang_chunk} ===")
+        
+        # Prepare futures for parallel execution
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(lang_chunk)) as executor:
+            futures = {}
+            
+            for lang in lang_chunk:
+                prompt_tgt_path = tsv_tgt_path / f"prompts_{lang}.tsv"
+                
+                # Submit translation task
+                future = executor.submit(
+                    translate_single_language,
+                    str(prompt_src_path),
+                    str(prompt_tgt_path),
+                    lang,
+                    prompt_pattern,
+                    args.num_threads,
+                    args.limit,
+                    args.timeout
+                )
+                futures[future] = lang
+            
+            # Wait for all translations in this chunk to complete
+            for future in concurrent.futures.as_completed(futures):
+                lang, success, error_msg = future.result()
+                if success:
+                    successful_translations.append(lang)
+                else:
+                    failed_translations.append((lang, error_msg))
+        
+        print(f"Chunk {chunk_idx} completed.")
+
+    # Print final summary
+    print(f"\n=== Translation Summary ===")
+    print(f"Successful translations ({len(successful_translations)}): {successful_translations}")
+    if failed_translations:
+        print(f"Failed translations ({len(failed_translations)}):")
+        for lang, error in failed_translations:
+            print(f"  - {lang}: {error}")
+    
     if args.limit is not None:
         print(f"\nLimited translation completed! Results saved to: {tsv_base_path}")
     else:
