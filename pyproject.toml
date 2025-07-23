@@ -45,6 +45,7 @@ dependencies = [
     "lm-eval>=0.4.7",
     "pyahocorasick>=2.1.0",
     "pyreft>=0.0.2",
+    "translatepy>=2.3",
 ]
 
 [dependency-groups]

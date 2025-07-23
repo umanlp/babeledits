@@ -55,6 +55,12 @@ mistakes/tgt/prompts_sw.tsv
 mistakes/tgt/prompts_zh.tsv
 edit_hard.py
 get_movies.py
-multirun
-mistakes
-outputs
+multirun/
+mistakes/
+outputs/
+slurm_logs/
+scripts/
+dst_res/
+dst_res_old/
+glossaries/
+pre_files/
