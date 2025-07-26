@@ -1,14 +1,28 @@
 # Babeledits
 
-This repository contains the code for building the BabelEdits dataset and for evaluating various Knowledge Editing methods on it. It relies on a modified version of [EasyEdit](https://github.com/zjunlp/EasyEdit), which the authors have no ties with, found in `./EasyEdit`.
+This repository contains the code for building the BabelEdits dataset and for
+evaluating various Knowledge Editing methods on it. It also contains code for
+generating the dataset from scratch.
 
-This modified EasyEdit contains our code for the BabelReFT method, as well as some new evaluation metrics.
+This code has been open-sourced alongside the following ACL'25 paper:
 
-Finally this repository also contains code for evaluating edited models on downstream performance.
+[**BABELEDITS: A Benchmark and a Modular Approach for Robust Cross-lingual Knowledge Editing of Large Language Models**](https://aclanthology.org/2025.findings-acl.438/), Tommaso Green, Félix Gaschi, Fabian David Schmidt, Simone Paolo Ponzetto, Goran Glavaš.
+
+
+**Important notes**: This repository also contains the code for modified versions of two dependencies:
+
+- a Knowledge Editing framework
+  ([zjunlp/EasyEdit](https://github.com/zjunlp/EasyEdit)), to include our
+  BabelReFT proposed method and a new way to perform the evaluation (in [./EasyEdit](./EasyEdit/README.md))
+- a page view counter for Wikipedia
+  [gesiscss/wiki-donwload-parse-page-views](https://github.com/gesiscss/wiki-download-parse-page-views),
+  to seperate couts per language (in [./wiki-count](./wiki-count/README.md))
 
 ## How to install
 
-This code uses `uv` to deal with dependencies. In order to run the code with the right dependencies, you simply need to run:
+This code uses `uv` to deal with dependencies. In order to run the code with the
+right dependencies, you simply need to run the following (or use any alternative
+way to [install uv](https://docs.astral.sh/uv/getting-started/installation/))
 
 ```{bash}
 pip install uv
@@ -37,3 +51,49 @@ uv run exec_eval.py --model hf --model_args pretrained=meta-llama/Llama-3.1-8B-I
 ```
 
 This will evaluate the base model. `uv run exec_eval.py --help` shows more options. To evaluate an edited model, use the `--load_weights` option with the path to a model saved by `edit.py`, providing that `edit.py` was run with either `return_edited_weights=True` or `return_edited_weights_at_end=True sequential=True`. Please note that `--model_args` is still needed since `edit.py` is only saving the modified parameters and not the whole model.
+
+## Architecture
+
+The repository contains the following important directories:
+
+- `annotation`: contains the manual evaluation of our markup-based translation approach compared to vanilla translation
+- `babeledits_pipeline`: contains the code for building the BabelEdits dataset, making it reproducible is a work in progress
+- `configs`: contains YAML configs to parametrize `edit.py` using hydra
+- `data_ppl`: contains data for evaluation perplexity before and after editing
+- `data_splits`: contains code for generating data splits
+- `easy_edit_adaptations`: contains code for plugging into EasyEdit (a dispatcher and some logging redirection)
+- `EasyEdit`: contains our forked version of [zjunlp/EasyEdit](https://github.com/zjunlp/EasyEdit)
+- `wiki-count`: contains our forked version of [gesiscss/wiki-donwload-parse-page-views](https://github.com/gesiscss/wiki-download-parse-page-views)
+
+## Coming soon
+
+- The full dataset hosted on HuggingFace
+- A fully runnable pipeline for reproducing Babeledits construction or building variants
+- mzrce integration
+
+## Cite this repository
+
+If you're using this repository, please cite the following work:
+
+```
+@inproceedings{green-etal-2025-babeledits,
+    title = "{BABELEDITS}: A Benchmark and a Modular Approach for Robust Cross-lingual Knowledge Editing of Large Language Models",
+    author = "Green, Tommaso  and
+      Gaschi, F{\'e}lix  and
+      Schmidt, Fabian David  and
+      Ponzetto, Simone Paolo  and
+      Glava{\v{s}}, Goran",
+    editor = "Che, Wanxiang  and
+      Nabende, Joyce  and
+      Shutova, Ekaterina  and
+      Pilehvar, Mohammad Taher",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2025",
+    month = jul,
+    year = "2025",
+    address = "Vienna, Austria",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.findings-acl.438/",
+    pages = "8342--8369",
+    ISBN = "979-8-89176-256-5",
+}
+```
