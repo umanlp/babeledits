@@ -1,4 +1,0 @@
-[submodule "EasyEdit"]
-	path = EasyEdit
-	url = https://github.com/felixgaschi/EasyEdit-private.git
-	branch = "felix/add_bloom"
