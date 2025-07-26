@@ -1,6 +1,0 @@
-RESTFUL_KEY: 'b9f7d860-7f53-4660-84bd-c302b13ab778'
-# BabelNet 5.1 REST endpoint
-RESTFUL_URL: 'https://babelnet.io/v9/service'
-
-#To use RPC mode, uncomment following line
-RPC_URL: 'tcp://127.0.0.1:8181'
