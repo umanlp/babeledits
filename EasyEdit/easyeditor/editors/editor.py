@@ -496,10 +496,12 @@ class BaseEditor:
                     else:
                         mean_norm = -1
                         all_metrics[i]["intermediate"]["norm_diff"] = mean_norm
-                    if lm_cfg:
-                        lm_score = evaluate_language_modeling(edited_model, lm_cfg)
-                        all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
-                        print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
+                if lm_cfg: # we need to store intermediate values for LM because that's what used to get the results
+                    if "intermediate" not in all_metrics[i]:
+                        all_metrics[i]['intermediate'] = {}
+                    lm_score = evaluate_language_modeling(edited_model, lm_cfg)
+                    all_metrics[i]['intermediate'].update({lm_cfg['metric']:lm_score})
+                    print(f"Language Modeling Score(s) using {lm_cfg['metric']} : {lm_score}")
                 
                 # we're saving the vocabulary after each step for saving/loading the edited model
                 if (return_edited_weights_end or return_edited_weights) and self.alg_name == "BabelReFT":
