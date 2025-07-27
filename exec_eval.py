@@ -621,7 +621,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                         intervention_state_dict = loaded_data[
                             "babelreft_interventions"
                         ][k][i]
-                        intervention = v[0]
+                        intervention = v
                         if isinstance(intervention, TrainableIntervention):
                             intervention.load_state_dict(intervention_state_dict)
                     lm._model = wrapped_model

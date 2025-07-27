@@ -32,10 +32,20 @@ Then, to run a script, instead of using the `python` executable, use `uv run`
 
 ## How to edit a model
 
+If you want to edit a model with the BabelEdit dataset, you first need to download it:
+
+```
+uv run huggingface-cli download umanlp/babeledits --repo-type dataset  --local-dir datasets/
+```
+
+This will download the data directly to the `datasets` folder. You can select
+another path if you want, but you'll need to change the default configuration in
+`configs` accordingly, or use the `dataset=` option when running the executable.
+
 To run BabelReFT editing on 100 sequential edits in English, use the following command:
 
 ```{bash}
-PYTHONPATH="." uv run edit.py dataset=<DATASET_PATH> method="babelreft" max_edits=100 sequential=True
+PYTHONPATH="." uv run edit.py method="babelreft" max_edits=10 sequential=True return_edited_weights_at_end=True
 ```
 
 Available options can be found by running `PYTHONPATH="." uv run edit.py --help` or simply looking into the `configs` folder.
@@ -47,10 +57,10 @@ Available options can be found by running `PYTHONPATH="." uv run edit.py --help`
 To run downstream evaluation, use the following command:
 
 ```{bash}
-uv run exec_eval.py --model hf --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,dtype='bfloat16' --batch_size 1 --device cuda:0 --tasks xquad_en --editing_dataset <DATASET_PATH>
+uv run exec_eval.py --model hf --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,dtype='bfloat16' --batch_size 1 --device cuda:0 --tasks xquad_en --editing_dataset datasets/babeledits_test.json
 ```
 
-This will evaluate the base model. `uv run exec_eval.py --help` shows more options. To evaluate an edited model, use the `--load_weights` option with the path to a model saved by `edit.py`, providing that `edit.py` was run with either `return_edited_weights=True` or `return_edited_weights_at_end=True sequential=True`. Please note that `--model_args` is still needed since `edit.py` is only saving the modified parameters and not the whole model.
+This will evaluate the base model. `uv run exec_eval.py --help` shows more options. To evaluate an edited model, use the `--load_weights` option with the path to a model saved by `edit.py`, providing that `edit.py` was run with either `return_edited_weights=True` or `return_edited_weights_at_end=True sequential=True` (results will be stored in ./logs by default). Please note that `--model_args` is still needed since `edit.py` is only saving the modified parameters and not the whole model.
 
 ## Architecture
 

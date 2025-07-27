@@ -9,7 +9,7 @@ metrics:
   - rewrite_score
 locality_metrics:
   - nkl
-dataset: "datasets/v8/translated/test.json"
+dataset: "datasets/babeledits_test.json"
 edit_lang: "en"
 tgt_langs: ['ar', 'de', 'en', 'fr', 'hr', 'it', 'ja', 'ka', 'my', 'qu', 'zh']
 multi_answer_eval: true
