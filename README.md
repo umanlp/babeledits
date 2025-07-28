@@ -1,4 +1,4 @@
-# Babeledits
+# BabelEdits
 
 This repository contains the code for building the BabelEdits dataset and for
 evaluating various Knowledge Editing methods on it. It also contains code for
@@ -8,6 +8,7 @@ This code has been open-sourced alongside the following ACL'25 paper:
 
 [**BABELEDITS: A Benchmark and a Modular Approach for Robust Cross-lingual Knowledge Editing of Large Language Models**](https://aclanthology.org/2025.findings-acl.438/), Tommaso Green, Félix Gaschi, Fabian David Schmidt, Simone Paolo Ponzetto, Goran Glavaš.
 
+The BabelEdits Benchmark is available on [Hugging Face](https://huggingface.co/datasets/umanlp/babeledits).
 
 **Important notes**: This repository also contains the code for modified versions of two dependencies:
 
@@ -25,7 +26,10 @@ right dependencies, you simply need to run the following (or use any alternative
 way to [install uv](https://docs.astral.sh/uv/getting-started/installation/))
 
 ```{bash}
-pip install uv
+# For Linux and macOS
+wget -qO- https://astral.sh/uv/install.sh | sh 
+# For Windows (on PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 Then, to run a script, instead of using the `python` executable, use `uv run`
@@ -76,10 +80,8 @@ The repository contains the following important directories:
 - `wiki-count`: contains our forked version of [gesiscss/wiki-donwload-parse-page-views](https://github.com/gesiscss/wiki-download-parse-page-views)
 
 ## Coming soon
-
-- The full dataset hosted on HuggingFace
 - A fully runnable pipeline for reproducing Babeledits construction or building variants
-- mzrce integration
+- mZSRE dataset 
 
 ## Cite this repository
 
@@ -87,7 +89,7 @@ If you're using this repository, please cite the following work:
 
 ```
 @inproceedings{green-etal-2025-babeledits,
-    title = "{BABELEDITS}: A Benchmark and a Modular Approach for Robust Cross-lingual Knowledge Editing of Large Language Models",
+    title = "{BabelEdits}: A Benchmark and a Modular Approach for Robust Cross-lingual Knowledge Editing of Large Language Models",
     author = "Green, Tommaso  and
       Gaschi, F{\'e}lix  and
       Schmidt, Fabian David  and
